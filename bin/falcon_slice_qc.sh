@@ -6,9 +6,9 @@ function Usage {
   cat <<EOF
    Surface QC tool
    Works best in icbm152 09c space
-  [${progname}] usage: <input.mnc> <ics.ply> <ocs.ply> <output.jpg/png/tiff
+  Usage: ${progname} <input.mnc> <ics.ply> <ocs.ply> <output.jpg/png/tiff>
 
-  [${progname}] optional usage:
+  --- Optional parameters  ---
   --min <f> - set image min
   --max <f> - set image max
   --pct <f> - set image max using perectile

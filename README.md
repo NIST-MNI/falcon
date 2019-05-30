@@ -2,13 +2,83 @@
 
 ## Included higlevel scripts
 * falcon_run.sh - execute FALCON surface extraction pipeline 
+```
+falcon_run.sh <input.mnc> <output_base> -brain <brain_mask.mnc>
+
   parameters:
+  -help                          :  show this usage
+
+  ---- Required parameters ---
+  -brain <brain mask.mnc>        :  brain mask
+
+  --- Recomended parameters ---
+  -nl <nl.xfm>                   :  nonlinear registration to icbm [default = None, will run ANTs]
+  -omp <omp>                     :  change number of processors [default=1]
+  -use_icbm                      :  use mesh from ICBM for initialization , default - use shrink-wrap
+  -anlm                          :  apply anlm filter to input t1w scan (if not done before)
+  -postprocess                   :  apply post-procesiing: resample mesh to atlas, calculate thickness
+
+  --- Optional parameters  ---
+  -vent <vent.mnc>               :  ventricle mask [default = None]
+  -cerebellum <cerebellum.mnc>   :  cerebellum mask [default = None]
+  -brainstem <brainstem.mnc>     :  brainstem mask [default = None]
+  -cls <cls.mnc>                 :  tissue classification map
+  -priors <WM> <GM> <CSF>        :  tissue priors, ( default: none )
+  -nopriors                      :  don't use tissue priors, for surface fitting
+
+  --- Optional parameters (don't touch, if you don't know what you are doing)   ---
+  -gwimask <mask.mnc>            :  gray matter - white matter interface mask [default = None]
+  -cerebellummask <mask.mnc>     :  cerebellum mask [default = None]
+  -wmmask <mask.mnc>             :  white matter mask [default = None]
+  -csfmask <csf.mnc>             :  CSF mask [default = None]
+  -left <left.mnc>               :  left hemisphere mask [default = None]
+  -right <right.mnc>             :  right hemisphere mask [default = None]
+  -sides <left.mnc> <right.mnc>  :  left and right hemisphere masks [default = None]
+  -variant  <var>                :  for debugging
+  -trace                         :  produce traces of intermediate surfaces
+  -hr                            :  produce high-resolution thickness measurement in ICBM space
+  -smooth <fwhm>                 :  smooth thickness maps (in addition)
+  -noremesh                      :  don't remesh initial mesh (for DEBUGGING only)
+  -debug                         :  run in debug mode (keep temp, echo commands)
+  -verbose                       :  echo commands
+```
 * falcon_off_qc_2.sh - generate surface QC image for two hemispheres
-  parameters:
+```  
+falcon_off_qc_2.sh <input_lt.ply> <input_measurement_lt.csv> <input_rt.ply> <input_measurement_rt.csv> <output.png>   [foreground] [background] 
+  --- Optional parameters  ---
+  -min <m>  - minimal value for the measurement (default: minimum)
+  -max <m>  - maximal value for the measurement (default: maximum)
+  -title <title> - plot title
+  -spectral - use spectral colour map (default)
+  -atrophy  - use atrophy colour map
+  -summer   - use summer colour map
+  -jacobian - use jacobian colour map
+  -gray     - use gray colour map
+  -sphere   - output on the spherical map, using spherical coordinates instead of x,y,z
+  -column  <n> - specify column name from csv file to use (default will use the first column)
+```
 * falcon_off_qc.sh   - generrate surface QC image for one hemisphere 
-  parameters:
+```
+falcon_off_qc.sh <input.off> <input_measurement.txt> <output.png> [foreground] [background]
+  --- Optional parameters  ---
+  -min <m>  - minimal value for the measurement (default: minimum)
+  -max <m>  - maximal value for the measurement (default: maximum)
+  -title <title> - plot title
+  -spectral - use spectral colour map (default)
+  -atrophy  - use atrophy colour map
+  -summer   - use summer colour map
+  -jacobian - use jacobian colour map
+  -gray     - use gray colour map
+  -sphere   - output on the spherical map, using spherical coordinates instead of x,y,z
+```
 * falcon_slice_qc.sh - generate QC image showing intersection of surface and volume
-  parameters:
+```
+  falcon_slice_qc.sh <input.mnc> <ics.ply> <ocs.ply> <output.jpg/png/tiff>
+  --- Optional parameters  ---
+  --min <f> - set image min (default: minimum)
+  --max <f> - set image max (default: maximum)
+  --pct <f> - set image max using percentile
+```
 
 
 ## Included low level tools

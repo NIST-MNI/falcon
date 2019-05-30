@@ -19,6 +19,7 @@ function Usage {
  Usage: 
   `basename $0` <input_lt.ply> <input_measurement_lt.txt/csv> <input_rt.ply> <input_measurement_rt.txt/csv> <output.png> \
     [foreground] [background] 
+  --- Optional parameters  ---
   -min <m> 
   -max <m> 
   -title <title>

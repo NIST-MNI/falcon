@@ -14,9 +14,9 @@
 ####################################
 
 MAJOR_VERSION=0
-MINOR_VERSION=2
-MICRO_VERSION=1
-ver=s66
+MINOR_VERSION=9
+MICRO_VERSION=0
+ver=${MAJOR_VERSION}.${MINOR_VERSION}.${MICRO_VERSION}
 
 progname=$(basename $0)
 
@@ -57,14 +57,14 @@ icbm_dir=$FALCON_DATA/data
 function Usage {
   cat <<EOF
 
-  [${progname}] version ${MAJOR_VERSION}.${MINOR_VERSION}.${MICRO_VERSION} ${ver}
+  ${progname} version ${ver} 
 
-  [${progname}] usage: <input.mnc> <output_base>
+  ${progname} <input.mnc> <output_base> -brain <brain_mask.mnc>
 
-  [${progname}] optional usage:
+  ${progname} parameters:
   -help                          :  show this usage
 
-  ---- Required paramters ---
+  ---- Required parameters ---
   -brain <brain mask.mnc>        :  brain mask
 
   --- Recomended parameters ---

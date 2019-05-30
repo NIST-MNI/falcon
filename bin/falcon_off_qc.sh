@@ -1,5 +1,5 @@
 #! /bin/bash
-set -e -x -o pipefail
+set -e -o pipefail
 
 cmap=-spectral
 title=""
@@ -15,6 +15,7 @@ fi
 function Usage {
   cat <<EOF
 Usage: `basename $0` <input.off> <input_measurement.txt> <output.png> [foreground] [background]
+  --- Optional parameters  ---
   -min <m> 
   -max <m> 
   -title <title>
