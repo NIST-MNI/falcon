@@ -1,5 +1,21 @@
 # FALCON cortical surface extraction tool
 
+## Installation 
+### Using conda:
+```conda install -c vfonov falcon``` - will work on linux
+### Compiling from the source:
+Prerequisites: minc-toolkit-v2 (http://bic-mni.github.io/), libtiff, povray, imagemagick
+```
+cmake <source_dir> \
+ -DCMAKE_INSTALL_PREFIX:PATH=<install prefix> \
+ -DMINC_TOOLKIT_DIR:PATH=/opt/minc/1.9.17 \
+ -DCMAKE_BUILD_TYPE:STRING=Release \
+ -DHAVE_POVRAY:BOOL=ON \
+ -DUSE_OPENMP:BOOL=ON
+
+make && make install
+```
+
 ## Included higlevel scripts
 * falcon_run.sh - execute FALCON surface extraction pipeline 
 ```
