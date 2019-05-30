@@ -1,0 +1,264 @@
+/* Filename:     niik_classify.c
+ * Description:  Kunio's nifti1 classification program
+ * Author:       Kunio Nakamura 
+ * Date:         December 28, 2012
+ */
+
+#include "falcon.h"
+
+#define MAJOR_VERSION (0)
+#define MINOR_VERSION (0)
+#define MICRO_VERSION (0)
+
+static char *niik_classify_version[] = {
+  "  niik_classify version history\n"
+  "  0.0.0 knakamura@mrs.bic.mcgill.ca\n"
+  "  -initial version\n"
+};
+
+static char *niik_classify_help[] = {
+  "  usage: <out.nii> [options]\n"
+  "\n"
+  "  optional usage:\n"
+  "  -u -help                   : show this usage\n"
+  "  --version                  : show version info\n"
+  "  -t1w <t1w.nii>             : input T1-weighted image\n"
+  "  -pdw <pdw.nii>             : input PD-weighted image\n"
+  "  -t2w <t2w.nii>             : input T2-weighted image\n"
+  "  -flr <flr.nii>             : input FLAIR image\n"
+  "  -mask <brain.nii>          : input brain parenchyma mask (GM+WM, excluding CSF)\n"
+  "\n"
+  "  n.b.\n"
+  "  -all images need to be in the same space, resampled to the same dimension\n"
+};
+
+
+void usage() {
+  fprintf(stdout,"%s",*niik_classify_help);
+  return; 
+} 
+
+
+int main(int argc,char *argv[],char *envp[])
+{
+  niik_classify_kmeans *K=NULL;
+  niik_classify_fcm *F=NULL;
+  nifti_image
+    **imglist=NULL,
+    *I=NULL,
+    *a_gm=NULL,
+    *a_wm=NULL,
+    *a_csf=NULL,
+    *a_les=NULL,
+    *pdwimg=NULL,
+    *t2wimg=NULL,
+    *t1wimg=NULL,
+    *t1cimg=NULL,
+    *flrimg=NULL,
+    *brainmask=NULL;
+  char
+    *outcheckname=NULL,
+    fcname[20]="niik_classify";
+  int
+    class_type=NIIK_CLASSIFY_FCM,
+    maxiter=5,
+    num_img=0,
+    num_class=3,
+    verbose=2,
+    n,
+    nc=1,sc=1;
+  niikmat
+    *mnireg=NULL;
+
+  struct tm *stm;
+  time_t ctm;
+  char tmstr[256];
+
+  if(argc==1) {
+    usage();
+    exit(0); }
+
+  ctm=time(NULL);
+  stm=localtime(&ctm);
+  strftime(tmstr,256,"%Y-%m-%d %T",stm);
+  fprintf(stdout,"  niik_classifier: version %i.%i.%i\n",MAJOR_VERSION,MINOR_VERSION,MICRO_VERSION);
+  fprintf(stdout,"  niik_classifier: executed at %s\n",tmstr);
+
+  while(nc<argc) {
+    if(argv[nc][0]=='-') {
+      if(!strncmp(argv[nc],"--version",9)){
+	fprintf(stdout,"%s",*niik_classify_version);
+        exit(0); }
+      else if(!strncmp(argv[nc],"--help",6)){
+        fprintf(stdout,"%s",*niik_classify_help);
+        exit(0); }
+      else if(!strncmp(argv[nc],"-outcheck",9)){
+        outcheckname=argv[++nc]; 
+        fprintf(stdout,"  outcheck %s\n",outcheckname);
+      } /* outcheck */
+
+
+      else if(!strncmp(argv[nc],"-kmeans",7)){
+        class_type=NIIK_CLASSIFY_KMEANS;
+      } /* kmeans */
+
+      else if(!strncmp(argv[nc],"-nclass",7)){
+        num_class=atoi(argv[++nc]);
+      } /* class */
+
+      else if(!strncmp(argv[nc],"-iter",5)){
+        maxiter=atoi(argv[++nc]);
+      } /* iter */
+
+      else if(!strncmp(argv[nc],"-mask",5)){
+        if((nc++)>=argc) { fprintf(stderr,"[%s] ERROR: missing argment(s)\n",fcname); exit(0); }
+        if(brainmask!=NULL) { fprintf(stderr,"[%s] ERROR: brain mask already used\n",fcname); exit(0); }
+        fprintf(stdout,"[%s] reading brain    %s\n",fcname,argv[nc]);
+        if((brainmask=niik_image_read(argv[nc]))==NULL){
+          fprintf(stderr,"[%s] ERROR: niik_image_read %s\n",fcname,argv[nc]);
+          exit(0); } 
+      } /* mask */
+      else if(!strncmp(argv[nc],"-t1w",4)){
+        if((nc++)>=argc) { fprintf(stderr,"[%s] ERROR: missing argment(s)\n",fcname); exit(0); }
+        if(t1wimg!=NULL) { fprintf(stderr,"[%s] ERROR: t1w already used\n",fcname); exit(0); }
+        fprintf(stdout,"[%s] reading T1w      %s\n",fcname,argv[nc]);
+        if((t1wimg=niik_image_read(argv[nc]))==NULL){
+          fprintf(stderr,"[%s] ERROR: niik_image_read %s\n",fcname,argv[nc]);
+          exit(0); } 
+      } /* t1w */
+      else if(!strncmp(argv[nc],"-t2w",4)){
+        if((nc++)>=argc) { fprintf(stderr,"[%s] ERROR: missing argment(s)\n",fcname); exit(0); }
+        if(t2wimg!=NULL) { fprintf(stderr,"[%s] ERROR: t2w already used\n",fcname); exit(0); }
+        fprintf(stdout,"[%s] reading T2w      %s\n",fcname,argv[nc]);
+        if((t2wimg=niik_image_read(argv[nc]))==NULL){
+          fprintf(stderr,"[%s] ERROR: niik_image_read %s\n",fcname,argv[nc]);
+          exit(0); } 
+      } /* t2w */
+      else if(!strncmp(argv[nc],"-flr",4)){
+        if((nc++)>=argc) { fprintf(stderr,"[%s] ERROR: missing argment(s)\n",fcname); exit(0); }
+        if(flrimg!=NULL) { fprintf(stderr,"[%s] ERROR: FLAIR already used\n",fcname); exit(0); }
+        fprintf(stdout,"[%s] reading FLAIR    %s\n",fcname,argv[nc]);
+        if((flrimg=niik_image_read(argv[nc]))==NULL){
+          fprintf(stderr,"[%s] ERROR: niik_image_read %s\n",fcname,argv[nc]);
+          exit(0); } 
+      } /* t1w */
+      else if(!strncmp(argv[nc],"-t1c",4)){
+        if((nc++)>=argc) { fprintf(stderr,"[%s] ERROR: missing argment(s)\n",fcname); exit(0); }
+        if(t1cimg!=NULL) { fprintf(stderr,"[%s] ERROR: t1w+contrast already used\n",fcname); exit(0); }
+        fprintf(stdout,"[%s] reading T1c     %s\n",fcname,argv[nc]);
+        if((t1cimg=niik_image_read(argv[nc]))==NULL){
+          fprintf(stderr,"[%s] ERROR: niik_image_read %s\n",fcname,argv[nc]);
+          exit(0); } 
+      } /* t1c */
+      else if(!strncmp(argv[nc],"-pdw",4)){
+        if((nc++)>=argc) { fprintf(stderr,"[%s] ERROR: missing argment(s)\n",fcname); exit(0); }
+        if(pdwimg!=NULL) { fprintf(stderr,"[%s] ERROR: PDw already used\n",fcname); exit(0); }
+        fprintf(stdout,"[%s] reading PDw      %s\n",fcname,argv[nc]);
+        if((pdwimg=niik_image_read(argv[nc]))==NULL){
+          fprintf(stderr,"[%s] ERROR: niik_image_read %s\n",fcname,argv[nc]);
+          exit(0); } 
+      } /* pdw */
+
+      else if(!strncmp(argv[nc],"-help",5)){
+        fprintf(stdout,"%s",*niik_classify_help);
+        exit(0); }
+
+      else if(!strncmp(argv[nc],"-fcm",4)){
+        class_type=NIIK_CLASSIFY_FCM;
+      } /* fcm */
+
+      else if(!strncmp(argv[nc],"-u",2)){
+        usage();
+        exit(0); }
+
+      else {
+        fprintf(stderr,"[%s] ERROR: unknown option %s\n",fcname,argv[nc]);
+        exit(0); }
+      nc++; }
+    else {
+      argv[sc++]=argv[nc++]; }
+  } /* reading options (while) */
+  argc=sc;
+
+  if(argc!=2) {
+    fprintf(stderr,"[%s] ERROR: wrong usage\n",fcname);
+    exit(0); }
+
+  if(brainmask==NULL){
+    fprintf(stderr,"[%s] ERROR: missing brain mask (-mask)\n",fcname);
+    exit(0) ;}
+
+  num_img=0;
+  num_img=(t1wimg!=NULL)?num_img+1:num_img; 
+  num_img=(t1cimg!=NULL)?num_img+1:num_img; 
+  num_img=(t2wimg!=NULL)?num_img+1:num_img; 
+  num_img=(pdwimg!=NULL)?num_img+1:num_img; 
+  num_img=(flrimg!=NULL)?num_img+1:num_img; 
+  fprintf(stdout,"[%s] using %i images\n",fcname,num_img);
+
+  imglist=(nifti_image **)calloc(num_img,sizeof(nifti_image *));
+  num_img=0;
+  if(t1wimg!=NULL) imglist[num_img++]=t1wimg;
+  if(pdwimg!=NULL) imglist[num_img++]=pdwimg;
+  if(t2wimg!=NULL) imglist[num_img++]=t2wimg;
+  if(flrimg!=NULL) imglist[num_img++]=flrimg;
+  I = niik_image_combine(imglist,num_img,5,0);
+  
+  switch(class_type){
+  case NIIK_CLASSIFY_KMEANS:
+    K = niik_classify_kmeans_init(I,brainmask,3,maxiter,0);
+    I=niik_image_free(I);
+
+    brainmask=niik_image_free(brainmask);
+    t1wimg = niik_image_free(t1wimg);
+    t1cimg = niik_image_free(t1cimg);
+    t2wimg = niik_image_free(t2wimg);
+    pdwimg = niik_image_free(pdwimg);
+    flrimg = niik_image_free(flrimg);
+
+    niik_classify_kmeans_initialize_means(K,0);
+    niik_classify_kmeans_display(K);
+    niik_classify_kmeans_iterate(K,0);
+    niik_classify_kmeans_display(K);
+
+    for(n=0;n<=K->num_class;n++){
+      niik_image_label_display_stats(K->img,K->mask,n); }
+
+    fprintf(stdout,"[%s] writing output   %s\n",fcname,argv[1]);
+    if(!niik_image_write(argv[1],K->mask)){
+      fprintf(stderr,"[%s] ERROR: niik_image_write %s\n",fcname,argv[1]);
+      exit(0); }
+
+    niik_classify_kmeans_display(K);
+    K=niik_classify_kmeans_free(K);
+
+    break;
+
+  case NIIK_CLASSIFY_FCM:
+
+    F = niik_classify_fcm_init(I,brainmask,num_class,maxiter,1);
+    I=niik_image_free(I);
+    niik_classify_fcm_display(F);
+
+    niik_classify_fcm_initialize_means(F,1);
+
+    if(!niik_classify_fcm_iterate(F,verbose)){
+      fprintf(stderr,"[%s] ERROR: niik_classify_fcm_iterate\n",fcname);
+      exit(0); }
+
+    fprintf(stdout,"[%s] writing output   %s\n",fcname,argv[1]);
+    if(!niik_image_write(argv[1],F->primg)){
+      fprintf(stderr,"[%s] ERROR: niik_image_write %s\n",fcname,argv[1]);
+      exit(0); }
+
+    niik_classify_fcm_display(F);
+    F=niik_classify_fcm_free(F);
+
+    break;
+  }
+
+  niik_fc_display(fcname,0);
+  exit(0);
+} /* niik_classify */
+
+

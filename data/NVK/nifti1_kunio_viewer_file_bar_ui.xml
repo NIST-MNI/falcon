@@ -1,0 +1,56 @@
+<ui>
+  <menubar name="MainMenu">
+    <menu name="FileMenu" action="FileMenuAction">
+      <menuitem name="Open"   action="FileOpenAction" />
+      <menuitem name="Reload" action="FileReloadAction" />
+      <menuitem name="Save"   action="FileSaveAction" />
+      <menuitem name="Quit"   action="FileQuitAction" />
+      <placeholder name="FileMenuAdditions" />
+    </menu>
+    <menu name="EditMenu" action="EditMenuAction">
+      <menuitem name="EditUndo"            action="EditUndoAction"/>
+      <menuitem name="EditAutoSave"        action="EditAutoSaveToggleAction"/>
+      <menuitem name="EditPeek"            action="EditPeekAction"/>
+    </menu>
+    <menu name="ViewMenu" action="ViewMenuAction">
+      <menuitem name="ViewInfo"            action="ViewInfoAction"/>
+      <menuitem name="ViewReset"           action="ViewResetAction"/>
+      <menuitem name="ViewChangeAxis1"     action="ViewChangeAxis1"/>
+      <menuitem name="ViewChangeAxis2"     action="ViewChangeAxis2"/>
+      <menuitem name="ViewResetIntensity"  action="ViewResetIntensity"/>
+      <menu name="ViewFlipMenu" action="ViewFlipMenuAction">
+	<menuitem name="ViewFlipX"         action="ViewFlipX"/>
+	<menuitem name="ViewFlipY"         action="ViewFlipY"/>
+	<menuitem name="ViewFlipZ"         action="ViewFlipZ"/>
+      </menu>
+      <menu name="ViewZoomMenu" action="ViewZoomMenuAction">
+	<menuitem name="ViewZoomIn"        action="ViewZoomIn"/>
+	<menuitem name="ViewZoomOut"       action="ViewZoomOut"/>
+      </menu>
+      <menu name="ViewDrawLineDot" action="ViewDrawLineDot">
+        <menuitem name="ViewDrawRedLine" action="ViewDrawRedLine"/>
+        <menuitem name="ViewDrawGreenDot" action="ViewDrawGreenDot"/>
+      </menu>
+<!------
+   <menu name="ViewCoordinate"          action="ViewCoordinateMenuAction">
+     <menuitem name="ViewCoordinateXYZ" action="ViewCoordinateXYZ"/>
+   </menu>
+------->
+    </menu>
+    <menu name="WindowMenu" action="WindowMenuAction">
+      <menuitem name="Window Expand" action="WindowExpand"/>
+      <menuitem name="Window Shrink" action="WindowShrink"/>
+    </menu>
+  </menubar>
+  
+<!-----
+  <toolbar name="MainToolbar" action="MainMenuBarAction">
+    <placeholder name="ToolItems">
+      <separator/>
+      <toolitem name="Clear" action="ClearAction"/>
+      <toolitem name="Lookup" action="LookupAction"/>
+      <separator/>
+    </placeholder>
+  </toolbar>
+------->
+</ui>
