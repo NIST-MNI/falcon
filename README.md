@@ -1,5 +1,5 @@
 # FALCON cortical surface extraction tool
-![Thickness map](https://github.com/vfonov/falcon/releases/download/v0/OASIS-TRT-20-18_thickness-s66_lt.png)
+![Example Thickness map](https://github.com/vfonov/falcon/blob/gh-pages/examples/OASIS-TRT-20-18_thickness-s66_lt.png?raw=true)
 
 ## Installation 
 ### Using conda:
