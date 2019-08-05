@@ -1,6 +1,9 @@
 # FALCON cortical surface extraction tool
 ![Example Thickness map](https://github.com/vfonov/falcon/blob/gh-pages/examples/OASIS-TRT-20-18_thickness-s66_lt.png?raw=true)
 
+## Preliminary results
+* [Google drive slides from the meeting on 2019-01-28](https://docs.google.com/presentation/d/1z2YPbEM3VdAtisJ61f-7iaqEFusUhtN4l2r1_5jiWT0/edit?usp=sharing)
+
 ## Installation 
 ### Using conda:
 ```conda install -c vfonov falcon``` - will work on linux
