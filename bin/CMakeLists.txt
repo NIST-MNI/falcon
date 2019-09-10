@@ -13,5 +13,7 @@ INSTALL(PROGRAMS
         falcon_slice_qc.sh 
         falcon_off_qc.sh
         falcon_off_qc_2.sh
+        falcon_antsAtroposN4.sh
+        falcon_antsBrainExtraction.sh
         DESTINATION 
         bin )

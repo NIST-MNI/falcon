@@ -234,7 +234,8 @@ if [[ -z "$cls" ]];then
       export ANTSPATH=${MINC_TOOLKIT}/bin
     fi
 
-    antsAtroposN4.sh -d 3 -a $scan -x $brainmask -c 3 -o ${tempdir}/atropos_ -s mnc  -p ${tempdir}/prior_%d.mnc -y 3 -m 1
+    # run version patched for better mnc support
+    falcon_antsAtroposN4.sh -d 3 -a $scan -x $brainmask -c 3 -o ${tempdir}/atropos_ -s mnc  -p ${tempdir}/prior_%d.mnc -y 3 -m 1
     cp ${tempdir}/atropos_Segmentation.mnc ${fn}_cls.mnc
 
     for l in $(seq 1 3);do
