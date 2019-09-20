@@ -2391,10 +2391,10 @@ int niikcortex_remesh_cortex(niikcortex_deform * dfm)
   int xsc,cidx,i;
   const char* fcname=__func__;
   bbox *bb;
-
+  
   fprintf(stdout,"[%s] Remeshing\n",fcname);
 
-  for(int i=0;i<10;i++) {
+  for(i=0;i<10;i++) {
     /*need curvature info*/
     #if 1
     for(cidx=0; cidx<2; cidx++)

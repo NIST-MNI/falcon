@@ -223,9 +223,9 @@ int main(int argc,char *argv[],char *envp[]) {
       exit(1);
     }
   }
-  if(in_brain_mask) {
-    if((border=niik_image_read(in_brain_mask))==NULL) {
-      fprintf(stderr,"[%s] ERROR: nifti_image_read %s\n",fcname,in_brain_mask);
+  if(in_border) {
+    if((border=niik_image_read(in_border))==NULL) {
+      fprintf(stderr,"[%s] ERROR: nifti_image_read %s\n",fcname,in_border);
       exit(1);
     }
     NIIK_RET1((!niik_image_type_convert(border,NIFTI_TYPE_UINT8)),fcname,"niik_image_type_convert");

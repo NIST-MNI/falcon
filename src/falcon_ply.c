@@ -81,12 +81,12 @@ int off_kobj_write_ply_ex(const char *fname, kobj *obj,
   }
 
   ply_add_element(oply,"face",obj->nface); /*face*/
-  ply_add_list_property(oply,"vertex_index", PLY_UINT8, PLY_UINT);
+  ply_add_list_property(oply,"vertex_indices", PLY_UCHAR, PLY_UINT);/*vertex_index*/
 
   if(obj->color && output_color ) {
-    ply_add_scalar_property(oply,"red",  PLY_UINT8);
-    ply_add_scalar_property(oply,"green",PLY_UINT8);
-    ply_add_scalar_property(oply,"blue", PLY_UINT8);
+    ply_add_scalar_property(oply,"red",  PLY_UCHAR);
+    ply_add_scalar_property(oply,"green",PLY_UCHAR);
+    ply_add_scalar_property(oply,"blue", PLY_UCHAR);
   }
 
   if(obj->edge!=NULL && output_edge) {

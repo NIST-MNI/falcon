@@ -143,7 +143,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
                               kobj *ics,                 /* white matter surface */
                               kobj *ocs,                 /* pial surface is updated */
                               nifti_image *border)       /* limit for GM expansion*/
-{              
+{
 
   const char *fcname=__func__;
   char fname[512];
@@ -236,8 +236,8 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
   }/* check intersection */
 
   if(verbose>0) fprintf(stdout,"[%s] initialize cortex gradient vector\n",fcname);
-  xmin = -3;
-  xmax = 12;
+  xmin = -3.0;
+  xmax =  6.0;
   dx = 0.1;
   /*number of steps (?)*/
   for(nx=0,xx=xmin; xx<=(xmax+0.001); xx+=dx) {
@@ -253,7 +253,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
     x[n] = xmin + dx*n;
     yb[n] = 0;
   }
-  n0=(int) floor(-xmin/dx+0.5);
+  n0=(int) floor(-xmin/dx+0.5); /*index corresponding to zero thickness*/
   if(verbose>0) fprintf(stdout,"[%s] vector %6.2f : %6.2f : %6.2f  | %i n0 %i\n",fcname,xmin,dx,xmax,nx,n0);
 
 
@@ -285,8 +285,9 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
 
   off_update_kobj_face_normal(ics);
   off_update_kobj_vert_normal(ics);
+  /*TODO: do we need this?*/
+  off_smooth_kobj_vert_normal(ics);
 
-  /*off_smooth_kobj_vert_normal(ics);*/
   for(fi=ics->face,fo=ocs->face; fi!=NULL; fi=fi->next,fo=fo->next) {
     fo->normal=fi->normal;
   }
@@ -295,7 +296,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
   }
 
   /*create index*/
-  for(vi=ics->vert,vo=ocs->vert,vindex=0; vi!=NULL; vi=vi->next,vo=vo->next,vindex++) {
+  for(vi=ics->vert, vo=ocs->vert,vindex=0; vi!=NULL; vi=vi->next,vo=vo->next,vindex++) {
     _vi[vindex]=vi;
     _vo[vindex]=vo;
     vo->idata=1;
@@ -304,21 +305,21 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
 
   if(verbose>=1) fprintf(stdout,"[%s] initialize pial surface at white surface\n",fcname);
   for(vi=ics->vert,vo=ocs->vert; vi!=NULL; vi=vi->next,vo=vo->next) {
-    vo->v=niikpt_move_normal(vi->v,vi->normal,init_cth);
+    vo->v = niikpt_move_normal(vi->v, vi->normal, init_cth);
   }
 
   if(verbose) fprintf(stdout,"[%s] check cortex intersections\n",fcname);
-  if((xsc = niikcortex_off_count_intersection(bb,ics,ocs))<0) {
+  if((xsc = niikcortex_off_count_intersection(bb, ics, ocs))<0) {
     fprintf(stderr,"ERROR: niikcortex_off_count_intersection(bb,ics,ocs)\n");
     return 0;
   }
 
   if(verbose>1 && xsc>0) {
     if(verbose>2) {
-      fprintf(stdout,"[niikcortex_initocs_expand] write tmp_niikcortex_initocs_ics.off\n");
-      off_kobj_write_offply("tmp_niikcortex_initocs_ics.off",ics,0);
-      fprintf(stdout,"[niikcortex_initocs_expand] write tmp_niikcortex_initocs_ocs.off\n");
-      off_kobj_write_offply("tmp_niikcortex_initocs_ocs.off",ocs,0);
+      fprintf(stdout,"[niikcortex_initocs_expand] write tmp_niikcortex_initocs_ics.ply\n");
+      off_kobj_write_offply("tmp_niikcortex_initocs_ics.ply",ics,0);
+      fprintf(stdout,"[niikcortex_initocs_expand] write tmp_niikcortex_initocs_ocs.ply\n");
+      off_kobj_write_offply("tmp_niikcortex_initocs_ocs.ply",ocs,0);
     }
     for(fo=ocs->face; fo!=NULL; fo=fo->next) {
       if(fo->color[0]==fo->color[1]) continue;
@@ -330,17 +331,17 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
   } /* xsc write output */
 
   if(xsc) { /* correct intersections */
-    nn = NIIK_IMAX(100,xsc);
+    nn = NIIK_IMAX(200, xsc);
     for(iter=0; iter<nn && xsc>0; iter++) {
       fprintf(stdout,"[%s] removing intersection iter %i\n",fcname,iter);
       /* correct each surface separately */
       for(fo=ocs->face; fo!=NULL; fo=fo->next) {
-        if(fo->color[0]==fo->color[1]) continue;
+        if(fo->color[0] == fo->color[1]) continue;
         break;
       }
       if(fo==NULL) break;
       while(fo!=NULL) {
-        if(niikcortex_initocs_expand_remove_intersection(bb,ics,ocs,fo,init_cth*2)) break;
+        if(niikcortex_initocs_expand_remove_intersection(bb,ics,ocs,fo, init_cth*2)) break;
         /* do the next one */
         for(fo=fo->next; fo!=NULL; fo=fo->next) {
           if(fo->color[0]==fo->color[1]) continue;
@@ -349,11 +350,11 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
         if(fo==NULL) break;
         niikcortex_initocs_expand_remove_intersection(bb,ics,ocs,fo,init_cth*2);
       }
-      if(iter>=5) { /* after 5 iterations, try to change white surface in addition to pial surface */
+      if(iter>=10) { /* after 10 iterations, try to change white surface in addition to pial surface */
         fprintf(stdout,"[niikcortex_initocs_expand] removing intersection iter %i [white]\n",iter);
         /* correct each surface separately */
         for(fi=ics->face; fi!=NULL; fi=fi->next) {
-          if(fi->color[0]==fi->color[1]) continue;
+          if(fi->color[0] == fi->color[1]) continue;
           off_remesh_kvert_relocate(fi->vert[0]);
           off_remesh_kvert_relocate(fi->vert[1]);
           off_remesh_kvert_relocate(fi->vert[2]);
@@ -366,11 +367,10 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
       fprintf(stdout,"[%s]   remaining intersections [iter %i] %i\n",fcname,iter,xsc);
     } /* each iteration */
   } /* xsc */
-  if(verbose>0) fprintf(stdout,"[%s] after initial surface, check intersections = %i\n",fcname,xsc);
 
+  if(verbose>0) fprintf(stdout,"[%s] after initial surface, check intersections = %i\n",fcname, xsc);
   if(verbose>0) fprintf(stdout,"[%s] regional max cortical thickness\n",fcname);
-
-
+  
   /*
    * CALCULATE MAXIMUM CORTICAL THICKNESS
    * per vertex, by sampling intensities in the normal direction
@@ -379,9 +379,9 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
 
   for(vi=ics->vert,vo=ocs->vert,vindex=0; vi!=NULL; vi=vi->next,vo=vo->next,vindex++) {
     for(n=0; n<nx; n++) {
-      niikpt _pos=niikpt_move_normal(vo->v, vi->normal, x[n] );
+      niikpt _pos = niikpt_move_normal(vo->v, vi->normal, x[n] );
       dy[n] = y[n] = niik_image_interpolate_3d_linear(img,_pos);
-     
+
       if(border)
         yb[n] = niik_image_interpolate_3d_nn(border,_pos);
     }
@@ -398,7 +398,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
     }
 
     /* find the very max */
-    for(n=n0; n<nx; n++) {
+    for(n=n0; n<nx; n++) { /*VF:hack*/
       if(x[n]>=max_cth) {
         if(verbose>5) {
           fprintf(stdout,"\tmax cth %.5f\n",max_cth);
@@ -411,25 +411,26 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
         }
         break;
       }
-      if(y[n]>intOCS && y[n]<intGM && dy[n]>gthresh) {
+      if( y[n]> intOCS && y[n]<intGM && dy[n]>gthresh) {
         if(verbose>5) {
           fprintf(stdout,"\ty=%.2f dy=%.2f\n",y[n],dy[n]);
         }
         break;
       }
-      if(x[n]>=3 && y[n]>=intWM) {
+      /* VF: not sure why we would do this
+      if(x[n]>=3 && y[n]>=intWM) { 
         if(verbose>5) {
           fprintf(stdout,"\tx=%5.2f\n",x[n]);
         }
         break;
-      }
+      }*/
     }
     if(verbose>5) {
       fprintf(stdout,"%3i %6.2f %6.2f %8.3f   max\n",n,x[n],y[n],dy[n]);
     }
 
     /* pull back if really low */
-    if(y[n]<intCSF||yb[n]>0) {
+    if(y[n]<intCSF || yb[n]>0) {
       for(m=n; m>n0; m--) {
         if(y[m]>intCSF && y[n]<intGM) {
           if(m==(nx-1)) {
@@ -450,7 +451,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
       if(m>n0) n=m;
     }
 
-    mcth_list[vindex] = NIIK_DMIN(x[n],max_cth);
+    mcth_list[vindex] = NIIK_DMIN(x[n], max_cth);
     if(verbose>5) fprintf(stdout,"%3i %6.2f %6.2f %8.3f \n",n,x[n],y[n],dy[n]);
   } /* each vertex */
   free(x);
@@ -462,18 +463,17 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
 
 
   /* SMOOTHING -MAX CORTICAL THICKNESS */
-  if(verbose) {
+  if(verbose>0) {
     fprintf(stdout,"[niikcortex_initocs_expand] surface smoothing (regional max cortical thickness) %i\n",smooth_iter_maxcth);
-    /*niik_display_stats_for_double_vector(mcth_list,ics->nvert);*/
-  }
-  for(n=0; n<smooth_iter_maxcth; n++) {
-    NIIK_RET0((!off_surface_smooth_using_vert(ics,mcth_list,3,1)),fcname,"off_surface_smooth_using_vert");
-  }
-  if(verbose) {
-    fprintf(stdout,"[niikcortex_initocs_expand] after surface smoothing\n");
     niik_display_stats_for_double_vector(mcth_list,ics->nvert);
   }
-
+  for(n=0; n<smooth_iter_maxcth; n++) {
+    NIIK_RET0((!off_surface_smooth_using_vert(ics, mcth_list, 3, 1)), fcname,"off_surface_smooth_using_vert");
+  }
+  if(verbose>0) {
+    fprintf(stdout,"[niikcortex_initocs_expand] after surface smoothing\n");
+    niik_display_stats_for_double_vector(mcth_list, ics->nvert);
+  }
 
   /************************************************
    *
@@ -486,7 +486,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
 
   for(iter=0; iter<stepiter; iter++) {
     if(verbose>2) {
-      sprintf(fname,"tmp_initocs_%i.off",iter);
+      sprintf(fname,"tmp_initocs_%i.ply",iter);
       fprintf(stdout,"[%s] iter %i  writing output for testing %s\n",fcname,iter,fname);
       NIIK_RET0((!off_kobj_add_one_color(ocs,1,0.2,0.2)),fcname,"off_kobj_add_one_color");
       NIIK_RET0((!off_kobj_write_offply(fname,ocs,0)),fcname,"off_kobj_write_off");
@@ -513,7 +513,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
 
     for(dist=0, sumdist=bb->delta, iter2=0;
         ( dist <= (max_cth+0.001) ) && iter2 < maxiter2 ;
-        iter2++, dist+=step_size[iter], sumdist+=step_size[iter] ) {
+        iter2++, dist += step_size[iter], sumdist += step_size[iter] ) {
       if(sumdist>bb->delta*0.5) {
         if(verbose>2) fprintf(stdout,"[%s] %i  bbox update\n",fcname,iter);
 
@@ -539,7 +539,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
 
 
       /**/
-      memset(indicator,0,ocs->nvert);
+      memset(indicator, 0, ocs->nvert);
 
       num=0;
       for(c=0; c<stride; c++) {
@@ -563,9 +563,9 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
                   double cth;
                   niikpt normal, origpt;
 
-                  vo=cf->vert[l];
-                  vindex=vo->index-1;
-                  vi=_vi[vindex];
+                  vo = cf->vert[l];
+                  vindex = vo->index-1;
+                  vi = _vi[vindex];
 
                   if(indicator[vindex]) continue;
                   indicator[vindex]=1;
@@ -573,8 +573,8 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
                   if(vo->v.w>0) continue;
 
                   origpt = vo->v;
-                  vo->v = niikpt_move_normal(vo->v,vo->normal,step_size[iter]);
-                  cth = niikpt_distance(vi->v,vo->v);
+                  vo->v = niikpt_move_normal(vo->v, vo->normal, step_size[iter]);
+                  cth = niikpt_distance(vi->v, vo->v);
 
                   /* check for the max cortical thickness */
                   if(cth>mcth_list[vindex]) {
@@ -606,17 +606,19 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
                     }
                   }
 
-                  /* check for intersection 0.5mm */
-                  vo->v = niikpt_move_normal(origpt,vo->normal,0.5);
+                  /* check for intersection 0.5mm, why? */
+                  /*
+                  vo->v = niikpt_move_normal(origpt, vo->normal, 0.5);
                   off_update_kvert_pminmax(vo);
                   if(off_check_self_intersection_kvert(bb,vo)) {
                     vo->v=origpt;
                     off_update_kvert_pminmax(vo);
+                    printf("+");
                     continue;
-                  }
+                  }*/
 
                   /* check for intersection defined step */
-                  vo->v = niikpt_move_normal(origpt,vo->normal,step_size[iter]);
+                  vo->v = niikpt_move_normal(origpt, vo->normal, step_size[iter]);
                   off_update_kvert_pminmax(vo);
                   if(off_check_self_intersection_kvert(bb,vo)) {
                     vo->v=origpt;
