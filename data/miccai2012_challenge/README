@@ -1,2 +1,12 @@
 Data is based on segmentations provided in MICCAI 2012 Grand Challenge and Workshop on Multi-Atlas Labeling.
 
+Tissue priors:
+tissue_prior8_0.mnc # BG
+tissue_prior8_1.mnc # 1. Ventricle CSF (lateral ventricles + 2nd + 3rd ventricles)
+tissue_prior8_2.mnc # 2. Cortical GM
+tissue_prior8_3.mnc # 3. WM
+tissue_prior8_4.mnc # 4. Subcortical GM
+tissue_prior8_5.mnc # 5. Brainstem
+tissue_prior8_6.mnc # 6. Cerebelum WM
+tissue_prior8_7.mnc # 7. Cerebelum GM
+tissue_prior8_8.mnc # 8. Additional CSF: extracerebral + 4th ventricle
