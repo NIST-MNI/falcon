@@ -76,7 +76,13 @@ Optional arguments:
      -u:  use random seeding                    Use random number generated from system clock in Atropos (default = 1)
      -w:  Atropos prior segmentation weight     Atropos spatial prior probability weight for the segmentation (default = 0)
 
-     -z:  Test / debug mode                     If > 0, attempts to continue after errors.
+     -z:  Test / debug mode                     If > 0, attempts to c1ontinue after errors.
+
+
+     ============
+     -e:                                       N4 B-spline parameter (size of b-spline kernel), default ${N4_BSPLINE_PARAMS}
+     -f:                                       N4 shrink factor, default ${N4_SHRINK_FACTOR}
+     -i:                                       N4 Convergence, default ${N4_CONVERGENCE}
 
 USAGE
     exit 1
@@ -171,7 +177,7 @@ ANATOMICAL_IMAGES=()
 ATROPOS_SEGMENTATION_PRIORS=""
 
 # VF: using real tempdir to store some files
-TEMPDIR=$(mktemp -d -t antsBrainExtraction.XXXXXX)
+TEMPDIR=$(mktemp -d -t antsAtroposN4.XXXXXX)
 trap "rm -rf $TEMPDIR" 0 1 2 15
 
 ################################################################################
@@ -202,7 +208,7 @@ if [[ $# -lt 3 ]] ; then
   Usage >&2
   exit 1
 else
-  while getopts "a:b:c:d:g:h:k:l:m:n:o:p:r:s:t:u:w:x:y:z:" OPT
+  while getopts "a:b:c:d:e:f:g:h:i:k:l:m:n:o:q:p:r:s:t:u:w:x:y:z:q:" OPT
     do
       case $OPT in
           c) #number of segmentation classes
@@ -226,6 +232,16 @@ else
           b) #atropos prior weight
        ATROPOS_SEGMENTATION_POSTERIOR_FORMULATION=$OPTARG
        ;;
+          e) #n4 b-spline
+       N4_BSPLINE_PARAMS="$OPTARG"
+       ;;
+          f) #n4 shrink factor
+       N4_SHRINK_FACTOR="$OPTARG"
+       ;;
+          i) #n4 convergence
+       N4_CONVERGENCE=$OPTARG
+       ;;
+
           g) # denoise anatomical images
        DENOISE_ANATOMICAL_IMAGES=$OPTARG
        ;;
@@ -247,14 +263,14 @@ else
           p) # segmentation label prior image
        ATROPOS_SEGMENTATION_PRIORS=$OPTARG
        ;;
+          q) #model
+       ATROPOS_SEGMENTATION_LIKELIHOOD=$OPTARG # 'HistogramParzenWindows[1.0,32]'
+       ;;
           r) #mrf
        ATROPOS_SEGMENTATION_MRF=$OPTARG
        ;;
           s) #output suffix
        OUTPUT_SUFFIX=$OPTARG
-       ;;
-          t) #n4 convergence
-       N4_CONVERGENCE=$OPTARG
        ;;
           u) #use random seeding
        USE_RANDOM_SEEDING=$OPTARG
