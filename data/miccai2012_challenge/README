@@ -1,2 +1,25 @@
 Data is based on segmentations provided in MICCAI 2012 Grand Challenge and Workshop on Multi-Atlas Labeling.
 
+# structures priors
+prior_brainstem.mnc  - Brainstem
+prior_cerebellum.mnc - cerebellum
+prior_deep_gm.mnc    - deep gray matter 
+prior_hc.mnc         - hippocampus
+prior_ventricles.mnc - ventricles
+
+# tissue priors
+tissue_prior_1.mnc   - CSF
+tissue_prior_2.mnc   - GM
+tissue_prior_3.mnc   - WM
+
+# alternative tissue priors
+tissue_prior8_0.mnc  - BG
+tissue_prior8_1.mnc  - Ventricle CSF
+tissue_prior8_2.mnc  - Cortical GM
+tissue_prior8_3.mnc  - WM
+tissue_prior8_4.mnc  - Subcortical GM
+tissue_prior8_5.mnc  - Brainstem
+tissue_prior8_6.mnc  - Cerebelum MW
+tissue_prior8_7.mnc  - Cerebelum GM
+tissue_prior8_8.mnc  - Additional CSF: extracerebral + 4th ventricle
+
