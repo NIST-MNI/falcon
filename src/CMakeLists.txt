@@ -12,6 +12,12 @@ IF(HAVE_LIBTIFF)
     LINK_LIBRARIES(${TIFF_LIBRARY})
 ENDIF(HAVE_LIBTIFF)
 
+IF(HAVE_ZLIB)
+    INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
+    LINK_LIBRARIES(${ZLIB_LIBRARIES})
+ENDIF(HAVE_ZLIB)
+
+
 # default verbosity level, change for debugging?
 SET(FALCON_VERBOSE 0)
 
@@ -36,8 +42,8 @@ SET(CSV_LIB_SRC
     libcsv/csv.h  libcsv/libcsv.c
 )
 
-
-#ADD_LIBRARY(rply_lib  ${RPLY_LIB_SRC})
+# NrrdIO
+ADD_SUBDIRECTORY(NrrdIO)
 
 
 SET(FALCON_LIB_HDR
