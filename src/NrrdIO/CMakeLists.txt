@@ -7,6 +7,7 @@ INCLUDE_REGULAR_EXPRESSION("^.*.h$")
 # "Nearly Raw Raster Data" within the open-source Teem software
 # package. See http://teem.sourceforge.net for more information.
 #
+OPTION(BUILD_NRRD_EXAMPLE  "Build Nrrd example" OFF)
 
 SET(nrrdio_SRCS 754.c mop.c array.c parseAir.c dio.c sane.c endianAir.c
 string.c enum.c miscAir.c biffbiff.c biffmsg.c accessors.c defaultsNrrd.c
@@ -25,10 +26,10 @@ if(NOT BUILD_SHARED_LIBS)
 endif()
 
 # Configure (and learn how to find) NrrdIO.h
-CONFIGURE_FILE(${ITK3P_NrrdIO_SOURCE_DIR}/NrrdIO.h.in
-  ${ITK3P_NrrdIO_BINARY_DIR}/NrrdIO.h)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/NrrdIO.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/NrrdIO.h)
 INCLUDE_DIRECTORIES(
-  ${ITK3P_NrrdIO_BINARY_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 #-----------------------------------------------------------------------------
@@ -90,3 +91,9 @@ ENDIF(HAVE_ZLIB)
 IF(CMAKE_COMPILER_IS_GNUCXX)
   SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
 ENDIF(CMAKE_COMPILER_IS_GNUCXX)
+
+
+IF(BUILD_NRRD_EXAMPLE)
+  ADD_EXECUTABLE(NrrdIO_sampleIO sampleIO.c)
+  TARGET_LINK_LIBRARIES(NrrdIO_sampleIO NrrdIO)
+ENDIF(BUILD_NRRD_EXAMPLE)
