@@ -29,6 +29,8 @@ INCLUDE_DIRECTORIES(
    #surface_tools
    rply-1.1.4
    libcsv
+   NrrdIO
+   ${CMAKE_CURRENT_BINARY_DIR}/NrrdIO
 )
 
 SET(RPLY_LIB_SRC
@@ -196,6 +198,7 @@ ADD_EXECUTABLE(falcon_surface_smooth          niikcortex_surface_smooth.c)
 ADD_EXECUTABLE(falcon_transform_surface       niikcortex_transform_surface.c)
 
 ADD_EXECUTABLE(falcon_transform_surface_ants  niikcortex_transform_surface_ants.c)
+TARGET_LINK_LIBRARIES(falcon_transform_surface_ants NrrdIO)
 
 ADD_EXECUTABLE(falcon_avg                     niik_avg.c)
 

@@ -12,42 +12,41 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include "NrrdIO.h"
 
 void show_usage (const char *name) {
-  fprintf(stdout,"Usage: %s <input.off/ply> <xfm> <output.off/ply> \n"
+  fprintf(stdout,
+          "Transform surface using antsApplyTransformsToPoints\n"
+          " will use system call to antsApplyTransformsToPoints\n"
+          " transformations are specified as accepted by antsApplyTransformsToPoints\n"
+          "\n"
+          "Usage: %s <input.off/ply> [transform spec 1] [transform spec2] <output.off/ply> \n"
           "\t--clobber clobber output files\n"
-          "\t--invert_transform \n",
+          "\n"
+          "transform spec - are in the format as understood by antsApplyTransformsToPoints,\n"
+          "   either simple transformFileName or  \"[transformFileName,useInverse]\" \n"
+          ,
           name);
 }
 
-/*TODO: reorient faces if the transform is left-handed?*/
-int apply_transform_kobj(kobj *obj,
-                         VIO_General_transform* transform ) {
-  kvert *v;
-  for(v=obj->vert; v!=NULL; v=v->next) {
-    VIO_Real x,y,z;
-    general_transform_point( transform,
-                             (VIO_Real) v->v.x,
-                             (VIO_Real) v->v.y,
-                             (VIO_Real) v->v.z,
-                             &x, &y, &z );
-    v->v.x=x;
-    v->v.y=y;
-    v->v.z=z;
-  }
-  return 1;
-}
 
 int main(int argc, char **argv) {
-  const char *fcname="falcon_transform_surface";
+  const char *fcname="falcon_transform_surface_ants";
   int clobber=0;
   int verbose=0;
-  int invert_transform=0;
-  int c;
-  float fwhm=1;
+  int c,i;
+  int n_transforms=0;
+  double *raw_coordinates=NULL;
+
+  char tmp_nrrd_in[1024];
+  int nrrd_in=-1;
+  char tmp_nrrd_out[1024];
+  int nrrd_out=-1;
+  const char *tmpdir=getenv("TMPDIR");
+  
   const char *in_off=NULL;
   const char *out_off=NULL;
-  const char *in_xfm=NULL;
+  const char **in_transformations=NULL;
 
   VIO_General_transform   transform;
   kobj *obj=NULL;
@@ -55,7 +54,6 @@ int main(int argc, char **argv) {
   struct option long_options[] = {
     {"clobber",          no_argument, &clobber, 1},
     {"verbose",          no_argument, &verbose, 1},
-    {"invert_transform", no_argument, &invert_transform, 1},
     {0, 0, 0, 0}
   };
   char* timestamp = niik_create_minc_timestamp(argc,argv);
@@ -80,15 +78,21 @@ int main(int argc, char **argv) {
     }
   }
 
-  if((argc - optind)<3) {
+  if((argc - optind)<2) {
     show_usage(argv[0]);
     return 1;
   }
+  n_transforms=argc-optind-2;
 
   in_off =argv[optind];
-  in_xfm =argv[optind+1];
-  out_off=argv[optind+2];
 
+  in_transformations=(const char**)calloc(n_transforms,sizeof(const char*));
+
+  for(i=0;i<n_transforms;++i)
+  {
+    in_transformations[i]=argv[optind+1+i];
+  }
+  out_off=argv[argc-1];
 
   if (!clobber && !access (out_off, F_OK)) {
     fprintf(stderr,"%s Exists!\n", out_off);
@@ -97,18 +101,91 @@ int main(int argc, char **argv) {
   niik_fc_display(fcname,1);
 
   NIIK_EXIT( ((obj=off_kobj_read_offply(in_off))==NULL),              fcname,"niik_kobj_read_off",1);
-  NIIK_EXIT( (input_transform_file( in_xfm, &transform ) != VIO_OK),fcname,"input_transform_file",1 );
 
-  if( invert_transform )
-    invert_general_transform( &transform );
+  /*
+  Convert phisical points to separate array, store in a temporary .mhd or csv file, apply antsApplyTransformsToPoints , then read back
+  */
+  if(tmpdir==NULL) tmpdir="/tmp";
+  sprintf(tmp_nrrd_in,"%s/inXXXXXX.nrrd",tmpdir);
+  sprintf(tmp_nrrd_out,"%s/outXXXXXX.nrrd",tmpdir);
+  
+  if( (nrrd_in=mkstemps(tmp_nrrd_in,5))!=-1 && 
+      (nrrd_out=mkstemps(tmp_nrrd_out,5))!=-1 )
+  {
+    int r;
+    char cmdline[3000];
+    Nrrd *nval = nrrdNew();
+    double *raw_coordinates;
+    
+    close(nrrd_in);
+    close(nrrd_out);
 
-  NIIK_EXIT( !apply_transform_kobj( obj, &transform ),fcname,"apply_transform_kobj",1 );
-  NIIK_EXIT((!off_kobj_write_offply(out_off,obj,0)),fcname,"off_kobj_write_off",1);
+    nrrdAlloc_va(nval, nrrdTypeDouble, 2, 3, obj->nvert );
+    raw_coordinates = (double*)nval->data;
+
+    kvert *v;
+    for(v=obj->vert,i=0; v!=NULL; v=v->next,++i) {
+      raw_coordinates[i*3   ] = v->v.x;
+      raw_coordinates[i*3+ 1] = v->v.y;
+      raw_coordinates[i*3+ 2] = v->v.z;
+    }
+    nrrdSave(tmp_nrrd_in, nval, NULL);
+    nrrdNuke(nval);
+
+    /*generate command line for antsApplyTransformsToPoints*/
+    sprintf(cmdline,"antsApplyTransformsToPoints -d 3 -p 1 -i %s -o %s -f ",tmp_nrrd_in, tmp_nrrd_out);
+
+    for(i=0;i<n_transforms;i++)
+    {
+      char tmp[1024];
+      sprintf(tmp," -t %s ",in_transformations[i] );
+      strncat(cmdline,tmp,sizeof(cmdline)-1);
+    }
+    if(verbose)
+      printf("Running:\n%s\n",cmdline);
+
+    if((r=system(cmdline))!=0)
+      fprintf(stderr,"%s\nReturn code:%d\n",argv[0], r);
+    nval = nrrdNew();
+
+    if (nrrdLoad(nval, tmp_nrrd_out, NULL)) {
+        char *err = biffGetDone(NRRD);
+        fprintf(stderr, "%s: trouble reading \"%s\":\n%s", argv[0], tmp_nrrd_out, err);
+        free(err);
+      } else {
+         if(verbose) 
+         {
+            printf("%s: \"%s\" is a %d-dimensional nrrd of type %d (%s)\n", 
+              argv[0], tmp_nrrd_out, nval->dim, nval->type,
+              airEnumStr(nrrdType, nval->type));
+            printf("%s: the array contains %d elements, each %d bytes in size\n",
+              argv[0], (int)nrrdElementNumber(nval), (int)nrrdElementSize(nval));
+         }
+         raw_coordinates = (double*)nval->data;
+
+        for(v=obj->vert,i=0; v!=NULL; v=v->next,++i) {
+          v->v.x = raw_coordinates[i*3   ];
+          v->v.y = raw_coordinates[i*3+ 1];
+          v->v.z = raw_coordinates[i*3+ 2];
+        }
+        nrrdNuke(nval);
+
+        NIIK_EXIT((!off_kobj_write_offply(out_off,obj,0)),fcname,"off_kobj_write_off",1);
+
+        /*remove temp files*/
+        unlink(tmp_nrrd_in);
+        unlink(tmp_nrrd_out);
+      }
+  } else {
+    fprintf(stderr,"Failed to create temp files!\n");
+    perror("mkstemp");
+  }
 
   obj=off_kobj_free(obj);
-  delete_general_transform( &transform);
 
   niik_fc_display(fcname,0);
+  free(raw_coordinates);
+  free(in_transformations);
   free(timestamp);
   return 0;
 }
