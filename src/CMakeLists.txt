@@ -8,15 +8,14 @@ ENDIF(HAVE_BICPL)
 LINK_LIBRARIES(${LIBMINC_LIBRARIES})
 
 IF(HAVE_LIBTIFF)
-    INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIRS})
-    LINK_LIBRARIES(${TIFF_LIBRARY})
+  INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIRS})
+  LINK_LIBRARIES(${TIFF_LIBRARY})
 ENDIF(HAVE_LIBTIFF)
 
 IF(HAVE_ZLIB)
-    INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
-    LINK_LIBRARIES(${ZLIB_LIBRARIES})
+  INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
+  LINK_LIBRARIES(${ZLIB_LIBRARIES})
 ENDIF(HAVE_ZLIB)
-
 
 # default verbosity level, change for debugging?
 SET(FALCON_VERBOSE 0)
@@ -195,6 +194,8 @@ ADD_EXECUTABLE(falcon_surface_split           niikcortex_surface_split.c)
 ADD_EXECUTABLE(falcon_surface_smooth          niikcortex_surface_smooth.c)
 
 ADD_EXECUTABLE(falcon_transform_surface       niikcortex_transform_surface.c)
+
+ADD_EXECUTABLE(falcon_transform_surface_ants  niikcortex_transform_surface_ants.c)
 
 ADD_EXECUTABLE(falcon_avg                     niik_avg.c)
 
