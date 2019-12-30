@@ -479,6 +479,15 @@ if [[ ! -e ${fn}_GWI_mask_init_ocs.ply ]];then
         --border $csfmask
 fi
 
+# combine cerebellum and brainstem in one mask
+if [[ ! -e ${fn}_cerebellum_and_brainstem.mnc ]]; then
+      minccalc -labels -byte -express 'A[0]>0.5||A[1]>0.5?1:0' \
+        ${cerebellummask} \
+        ${fn}_brainstem_mask.mnc \
+        ${fn}_cerebellum_and_brainstem.mnc
+fi
+
+
 ###############################################################
 # refine both surfaces
 ###############################################################
@@ -500,8 +509,7 @@ if [[ ! -e ${OUTPUT}_ics-${ver}.ply ]];then
   ${FALCON_BIN}/falcon_cortex_refine \
           ${scan} ${fn}_cerebral_brain_mask.mnc \
           ${ventmask} ${wmmask}  \
-          ${fn}_cerebellum_mask.mnc \
-          ${fn}_brainstem_mask.mnc \
+          ${fn}_cerebellum_and_brainstem.mnc \
           ${fn}_GWI_mask_init_ics.ply ${fn}_GWI_mask_init_ocs.ply \
           ${OUTPUT}_ics-${ver}.ply    ${OUTPUT}_ocs-${ver}.ply \
           -nonctx-mask ${fn}_nonctx_mask.mnc  \
@@ -540,8 +548,7 @@ if [[ ! -e ${OUTPUT}_ics-${ver}.ply ]];then
           ${fn}_cerebral_brain_mask.mnc \
           ${ventmask} \
           ${wmmask}  \
-          ${fn}_cerebellum_mask.mnc \
-          ${fn}_brainstem_mask.mnc \
+          ${fn}_cerebellum_and_brainstem.mnc \
           ${fn}_GWI_mask_init_ics.ply ${fn}_GWI_mask_init_ocs.ply \
           ${OUTPUT}_ics-${ver}.ply    ${OUTPUT}_ocs-${ver}.ply \
           -nonctx-mask ${fn}_nonctx_mask.mnc  \

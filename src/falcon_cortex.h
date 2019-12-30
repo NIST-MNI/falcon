@@ -20,7 +20,7 @@ enum {
   WEIGHT_VENTRICLE=5,           /* ventricle mask weights */
   WEIGHT_LESION=6,              /* lesion mask weights */
   WEIGHT_PROXIMITY=7,           /* proximity weights */
-  WEIGHT_CEREBELLUM=8,          /* cerebellum mask */
+  WEIGHT_AVOID=8,               /* weight for avoid mask */
   WEIGHT_ABS_THICKINESS=9,      /* absolute thickness */
   WEIGHT_GRADIENT=10,           /* gradient term */
   WEIGHT_CURVATURE=11,          /* surface curvature term*/
@@ -52,8 +52,7 @@ typedef unsigned char indicator_t;
 typedef struct {
   nifti_image *t1img;
   nifti_image *nonctx_mask;
-  nifti_image *brainstem_mask;
-  nifti_image *cerebellum_mask;
+  nifti_image *avoid_mask;
   nifti_image *gwi_mask;
   nifti_image *csf_mask;
   nifti_image *brain_mask;
@@ -130,7 +129,7 @@ typedef struct {
   nifti_image *brain_mask;
   nifti_image *gwi_mask;
   nifti_image *ventricle_mask;
-  nifti_image *cerebellum_mask;
+  nifti_image *avoid_mask;
   nifti_image *lesion_mask;
   nifti_image **prior;
   kvert ***vmat;
@@ -239,8 +238,7 @@ nifti_image *niikcortex_gwi_mask(nifti_image *img,
                                  nifti_image *ven_mask, double ven_dilate,
                                  nifti_image *wm_mask,
                                  double dgm_dilate,
-                                 nifti_image *cerebellum_mask,
-                                 nifti_image *brainstem_mask,
+                                 nifti_image *avoid_mask,
                                  nifti_image *lesion_mask,
                                  nifti_image *warpimg,double vessel_radius,
                                  double median_radius);
@@ -248,8 +246,7 @@ nifti_image *niikcortex_gwi_mask(nifti_image *img,
 nifti_image *niikcortex_modify_image(nifti_image *img,
                                      nifti_image *brain_mask,
                                      nifti_image *ven_mask, double ven_dilate, double ven_blur,
-                                     nifti_image *cerebellum_mask,
-                                     nifti_image *brainstem_mask,
+                                     nifti_image *avoid_mask,
                                      nifti_image *dgm_mask, double dgm_dilate, double dgm_blur,
                                      nifti_image *lesion_mask,
                                      double fillval);

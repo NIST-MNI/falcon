@@ -540,7 +540,7 @@ niikpt niikcortex_deform_calc_deformation_vertex(refine_info *dfm, kvert *vi, kv
       pgrad,
       pmask,
       pvent,
-      pcrm,
+      pavoid,
       plesm,
       pprox,
       pcurv,
@@ -560,7 +560,7 @@ niikpt niikcortex_deform_calc_deformation_vertex(refine_info *dfm, kvert *vi, kv
 
   //vidx = dfm->vi->index-1;
   bval = vval = lval = vcrm = 0;
-  pprior= psmooth= psum = pavg = ptsurf = pssurf = pimag = pmask = pvent = plesm = pprox = pgrad = pcrm = pcurv = pdgrad = pthick = niikpt_zero();
+  pprior= psmooth= psum = pavg = ptsurf = pssurf = pimag = pmask = pvent = plesm = pprox = pgrad = pavoid = pcurv = pdgrad = pthick = niikpt_zero();
   
   /* if(thklist[vidx]<0.01) {
      if(g_niikcortex_deform_calc_deformation_vertex_index==vidx) {
@@ -580,11 +580,11 @@ niikpt niikcortex_deform_calc_deformation_vertex(refine_info *dfm, kvert *vi, kv
     pvent = niikpt_kmul(v[cortex_id]->normal, vval);
   }
 
-  /* cerebellum term, avoid cerebellum */
-  if(dfm->deform_weights->m[cortex_id][WEIGHT_CEREBELLUM]>0.0) {
-    if(dfm->cerebellum_mask!=NULL) {
-      vcrm = niik_image_interpolate_3d_linear(dfm->cerebellum_mask,v[cortex_id]->v);
-      pcrm = niikpt_kmul(v[cortex_id]->normal, -vcrm);
+  /* avoid term, avoid mask */
+  if(dfm->deform_weights->m[cortex_id][WEIGHT_AVOID]>0.0) {
+    if(dfm->avoid_mask!=NULL) {
+      vcrm = niik_image_interpolate_3d_linear(dfm->avoid_mask,v[cortex_id]->v);
+      pavoid = niikpt_kmul(v[cortex_id]->normal, -vcrm);
     }
   }
 
@@ -672,7 +672,7 @@ niikpt niikcortex_deform_calc_deformation_vertex(refine_info *dfm, kvert *vi, kv
 cortex_id,
 v[cortex_id]->v.x,v[cortex_id]->v.y,v[cortex_id]->v.z,v[cortex_id]->normal.x,v[cortex_id]->normal.y,v[cortex_id]->normal.z,\
 ptsurf.x,ptsurf.y,ptsurf.z,pimag.x,pimag.y,pimag.z,pgrad.x,pgrad.y,pgrad.z,pmask.x,pmask.y,pmask.z,
-pvent.x,pvent.y,pvent.z,plesm.x,plesm.y,plesm.z,pprox.x,pprox.y,pprox.z,pcrm.x,pcrm.y,pcrm.z,
+pvent.x,pvent.y,pvent.z,plesm.x,plesm.y,plesm.z,pprox.x,pprox.y,pprox.z,pavoid.x,pavoid.y,pavoid.z,
 pcurv.x,pcurv.y,pcurv.z,pdgrad.x,pdgrad.y,pdgrad.z,pthick.x,pthick.y,pthick.z);
   }/*TODO: add pssurf*/
 
@@ -686,7 +686,7 @@ pcurv.x,pcurv.y,pcurv.z,pdgrad.x,pdgrad.y,pdgrad.z,pthick.x,pthick.y,pthick.z);
     pvent.x  * dfm->deform_weights->m[cortex_id][WEIGHT_VENTRICLE] +
     plesm.x  * dfm->deform_weights->m[cortex_id][WEIGHT_LESION] +
     pprox.x  * dfm->deform_weights->m[cortex_id][WEIGHT_PROXIMITY] +
-    pcrm.x   * dfm->deform_weights->m[cortex_id][WEIGHT_CEREBELLUM] +
+    pavoid.x   * dfm->deform_weights->m[cortex_id][WEIGHT_AVOID] +
     pcurv.x  * dfm->deform_weights->m[cortex_id][WEIGHT_CURVATURE] +
     pdgrad.x * dfm->deform_weights->m[cortex_id][WEIGHT_DGRADIENT] +
     pthick.x * dfm->deform_weights->m[cortex_id][WEIGHT_ABS_THICKINESS]+
@@ -702,7 +702,7 @@ pcurv.x,pcurv.y,pcurv.z,pdgrad.x,pdgrad.y,pdgrad.z,pthick.x,pthick.y,pthick.z);
     pvent.y  * dfm->deform_weights->m[cortex_id][WEIGHT_VENTRICLE] +
     plesm.y  * dfm->deform_weights->m[cortex_id][WEIGHT_LESION] +
     pprox.y  * dfm->deform_weights->m[cortex_id][WEIGHT_PROXIMITY] +
-    pcrm.y   * dfm->deform_weights->m[cortex_id][WEIGHT_CEREBELLUM]+
+    pavoid.y   * dfm->deform_weights->m[cortex_id][WEIGHT_AVOID]+
     pcurv.y  * dfm->deform_weights->m[cortex_id][WEIGHT_CURVATURE] +
     pdgrad.y * dfm->deform_weights->m[cortex_id][WEIGHT_DGRADIENT] +
     pthick.y * dfm->deform_weights->m[cortex_id][WEIGHT_ABS_THICKINESS]+
@@ -719,7 +719,7 @@ pcurv.x,pcurv.y,pcurv.z,pdgrad.x,pdgrad.y,pdgrad.z,pthick.x,pthick.y,pthick.z);
     pvent.z  * dfm->deform_weights->m[cortex_id][WEIGHT_VENTRICLE] +
     plesm.z  * dfm->deform_weights->m[cortex_id][WEIGHT_LESION] +
     pprox.z  * dfm->deform_weights->m[cortex_id][WEIGHT_PROXIMITY] +
-    pcrm.z   * dfm->deform_weights->m[cortex_id][WEIGHT_CEREBELLUM]+
+    pavoid.z   * dfm->deform_weights->m[cortex_id][WEIGHT_AVOID]+
     pcurv.z  * dfm->deform_weights->m[cortex_id][WEIGHT_CURVATURE]+
     pdgrad.z * dfm->deform_weights->m[cortex_id][WEIGHT_DGRADIENT]+
     pthick.z * dfm->deform_weights->m[cortex_id][WEIGHT_ABS_THICKINESS]+
@@ -756,7 +756,7 @@ int niikcortex_deform_calc_deformation( niikcortex_deform * dfm  )
   dfm_refine.img = dfm->t1img;
   dfm_refine.bb  = dfm->bb;
   dfm_refine.brain_mask = dfm->brain_mask;
-  dfm_refine.cerebellum_mask = dfm->cerebellum_mask;
+  dfm_refine.avoid_mask = dfm->avoid_mask;
   dfm_refine.ventricle_mask = dfm->csf_mask;
   dfm_refine.crv = dfm->crv;
   dfm_refine.deform_weights = dfm->weight;
@@ -1567,7 +1567,7 @@ int niikcortex_deform_cortex(niikcortex_deform * dfm)
     fprintf(stdout,"  thickness sm weights %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_THICKNESS_SMOOTHNESS],dfm->weight->m[CORTEX_OCS][WEIGHT_THICKNESS_SMOOTHNESS]);
     fprintf(stdout,"  brainmask weights    %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_BRAIN_MASK],dfm->weight->m[CORTEX_OCS][WEIGHT_BRAIN_MASK]);
     fprintf(stdout,"  ventricle weights    %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_VENTRICLE],dfm->weight->m[CORTEX_OCS][WEIGHT_VENTRICLE]);
-    fprintf(stdout,"  cerebellum weights   %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_CEREBELLUM],dfm->weight->m[CORTEX_OCS][WEIGHT_CEREBELLUM]);
+    fprintf(stdout,"  avoid weights        %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_AVOID],dfm->weight->m[CORTEX_OCS][WEIGHT_AVOID]);
     fprintf(stdout,"  lesion mask weights  %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_LESION],dfm->weight->m[CORTEX_OCS][WEIGHT_LESION]);
     fprintf(stdout,"  proximity weights    %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_PROXIMITY],dfm->weight->m[CORTEX_OCS][WEIGHT_PROXIMITY]);
     fprintf(stdout,"  abs thickness        %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_ABS_THICKINESS],dfm->weight->m[CORTEX_OCS][WEIGHT_ABS_THICKINESS]);
@@ -1633,7 +1633,7 @@ x,y,z,nx,ny,nz,\
 psurf.x,psurf.y,psurf.z,pimag.x,pimag.y,pimag.z,\
 pgrad.x,pgrad.y,pgrad.z,pmask.x,pmask.y,pmask.z,\
 pvent.x,pvent.y,pvent.z,plesm.x,plesm.y,plesm.z,\
-pprox.x,pprox.y,pprox.z,pcrm.x,pcrm.y,pcrm.z,\
+pprox.x,pprox.y,pprox.z,pavoid.x,pavoid.y,pavoid.z,\
 pcurv.x,pcurv.y,pcurv.z,pdgrad.x,pdgrad.y,pdgrad.z,\
 pthick.x,pthick.y,pthick.z\n");
   }
@@ -2238,13 +2238,12 @@ niikcortex_deform *niikcortex_deform_init() {
 
   dfm->t1img =
     dfm->nonctx_mask =
-      dfm->brainstem_mask =
-        dfm->cerebellum_mask =
-          dfm->gwi_mask =
-            dfm->csf_mask =
-              dfm->brain_mask =
-                dfm->lesion_mask =
-                  NULL;
+      dfm->avoid_mask =
+        dfm->gwi_mask =
+          dfm->csf_mask =
+            dfm->brain_mask =
+              dfm->lesion_mask =
+                NULL;
 
   NIIK_RET0(((dfm->ctx = (kobj **)calloc(2,sizeof(kobj *)))==NULL),fcname,"could not allocate memory for ctx");
   dfm->ctx[0]=dfm->ctx[1]=NULL;/*not needed because calloc*/
@@ -2267,8 +2266,8 @@ niikcortex_deform *niikcortex_deform_init() {
   dfm->weight->m[CORTEX_OCS][ WEIGHT_LESION ]     = 1.5;  /* lesion mask weights */
   dfm->weight->m[CORTEX_ICS][ WEIGHT_PROXIMITY ]  = 0.2;
   dfm->weight->m[CORTEX_OCS][ WEIGHT_PROXIMITY ]  = 0.2;  /* proximity weights */
-  dfm->weight->m[CORTEX_ICS][ WEIGHT_CEREBELLUM ] = 1.0;
-  dfm->weight->m[CORTEX_OCS][ WEIGHT_CEREBELLUM ] = 1.0;  /* cerebellum mask */
+  dfm->weight->m[CORTEX_ICS][ WEIGHT_AVOID ] = 1.0;
+  dfm->weight->m[CORTEX_OCS][ WEIGHT_AVOID ] = 1.0;  /* avoid mask */
   dfm->weight->m[CORTEX_ICS][ WEIGHT_ABS_THICKINESS ] = 0.0;
   dfm->weight->m[CORTEX_OCS][ WEIGHT_ABS_THICKINESS ] = 0.0;  /* absolute thickness */
   dfm->weight->m[CORTEX_ICS][ WEIGHT_GRADIENT ]   = 0.1;
@@ -2335,8 +2334,7 @@ niikcortex_deform *niikcortex_deform_free(niikcortex_deform *dfm) {
 
   dfm->t1img          = niik_image_free(dfm->t1img);
   dfm->nonctx_mask    = niik_image_free(dfm->nonctx_mask);
-  dfm->brainstem_mask = niik_image_free(dfm->brainstem_mask);
-  dfm->cerebellum_mask = niik_image_free(dfm->cerebellum_mask);
+  dfm->avoid_mask     = niik_image_free(dfm->avoid_mask);
   dfm->gwi_mask       = niik_image_free(dfm->gwi_mask);
   dfm->csf_mask       = niik_image_free(dfm->csf_mask);
   dfm->brain_mask     = niik_image_free(dfm->brain_mask);

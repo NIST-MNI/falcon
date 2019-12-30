@@ -153,7 +153,7 @@ int niikcortex_deform_calc_deformation_smoothing( niikcortex_deform * dfm,int it
   dfm_refine.img = dfm->t1img;
   dfm_refine.bb  = dfm->bb;
   dfm_refine.brain_mask = dfm->brain_mask;
-  dfm_refine.cerebellum_mask = dfm->cerebellum_mask;
+  dfm_refine.avoid_mask = dfm->avoid_mask;
   dfm_refine.ventricle_mask = dfm->csf_mask;
   dfm_refine.crv = dfm->crv;
   dfm_refine.deform_weights = dfm->weight;
@@ -338,7 +338,7 @@ int niikcortex_smooth_cortex(niikcortex_deform * dfm)
     fprintf(stdout,"  thickness sm weights %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_THICKNESS_SMOOTHNESS],dfm->weight->m[CORTEX_OCS][WEIGHT_THICKNESS_SMOOTHNESS]);
     fprintf(stdout,"  brainmask weights    %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_BRAIN_MASK],dfm->weight->m[CORTEX_OCS][WEIGHT_BRAIN_MASK]);
     fprintf(stdout,"  ventricle weights    %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_VENTRICLE],dfm->weight->m[CORTEX_OCS][WEIGHT_VENTRICLE]);
-    fprintf(stdout,"  cerebellum weights   %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_CEREBELLUM],dfm->weight->m[CORTEX_OCS][WEIGHT_CEREBELLUM]);
+    fprintf(stdout,"  avoid weights        %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_AVOID],dfm->weight->m[CORTEX_OCS][WEIGHT_AVOID]);
     fprintf(stdout,"  lesion mask weights  %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_LESION],dfm->weight->m[CORTEX_OCS][WEIGHT_LESION]);
     fprintf(stdout,"  proximity weights    %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_PROXIMITY],dfm->weight->m[CORTEX_OCS][WEIGHT_PROXIMITY]);
     fprintf(stdout,"  abs thickness        %-7.4f %-7.4f\n",dfm->weight->m[CORTEX_ICS][WEIGHT_ABS_THICKINESS],dfm->weight->m[CORTEX_OCS][WEIGHT_ABS_THICKINESS]);

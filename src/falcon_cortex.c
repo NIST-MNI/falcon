@@ -497,8 +497,7 @@ nifti_image *niikcortex_gwi_mask(nifti_image *img,
                                  nifti_image *ven_mask, double ven_dilate,
                                  nifti_image *wm_mask,
                                  double dgm_dilate,
-                                 nifti_image *cerebellum_mask,
-                                 nifti_image *brainstem_mask,
+                                 nifti_image *avoid_mask,
                                  nifti_image *lesion_mask,
                                  nifti_image *warpimg,double vessel_radius,
                                  double median_radius)
@@ -541,12 +540,8 @@ nifti_image *niikcortex_gwi_mask(nifti_image *img,
     fprintf(stderr,"ERROR: wm_mask is null\n");
     return NULL;
   }
-  if(cerebellum_mask==NULL) {
-    fprintf(stderr,"ERROR: cerebellum_mask is null\n");
-    return NULL;
-  }
-  if(brainstem_mask==NULL) {
-    fprintf(stderr,"ERROR: brainstem_mask is null\n");
+  if(avoid_mask==NULL) {
+    fprintf(stderr,"ERROR: avoid_mask is null\n");
     return NULL;
   }
   if(warpimg==NULL) {
@@ -567,12 +562,8 @@ nifti_image *niikcortex_gwi_mask(nifti_image *img,
     fprintf(stderr,"ERROR: wm_mask dim\n");
     return NULL;
   }
-  if(niik_image_cmp_dim(img,cerebellum_mask)) {
-    fprintf(stderr,"ERROR: cerebellum_mask dim\n");
-    return NULL;
-  }
-  if(niik_image_cmp_dim(img,brainstem_mask)) {
-    fprintf(stderr,"ERROR: brainstem_mask dim\n");
+  if(niik_image_cmp_dim(img,avoid_mask)) {
+    fprintf(stderr,"ERROR: avoid_mask dim\n");
     return NULL;
   }
   if(lesion_mask!=NULL) {
@@ -720,35 +711,17 @@ nifti_image *niikcortex_gwi_mask(nifti_image *img,
 
   /****************************************
    *
-   * 3. remove cerebellum
+   * 3. remove cerebellum & brainstem AKA avoid mask
    *
    ****************************************/
 
-  if(verbose) fprintf(stdout,"[niikcortex_gwi_mask] 3. remove cerebellum mask\n");
+  if(verbose) fprintf(stdout,"[niikcortex_gwi_mask] 3. remove cerebellum & brainstem mask\n");
   for(i=0; i<img->nvox; i++) {
-    bimg [i] = (bimg[i] && niik_image_get_voxel(cerebellum_mask,i)==0);
+    bimg [i] = (bimg[i] && niik_image_get_voxel(avoid_mask,i)==0);
   }
 
   if(verbose && g_niik_cortex_debug) {
-    sprintf(fname,"tmp_niikcortex_gwi_mask%i_rmcerebellum.nii.gz",oidx++);
-    fprintf(stdout,"[niikcortex_gwi_mask] writing %s\n",fname);
-    niik_image_write(fname,outimg);
-  }
-
-
-  /****************************************
-   *
-   * 4. remove brainstem
-   *
-   ****************************************/
-
-  if(verbose) fprintf(stdout,"[niikcortex_gwi_mask] 4. remove brainstem mask\n");
-  for(i=0; i<img->nvox; i++) {
-    bimg [i] = (bimg[i] && niik_image_get_voxel(brainstem_mask,i)==0);
-  }
-
-  if(verbose && g_niik_cortex_debug) {
-    sprintf(fname,"tmp_niikcortex_gwi_mask%i_rmbrainstem.nii.gz",oidx++);
+    sprintf(fname,"tmp_niikcortex_gwi_mask%i_rmavoid.nii.gz",oidx++);
     fprintf(stdout,"[niikcortex_gwi_mask] writing %s\n",fname);
     niik_image_write(fname,outimg);
   }
@@ -982,14 +955,13 @@ nifti_image *niikcortex_gwi_mask(nifti_image *img,
 nifti_image *niikcortex_modify_image(nifti_image *img,
                                      nifti_image *brain_mask,
                                      nifti_image *ven_mask, double ven_dilate, double ven_blur,
-                                     nifti_image *cerebellum_mask,
-                                     nifti_image *brainstem_mask,
+                                     nifti_image *avoid_mask,
                                      nifti_image *dgm_mask, double dgm_dilate, double dgm_blur,
                                      nifti_image *lesion_mask,
                                      double fillval)
 /*
  * images include:
- *   t1g, brainmask, ventricle mask, cerebellum mask, brainstem mask, deep GM mask
+ *   t1g, brainmask, ventricle mask, avoid mask, deep GM mask
  */
 {
   nifti_image
@@ -1082,8 +1054,7 @@ nifti_image *niikcortex_modify_image(nifti_image *img,
         p.x = i * img->dx;
         fimg[n] = NIIK_FMAX(fimg[n],niik_image_interpolate_3d(ven_mask,p,NIIK_INTERP_LINEAR) * fillval);
         fimg[n] = NIIK_FMAX(fimg[n],niik_image_interpolate_3d(dgm_mask,p,NIIK_INTERP_LINEAR) * fillval);
-        fimg[n] = fimg[n] * (1.0 - niik_image_interpolate_3d(cerebellum_mask,p,NIIK_INTERP_LINEAR));
-        fimg[n] = fimg[n] * (1.0 - niik_image_interpolate_3d( brainstem_mask,p,NIIK_INTERP_LINEAR));
+        fimg[n] = fimg[n] * (1.0 - niik_image_interpolate_3d(avoid_mask,p,NIIK_INTERP_LINEAR));
       }
     }
   }

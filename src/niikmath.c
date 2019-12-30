@@ -4480,7 +4480,7 @@ int main(int argc,char *argv[],char *envp[]) {
     else if(!strncmp(argv[1],"niikcortex-mimg",15)) {
       fprintf(stdout,"[niikmath] niikcortex-mimg\n");
       if(imglist==NULL || outname==NULL) {
-        fprintf(stdout,"  usage: %s %s -in=<img.nii> -imglist=<brain_mask.nii>,<ventricle_mask.nii>,<gwi_mask.nii>,<cerebellum_mask.nii>,<brainstem_mask.nii>,<dgm_mask.nii> -out=<out.nii>\n",argv[0],argv[1]);
+        fprintf(stdout,"  usage: %s %s -in=<img.nii> -imglist=<brain_mask.nii>,<ventricle_mask.nii>,<gwi_mask.nii>,<cerebellum+brainstem.mask.nii>,<dgm_mask.nii> -out=<out.nii>\n",argv[0],argv[1]);
         exit(1);
       }
       if(!niikcortex_estimate_tissue_values(img,imglist[0],imglist[1],imglist[2],
@@ -4498,7 +4498,7 @@ int main(int argc,char *argv[],char *envp[]) {
       if(niik_check_double_problem(radius2)) radius2=1.0;
       outimg = niikcortex_modify_image(img,imglist[0],imglist[1],radius,radius,
                                        imglist[3],imglist[4],
-                                       imglist[5],radius2,radius2,
+                                       radius2,radius2,
                                        maskimg, niikcortex_tissue_val[1]);
       fprintf(stdout,"[niikmath] writing output    %s\n",outname);
       niik_image_append_history(outimg,timestamp);
@@ -4510,7 +4510,7 @@ int main(int argc,char *argv[],char *envp[]) {
     else if(!strncmp(argv[1],"niikcortex-gwi",14)) {
       fprintf(stdout,"[niikmath] niikcortex-gwi\n");
       if(imglist==NULL || outname==NULL) {
-        fprintf(stdout,"  usage: %s %s -in=<img.nii> -imglist=<brain_mask.nii>,<ventricle_mask.nii>,<wm_mask.nii>,<dgm_mask.nii>,<cerebellum_mask.nii>,<brainstem_mask.nii> -warp-loc-map=<warpimg.nii.gz> -out=<out.nii>\n",argv[0],argv[1]);
+        fprintf(stdout,"  usage: %s %s -in=<img.nii> -imglist=<brain_mask.nii>,<ventricle_mask.nii>,<wm_mask.nii>,<dgm_mask.nii>,<avoid_mask.nii> -warp-loc-map=<warpimg.nii.gz> -out=<out.nii>\n",argv[0],argv[1]);
         fprintf(stdout,"\n");
         fprintf(stdout,"  optional usage:\n");
         fprintf(stdout,"  -radius=<R>         : median filter at the end [default=0.8]\n");
@@ -4528,8 +4528,7 @@ int main(int argc,char *argv[],char *envp[]) {
                                        imglist[1], inval,  /* ven mask */
                                        imglist[2],       /* wm mask */
                                        0,                /* dgm dilate */
-                                       imglist[4],       /* cerebellum mask */
-                                       imglist[5],       /* brainstem mask */
+                                       imglist[4],       /* avoid mask */
                                        maskimg,          /* lesion mask */
                                        warpimg,
                                        radius2,          /* blood vessel opening radius */

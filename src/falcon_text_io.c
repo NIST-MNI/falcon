@@ -478,7 +478,7 @@ int *niik_read_int_vector_ex(const char *fname, int *num, int column_id, const c
       _num ++;
     }
     gzrewind(gp);
-    if(!_num || _num==1&&skip_header) /*EMPTY FILE*/
+    if(!_num || ( _num==1 && skip_header)) /*EMPTY FILE*/
     {
         gzclose(gp);
         return NULL;
@@ -514,7 +514,7 @@ int *niik_read_int_vector_ex(const char *fname, int *num, int column_id, const c
       _num ++;
     }
     rewind(fp);
-    if(!_num || _num==1&&skip_header) /*EMPTY FILE*/
+    if(!_num || (_num==1 && skip_header) ) /*EMPTY FILE*/
     {
         fclose(fp);
         return NULL;

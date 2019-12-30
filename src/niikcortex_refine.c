@@ -23,7 +23,7 @@ void prog_history() {
 
 void usage() {
   fprintf(stdout,"niikcortex_refine\n");
-  fprintf(stdout,"  usage: [options] <img> <brain_mask> <csf_mask> <gwi_mask> <cerebellum_mask> <brainstem_mask> <white.off> <pial.off> <out_white.off> <out_pial.off\n\n");
+  fprintf(stdout,"  usage: [options] <img> <brain_mask> <csf_mask> <gwi_mask> <avoid mask> <white.off> <pial.off> <out_white.off> <out_pial.off\n\n");
   fprintf(stdout,"\n");
   fprintf(stdout,"  optional usage:\n");
   fprintf(stdout,"  -u -help --help                   : show this usage\n");
@@ -123,7 +123,7 @@ int niikcortex_deform_process(niikcortex_deform *dfm) {
   fprintf(stdout,"  thickness sm weights %-7.4f %-7.4f\n",dfm->weight->m[0][WEIGHT_THICKNESS_SMOOTHNESS],dfm->weight->m[1][WEIGHT_THICKNESS_SMOOTHNESS]);
   fprintf(stdout,"  brainmask weights    %-7.4f %-7.4f\n",dfm->weight->m[0][WEIGHT_BRAIN_MASK],dfm->weight->m[1][WEIGHT_BRAIN_MASK]);
   fprintf(stdout,"  ventricle weights    %-7.4f %-7.4f\n",dfm->weight->m[0][WEIGHT_VENTRICLE],dfm->weight->m[1][WEIGHT_VENTRICLE]);
-  fprintf(stdout,"  cerebellum weights   %-7.4f %-7.4f\n",dfm->weight->m[0][WEIGHT_CEREBELLUM],dfm->weight->m[1][WEIGHT_CEREBELLUM]);
+  fprintf(stdout,"  cerebellum weights   %-7.4f %-7.4f\n",dfm->weight->m[0][WEIGHT_AVOID],dfm->weight->m[1][WEIGHT_AVOID]);
   fprintf(stdout,"  lesion mask weights  %-7.4f %-7.4f\n",dfm->weight->m[0][WEIGHT_LESION],dfm->weight->m[1][WEIGHT_LESION]);
   fprintf(stdout,"  proximity weights    %-7.4f %-7.4f\n",dfm->weight->m[0][WEIGHT_PROXIMITY],dfm->weight->m[1][WEIGHT_PROXIMITY]);
   fprintf(stdout,"  abs thickness        %-7.4f %-7.4f\n",dfm->weight->m[0][WEIGHT_ABS_THICKINESS],dfm->weight->m[1][WEIGHT_ABS_THICKINESS]);
@@ -188,7 +188,7 @@ int niikcortex_deform_process(niikcortex_deform *dfm) {
 
 int main(int argc,char *argv[],char *envp[]) {
   niikcortex_deform *dfm=NULL;
-  const char *fcname="niikcortex_refine";
+  const char *fcname="falcon_cortex_refine";
   int n=0,i=0,nc=1,sc=1;
   double *ijk;
   /*niikmat *afmat=NULL;*/
@@ -552,12 +552,12 @@ int main(int argc,char *argv[],char *envp[]) {
           fprintf(stderr,"[%s] ERROR: missing argment(s), -wcereb <white> <pial>\n",fcname);
           exit(1);
         }
-        dfm->weight->m[0][WEIGHT_CEREBELLUM] = atof(argv[nc]);
+        dfm->weight->m[0][WEIGHT_AVOID] = atof(argv[nc]);
         if((++nc)>=argc) {
           fprintf(stderr,"[%s] ERROR: missing argment(s), -wcereb <white> <pial>\n",fcname);
           exit(1);
         }
-        dfm->weight->m[1][WEIGHT_CEREBELLUM] = atof(argv[nc]);
+        dfm->weight->m[1][WEIGHT_AVOID] = atof(argv[nc]);
       }
 
       else if(!strncmp(argv[nc],"-tmin",5)) {
@@ -675,12 +675,12 @@ int main(int argc,char *argv[],char *envp[]) {
   } /* reading options (while) */
   argc=sc;
 
-  if(argc<11) {
+  if(argc<10) {
     fprintf(stderr,"[%s] ERROR: too few argments (%i != 11)\n",fcname,argc);
     for(i=0; i<argc; i++) fprintf(stderr," %s",argv[i]);
     fprintf(stderr,"\n");
     exit(1);
-  } else if(argc>11) {
+  } else if(argc>10) {
     fprintf(stderr,"[%s] ERROR: too many argments (%i != 11)\n",fcname,argc);
     for(i=0; i<argc; i++) fprintf(stderr," %s",argv[i]);
     fprintf(stderr,"\n");
@@ -696,24 +696,17 @@ int main(int argc,char *argv[],char *envp[]) {
   NIIK_EXIT(((dfm->csf_mask=niik_image_read(argv[3]))==NULL),fcname,"niik_image_read",9);
   fprintf(stdout,"[%s] reading GWI image        %s\n",fcname,argv[4]);
   NIIK_EXIT(((dfm->gwi_mask=niik_image_read(argv[4]))==NULL),fcname,"niik_image_read",9);
-  fprintf(stdout,"[%s] reading cerebellum image %s\n",fcname,argv[5]);
-  NIIK_EXIT(((dfm->cerebellum_mask=niik_image_read(argv[5]))==NULL),fcname,"niik_image_read",9);
-  fprintf(stdout,"[%s] reading brainstem image  %s\n",fcname,argv[6]);
-  NIIK_EXIT(((dfm->brainstem_mask=niik_image_read(argv[6]))==NULL),fcname,"niik_image_read",9);
+  fprintf(stdout,"[%s] reading avoid image %s\n",fcname,argv[5]);
+  NIIK_EXIT(((dfm->avoid_mask=niik_image_read(argv[5]))==NULL),fcname,"niik_image_read",9);
   fprintf(stdout,"[%s] reading init ics object  %s\n",fcname,argv[7]);
-  NIIK_EXIT(((dfm->ctx[0]=off_kobj_read_offply(argv[7]))==NULL),fcname,"off_kobj_read_off",9);
+  NIIK_EXIT(((dfm->ctx[0]=off_kobj_read_offply(argv[6]))==NULL),fcname,"off_kobj_read_off",9);
   fprintf(stdout,"[%s] reading init ocs object  %s\n",fcname,argv[8]);
-  NIIK_EXIT(((dfm->ctx[1]=off_kobj_read_offply(argv[8]))==NULL),fcname,"off_kobj_read_off",9);
+  NIIK_EXIT(((dfm->ctx[1]=off_kobj_read_offply(argv[7]))==NULL),fcname,"off_kobj_read_off",9);
 
   NIIK_EXIT((!niik_image_type_convert(dfm->brain_mask,  NIFTI_TYPE_UINT8   )),fcname,"niik_image_convert, brain_mask",1);
   NIIK_EXIT((!niik_image_type_convert(dfm->csf_mask,    NIFTI_TYPE_UINT8   )),fcname,"niik_image_convert, csf_mask",1);
   NIIK_EXIT((!niik_image_type_convert(dfm->gwi_mask,    NIFTI_TYPE_UINT8   )),fcname,"niik_image_convert, gwi_mask",1);
-  NIIK_EXIT((!niik_image_type_convert(dfm->cerebellum_mask,NIFTI_TYPE_UINT8)),fcname,"niik_image_convert, cerebellum_mask",1);
-  NIIK_EXIT((!niik_image_type_convert(dfm->brainstem_mask, NIFTI_TYPE_UINT8)),fcname,"niik_image_convert, brainstem_mask",1);
-
-  /*why*/
-  fprintf(stdout,"[%s]   combine cerebellum mask and brainstem mask\n",fcname);
-  NIIK_EXIT((!niik_image_add_masks(dfm->cerebellum_mask, dfm->brainstem_mask)),fcname,"niik_image_add_masks",9);
+  NIIK_EXIT((!niik_image_type_convert(dfm->avoid_mask,  NIFTI_TYPE_UINT8   )),fcname,"niik_image_convert, avoid_mask",1);
 
   /*join priors for GM & WM into another one */
   if(dfm->prior[1] && dfm->prior[0]) {
@@ -787,25 +780,26 @@ int main(int argc,char *argv[],char *envp[]) {
   /* writing output for white surface */
   fprintf(stdout,"[%s] yellow color for white surface\n",fcname);
   NIIK_RET1((!off_kobj_add_one_color(dfm->ctx[0], 0.8, 0.8, 0)),fcname,"off_kobj_add_one_color");
-  fprintf(stdout,"[%s] writing white surface:  %s\n",fcname,argv[9]);
-  /*
-  NIIK_RET1((!off_kobj_write_offply(argv[9],dfm->ctx[0], 0)),fcname,"off_kobj_write_off");*/
+  fprintf(stdout,"[%s] writing white surface:  %s\n",fcname,argv[8]);
+  NIIK_RET1((!off_kobj_write_offply(argv[8],dfm->ctx[0], 0)),fcname,"off_kobj_write_off");
+
   /*FOR DEBUGGING ONLY*/
+  /*
   {
     const char *meas_names[]={"mf"};
     const double *meas_vec[]={dfm->mf_list};
-  //off_kobj_write_ply_ex(fname,obj,output_normal,output_sph, output_edge, 1, n_meas, meas_names, meas_vec);
-  
-    NIIK_RET1((!off_kobj_write_ply_ex(argv[9],dfm->ctx[0], 0, 1, 1, 1, 1, meas_names, meas_vec  )),fcname,"off_kobj_write_off");
-  }
+    NIIK_RET1((!off_kobj_write_ply_ex(argv[8],dfm->ctx[0], 0, 1, 1, 1, 1, meas_names, meas_vec  )),fcname,"off_kobj_write_off");
+  }*/
+
   /* writing output for pial surface */
   fprintf(stdout,"[%s] red color for pial surface\n",fcname);
   NIIK_RET1((!off_kobj_add_one_color(dfm->ctx[1], 1.0, 0.2, 0.2)),fcname,"off_kobj_add_one_color");
-  fprintf(stdout,"[%s] writing pial surface:   %s\n",fcname,argv[10]);
-  NIIK_RET1((!off_kobj_write_offply(argv[10], dfm->ctx[1],0)),fcname,"off_kobj_write_off");
+  fprintf(stdout,"[%s] writing pial surface:   %s\n",fcname,argv[9]);
+  NIIK_RET1((!off_kobj_write_offply(argv[9], dfm->ctx[1],0)),fcname,"off_kobj_write_off");
 
   if(dfm->convergence_log) 
     fclose(dfm->convergence_log);
+  
   dfm=niikcortex_deform_free(dfm);
   free(ijk);
   niik_fc_display(fcname,0);

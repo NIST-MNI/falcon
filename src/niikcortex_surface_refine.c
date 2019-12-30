@@ -417,7 +417,7 @@ niikpt mesh_deform_calc_deformation_vertex(refine_info  *dfm, kvert* v, int vidx
     pmask.x  * dfm->deform_weights->m[0][WEIGHT_BRAIN_MASK] +
     plesm.x  * dfm->deform_weights->m[0][WEIGHT_LESION] +
     pprox.x  * dfm->deform_weights->m[0][WEIGHT_PROXIMITY] +
-    pcrm.x   * dfm->deform_weights->m[0][WEIGHT_CEREBELLUM] +
+    pcrm.x   * dfm->deform_weights->m[0][WEIGHT_AVOID] +
     pcurv.x  * dfm->deform_weights->m[0][WEIGHT_CURVATURE] +
     pdgrad.x * dfm->deform_weights->m[0][WEIGHT_DGRADIENT] +
     pprior.x * dfm->deform_weights->m[0][WEIGHT_PRIOR];
@@ -430,7 +430,7 @@ niikpt mesh_deform_calc_deformation_vertex(refine_info  *dfm, kvert* v, int vidx
     pmask.y  * dfm->deform_weights->m[0][WEIGHT_BRAIN_MASK] +
     plesm.y  * dfm->deform_weights->m[0][WEIGHT_LESION] +
     pprox.y  * dfm->deform_weights->m[0][WEIGHT_PROXIMITY] +
-    pcrm.y   * dfm->deform_weights->m[0][WEIGHT_CEREBELLUM]+
+    pcrm.y   * dfm->deform_weights->m[0][WEIGHT_AVOID]+
     pcurv.y  * dfm->deform_weights->m[0][WEIGHT_CURVATURE] +
     pdgrad.y * dfm->deform_weights->m[0][WEIGHT_DGRADIENT] +
     pprior.y * dfm->deform_weights->m[0][WEIGHT_PRIOR];
@@ -443,7 +443,7 @@ niikpt mesh_deform_calc_deformation_vertex(refine_info  *dfm, kvert* v, int vidx
     pmask.z  * dfm->deform_weights->m[0][WEIGHT_BRAIN_MASK] +
     plesm.z  * dfm->deform_weights->m[0][WEIGHT_LESION] +
     pprox.z  * dfm->deform_weights->m[0][WEIGHT_PROXIMITY] +
-    pcrm.z   * dfm->deform_weights->m[0][WEIGHT_CEREBELLUM]+
+    pcrm.z   * dfm->deform_weights->m[0][WEIGHT_AVOID]+
     pcurv.z  * dfm->deform_weights->m[0][WEIGHT_CURVATURE]+
     pdgrad.z * dfm->deform_weights->m[0][WEIGHT_DGRADIENT] +
     pprior.z * dfm->deform_weights->m[0][WEIGHT_PRIOR];

@@ -645,7 +645,14 @@ if [[ ! -e ${fn}_GWI_mask_init_ocs.ply ]];then
           --vlist 0.5,0.2,0.1 \
           --border $csfmask
   fi
-  
+fi
+
+# combine cerebellum and brainstem in one mask
+if [[ ! -e ${fn}_cerebellum_and_brainstem.mnc ]]; then
+      minccalc -labels -byte -express 'A[0]>0.5||A[1]>0.5?1:0' \
+        ${cerebellummask} \
+        ${fn}_brainstem_mask.mnc \
+        ${fn}_cerebellum_and_brainstem.mnc
 fi
 
 ###############################################################
@@ -681,7 +688,6 @@ if [[ ! -e ${OUTPUT}_ics-${ver}.ply ]];then
     ${FALCON_BIN}/falcon_cortex_refine \
             ${scan} ${fn}_brain_mask2.mnc \
             ${ventmask} ${fn}_WM_AND_CB.mnc  \
-            ${tempdir}/${nm}_zero.mnc \
             ${fn}_brainstem_mask.mnc \
             ${fn}_GWI_mask_init_ics.ply ${fn}_GWI_mask_init_ocs.ply \
             ${OUTPUT}_ics-${ver}.ply    ${OUTPUT}_ocs-${ver}.ply \
@@ -716,11 +722,11 @@ if [[ ! -e ${OUTPUT}_ics-${ver}.ply ]];then
             ${priors} \
             -rungekutta
     else
+
       ${FALCON_BIN}/falcon_cortex_refine \
               ${scan} ${fn}_cerebral_brain_mask.mnc \
               ${ventmask} ${wmmask}  \
-              ${cerebellummask} \
-              ${fn}_brainstem_mask.mnc \
+              ${fn}_cerebellum_and_brainstem.mnc \
               ${fn}_GWI_mask_init_ics.ply ${fn}_GWI_mask_init_ocs.ply \
               ${OUTPUT}_ics-${ver}.ply    ${OUTPUT}_ocs-${ver}.ply \
               -nonctx-mask      ${fn}_nonctx_mask-${ver}.mnc  \
@@ -760,8 +766,7 @@ if [[ ! -e ${OUTPUT}_ics-${ver}.ply ]];then
             ${fn}_cerebral_brain_mask.mnc \
             ${ventmask} \
             ${wmmask}  \
-            ${cerebellummask} \
-            ${fn}_brainstem_mask.mnc \
+            ${fn}_cerebellum_and_brainstem.mnc \
             ${fn}_GWI_mask_init_ics.ply ${fn}_GWI_mask_init_ocs.ply \
             ${OUTPUT}_ics-${ver}.ply    ${OUTPUT}_ocs-${ver}.ply \
             -nonctx-mask ${fn}_nonctx_mask-${ver}.mnc  \
