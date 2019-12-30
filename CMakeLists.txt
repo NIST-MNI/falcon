@@ -20,18 +20,18 @@ if (USE_OPENMP)
 endif()
 
 IF(${CMAKE_VERSION} VERSION_GREATER "3.9.4") 
-OPTION(USE_LTO "Use link time optimization" OFF)
+  OPTION(USE_LTO "Use link time optimization" OFF)
 
-IF(USE_LTO)
-cmake_policy(SET CMP0069 NEW)
-# enable interprocedural and link-time optimization
-include(CheckIPOSupported)
-check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT error)
+  IF(USE_LTO)
+    cmake_policy(SET CMP0069 NEW)
+    # enable interprocedural and link-time optimization
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT error)
 
-IF(IPO_SUPPORTED)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-ENDIF(IPO_SUPPORTED)
-ENDIF(USE_LTO)
+    IF(IPO_SUPPORTED)
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    ENDIF(IPO_SUPPORTED)
+  ENDIF(USE_LTO)
 ENDIF()
 
 # configuring for different systems

@@ -1609,7 +1609,7 @@ int niikmesh_deform_process(niikcortex_deform *dfm) {
 
 int main(int argc,char *argv[],char *envp[]) {
   niikcortex_deform *dfm=NULL;
-  const char *fcname="niikcortex_mesh_refine";
+  const char *fcname="falcon_surface_refine";
   char *travel_out=NULL;
   int n=0,i=0,nc=1,sc=1;
   double *ijk;

@@ -70,10 +70,9 @@ int niikcortex_remesh_process(niikcortex_deform *dfm) {
 
 int main(int argc,char *argv[],char *envp[]) {
   niikcortex_deform *dfm=NULL;
-  const char *fcname="niikcortex_remesh";
+  const char *fcname="falcon_cortex_refine";
   int n=0,i=0,nc=1,sc=1;
   double *ijk;
-  /*niikmat *afmat=NULL;*/
   nifti_image *debugimg;
 
   if(argc==1) {
