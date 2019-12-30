@@ -1,5 +1,5 @@
 #! /bin/bash
-# FILENAME:  falcon_run_v2.sh
+# FILENAME:  falcon_run.sh
 # AUTHOR:    Kunio Nakamura, Vladimir S. FONOV
 # DATE:      May 01, 2019
 #
