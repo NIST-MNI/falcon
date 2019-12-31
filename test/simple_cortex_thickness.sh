@@ -126,7 +126,7 @@ run_cmd ${BINDIR}/falcon_math laplacemap \
 echo Shrink-Wrap
 run_cmd ${BINDIR}/falcon_cortex_shrinkwrap ${tempdir}/GW_dilate.mnc \
   ${tempdir}/GW_dilate_obj.ply \
-  --iter 50  --val 10 --elen 1 --clob --smooth 0.01
+  --iter 50  --step 2.0 --elen 1.0 --clob
 
 # initics
 echo Init ICS
