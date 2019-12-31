@@ -147,7 +147,7 @@ fi
 # refine (deform) both WM and pial surfaces
 run_cmd ${BINDIR}/falcon_cortex_refine ${SAMPLE_BRAIN} \
                        ${tempdir}/BRAIN_dilate.mnc  ${tempdir}/CSF.mnc  ${tempdir}/GW.mnc \
-                       ${tempdir}/zero.mnc ${tempdir}/zero.mnc \
+                       ${tempdir}/zero.mnc \
                        ${tempdir}/GW_init_ics.ply ${tempdir}/GW_init_ocs.ply \
                        ${OUT}_ics.ply ${OUT}_ocs.ply \
                       -gradient-FWHM    1.0 1.0 \
