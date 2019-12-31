@@ -44,7 +44,7 @@ void prog_usage() {
   fprintf(stdout,"  --obj <obj.off>    initial object [default=auto]\n");
   fprintf(stdout,"  --radius <R>       initial object's radius [default=estimage from image, if present or 10.0]\n");
   fprintf(stdout,"  --iter <I>         iteration [default=20]\n");
-  fprintf(stdout,"  --smooth <d>       Surface smoothing coeff [default=0.01]\n");
+  fprintf(stdout,"  --smooth <E>       Surface smoothing coeff [default=0.01]\n");
   fprintf(stdout,"  --step  <max_step_size> - maximum shrink step length , default 2 \n");
   fprintf(stdout,"  --val   <max_step_size> - same as --step \n");
   fprintf(stdout,"  --label <n> use this label in the mask file, default  any above 0 \n");
@@ -80,7 +80,7 @@ int main(int argc,char *argv[],char *envp[]) {
   int flag_debug=0;
   int flag_progress=0;
   int label=-1;
-  char* timestamp=niik_create_minc_timestamp(argc,argv);
+  char* timestamp = niik_create_minc_timestamp(argc,argv);
 
   struct option long_options[] = {
     {"clobber", no_argument,  &clobber, 1},
@@ -224,12 +224,14 @@ int main(int argc,char *argv[],char *envp[]) {
 #endif
 
   /*from niikmath*/
-
   if(niik_check_double_problem(steplen)) {
     steplen = 2.0;
   }
   if(niik_check_double_problem(phase)) {
     phase = 0.0;
+  }
+  if(niik_check_double_problem(smooth)) {
+    smooth = 0.01;
   }
 
   if(in_obj==NULL) {
@@ -271,12 +273,12 @@ int main(int argc,char *argv[],char *envp[]) {
 
   if(maskimg && iter>0 )
   {
-    if(niik_check_double_problem(elen)) elen=2;
+    if(niik_check_double_problem(elen)) elen=2.0;
 
     /*
       * run shrink wrap
       */
-    fprintf(stdout,"[%s] shrink wrap\n",fcname);
+    fprintf(stdout,"[%s] shrink wrap iter:%d smooth:%f elen:%f step:%f\n", fcname, iter, smooth, elen, steplen);
     NIIK_EXIT((!off_shrinkwrap_kobj_bbox_remesh(maskimg, obj, elen, iter, steplen,
               flag_bbox, flag_remesh, flag_debug, smooth )),fcname,"off_shrinkwrap_kobj_bbox_remesh",1);
 
