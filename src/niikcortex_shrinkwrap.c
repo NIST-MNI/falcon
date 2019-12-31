@@ -46,7 +46,7 @@ void prog_usage() {
   fprintf(stdout,"  --iter <I>         iteration [default=20]\n");
   fprintf(stdout,"  --smooth <d>       Surface smoothing coeff [default=0.01]\n");
   fprintf(stdout,"  --step  <max_step_size> - maximum shrink step length , default 2 \n");
-  fprintf(stdout,"  --val  <max_step_size> - same as --step \n");
+  fprintf(stdout,"  --val   <max_step_size> - same as --step \n");
   fprintf(stdout,"  --label <n> use this label in the mask file, default  any above 0 \n");
   fprintf(stdout,"                     maximum shrink size for each iteration [default=2mm]\n");
   fprintf(stdout,"  --phase=<phase>    change phase (angle) for spherical coordinate [default=0]\n");
