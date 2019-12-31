@@ -1,6 +1,7 @@
 #! /bin/bash
 set -e  
 #set -v
+#set -x
 
 BINDIR=$1
 SAMPLE_BRAIN=$2
@@ -80,12 +81,14 @@ function run_cmd {
   return 0
 }
 
-verify_files  ${SAMPLE_BRAIN} 
+verify_files  ${SAMPLE_BRAIN}
+
+if [ -z $OMP_NUM_THREADS ];then OMP_NUM_THREADS=1;fi
 
 echo OMP_NUM_THREADS=${OMP_NUM_THREADS}
 
 #export NIIKVERBOSE=3
-if false;then
+
 # create zero 
 run_cmd minccalc -express 0 -byte -clobber ${SAMPLE_BRAIN} ${tempdir}/zero.mnc
 # create one
@@ -96,7 +99,6 @@ run_cmd ${BINDIR}/falcon_math thresh  -in=${SAMPLE_BRAIN} -thresh=${GM} -out=${t
 
 # extract 'brain' 
 run_cmd ${BINDIR}/falcon_math thresh  -in=${SAMPLE_BRAIN} -thresh=${BCK} -out=${tempdir}/BRAIN.mnc 
-
 
 # extract 'non zero' 
 run_cmd ${BINDIR}/falcon_math thresh  -in=${SAMPLE_BRAIN} -thresh=0.01 -out=${tempdir}/NONZERO.mnc 
@@ -141,8 +143,6 @@ run_cmd ${BINDIR}/falcon_cortex_initocs ${SAMPLE_BRAIN} \
 
 echo 
 echo "refine (deform) both WM and pial surfaces"
-
-fi 
 
 # refine (deform) both WM and pial surfaces
 run_cmd ${BINDIR}/falcon_cortex_refine ${SAMPLE_BRAIN} \
