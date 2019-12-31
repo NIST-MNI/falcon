@@ -10,6 +10,7 @@
 #define omp_get_num_threads() 1
 #define omp_get_thread_num() 0
 #define omp_get_max_threads() 1
+
 #endif
 
 #include "falcon.h"
@@ -41,7 +42,7 @@ int niikcortex_initics_expand(nifti_image *brain_img,   /* atlas-based initial w
   int
   iter=0,
   verbose=0;
-  const char *fcname="niikcortex_initics_expand";
+  const char *fcname=__func__;
 
   niik_fc_display(fcname,1);
   NIIK_RET0((brain_img==NULL),fcname,"brain_img is null");
@@ -129,7 +130,9 @@ kobj *niikcortex_initics_atimg(nifti_image *at_ics_img,   /* atlas-based initial
   kobj *obj;
   niikpt ctr;
   int verbose=1;
-  if(verbose) fprintf(stdout,"[niikcortex_initics_atimg] start function\n");
+  const char *fcname=__func__;
+
+  if(verbose) fprintf(stdout,"[%s] start function\n",fcname);
   if(at_ics_img==NULL) {
     fprintf(stderr,"ERROR: at_ics_img is null\n");
     return 0;
@@ -139,18 +142,18 @@ kobj *niikcortex_initics_atimg(nifti_image *at_ics_img,   /* atlas-based initial
     fprintf(stderr,"ERROR: niikpt_image_get_centroid(maskimg,NULL)\n");
     return NULL;
   }
-  if(verbose) fprintf(stdout,"[niikcortex_initics_atimg] cetnroid = %7.3f %7.3f %7.3f\n",ctr.x,ctr.y,ctr.z);
+  if(verbose) fprintf(stdout,"[%s] cetnroid = %7.3f %7.3f %7.3f\n",fcname,ctr.x,ctr.y,ctr.z);
   if((obj=off_make_sphere_from_icosahedron(3,300,ctr))==NULL) {
     fprintf(stderr,"ERROR: off_make_sphere_from_icosahedron(3,300,ctr)\n");
     return NULL;
   }
-  if(verbose) fprintf(stdout,"[niikcortex_initics_atimg] initial spherical object\n");
+  if(verbose) fprintf(stdout,"[%s] initial spherical object\n",fcname);
   if(!off_shrinkwrap_kobj_simple(at_ics_img,obj,elen)) {
     fprintf(stderr,"ERROR: off_shrinkwrap_kobj_simple(img,obj,elen)\n");
     exit(0);
   }
-  if(verbose) fprintf(stdout,"[niikcortex_initics_atimg] shrink-wrap\n");
-  if(verbose) fprintf(stdout,"[niikcortex_initics_atimg] exit function\n");
+  if(verbose) fprintf(stdout,"[%s] shrink-wrap\n",fcname);
+  if(verbose) fprintf(stdout,"[%s] exit function\n",fcname);
   return obj;
 }
 
@@ -176,10 +179,11 @@ int niikcortex_initics_shrink_remesh_angular_region(kobj *obj,double elen,int ma
   kvert *v,*vrm[2];
   int n,iter;
   int verbose=0;
+  const char *fcname=__func__;  
   emax=4.0/3*elen;
   emin=4.0/5*elen;
   if(verbose) {
-    fprintf(stdout,"[niikcortex_initics_shrink_remesh_angular_region] %8.4f %8.4f %8.4f\n",elen,emin,emax);
+    fprintf(stdout,"[%s] %8.4f %8.4f %8.4f\n",fcname,elen,emin,emax);
     fprintf(stdout,"    regional elen = %8.4f\n",elen2);
     fprintf(stdout,"    vfe = %i %i %i\n",obj->nvert,obj->nface,obj->nedge);
   }
@@ -355,7 +359,7 @@ int niikcortex_initics_shrink(nifti_image *gwi_img,      /* subject's gray-white
                               int dfm_iter,              /* deformation iteration */
                               kobj *obj,                 /* white matter object -- updated here */
                               niikpt check_pt) {
-  char fcname[64]="niikcortex_initics_shrink";
+  const char *fcname=__func__;
   kvert *v,*check_v=NULL;
   double
     phi,psi,

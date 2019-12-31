@@ -71,9 +71,9 @@ typedef struct {
   int iter_remesh_step;            /* interval between remeshing */
   int bbox_depth;                  /* depth for bounding box */
   int verbose;                     /* verbose level */
-  int debug_keep_tmp; /* debug flag */
+  int debug_keep_tmp;              /* debug flag */
   double smoothing;                /* surface smoothing*/
-  int noremesh; 
+  int noremesh;                    /* disable remeshing*/
 } niikcortex_initics;              /* initial inner cortical surface deformation using shrink-wrpap */
 
 
@@ -121,7 +121,8 @@ int niikcortex_initics_process_check_deform_interp(niikcortex_initics *ics, kver
  * -copied from nifti1_kunio_cortex_initics.c
  */
 {
-  const char *fcname="niikcortex_initics_process_check_deform_interp";
+  const char *fcname=__func__;
+
   niikpt
     face_pt_list[64],
     edge_pt_list[64];
@@ -264,6 +265,7 @@ double niikcortex_initics_process_check_deform(niikcortex_initics *ics,bbox *bb,
 {
   niikpt origpt;
   niikpt update_smooth=niikpt_zero();
+  const char *fcname=__func__;
 
   origpt=v->v;
 
@@ -347,7 +349,7 @@ double niikcortex_initics_process_check_deform(niikcortex_initics *ics,bbox *bb,
 
 
 int niikcortex_initics_process(niikcortex_initics *ics) {
-  const char *fcname="niikcortex_initics_process";
+  const char *fcname=__func__;
   char tempout[64];
   int
     vpos, /* vertex position (index) */
@@ -491,7 +493,7 @@ int niikcortex_initics_process(niikcortex_initics *ics) {
 
 
 int main(int argc,char *argv[],char *envp[]) {
-  const char *fcname="niikcortex_initics";
+  const char *fcname=__func__;
   niikcortex_initics *initics=niikcortex_initics_init();
   int    i;
   int    clobber=0;
