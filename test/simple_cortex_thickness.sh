@@ -26,7 +26,7 @@ if [ -z $TMP ];then
   tempdir=$(mktemp -d -t FALCON.XXXXXX)
   trap "rm -rf $tempdir" 0 1 2 15
 else
-  tempdir=$TMP 
+  tempdir=$TMP
   if [ ! -e $tempdir ];then
     mkdir -p $tempdir
   fi
@@ -126,7 +126,7 @@ run_cmd ${BINDIR}/falcon_math laplacemap \
 echo Shrink-Wrap
 run_cmd ${BINDIR}/falcon_cortex_shrinkwrap ${tempdir}/GW_dilate.mnc \
   ${tempdir}/GW_dilate_obj.ply \
-  --iter 50  --step 2.0 --elen 1.0 --clob
+  --iter 50 --step 2.0 --smooth 0.05 --elen 1.0 --clob
 
 # initics
 echo Init ICS
