@@ -1,5 +1,5 @@
 #! /bin/bash
-set -e  
+set -e
 #set -v
 #set -x
 
@@ -30,8 +30,8 @@ else
   if [ ! -e $tempdir ];then
     mkdir -p $tempdir
   fi
-  # add tracing 
-  
+  # add tracing
+
   export FALCON_TRACE=$TMP/trace
 
   if [ ! -z ${CPLX} ];then
@@ -54,7 +54,7 @@ fi
 
 function verify_files {
   while [ $# -gt 0 ]; do
-    if [ ! -e $1 ];then 
+    if [ ! -e $1 ];then
       echo Missing $1
       exit 1
     fi
@@ -89,23 +89,23 @@ echo OMP_NUM_THREADS=${OMP_NUM_THREADS}
 
 #export NIIKVERBOSE=3
 
-# create zero 
+# create zero
 run_cmd minccalc -express 0 -byte -clobber ${SAMPLE_BRAIN} ${tempdir}/zero.mnc
 # create one
 run_cmd minccalc -express 1 -byte -clobber ${SAMPLE_BRAIN} ${tempdir}/one.mnc
 
 # extract GW interface
-run_cmd ${BINDIR}/falcon_math thresh  -in=${SAMPLE_BRAIN} -thresh=${GM} -out=${tempdir}/GW.mnc 
+run_cmd ${BINDIR}/falcon_math thresh  -in=${SAMPLE_BRAIN} -thresh=${GM} -out=${tempdir}/GW.mnc
 
-# extract 'brain' 
-run_cmd ${BINDIR}/falcon_math thresh  -in=${SAMPLE_BRAIN} -thresh=${BCK} -out=${tempdir}/BRAIN.mnc 
+# extract 'brain'
+run_cmd ${BINDIR}/falcon_math thresh  -in=${SAMPLE_BRAIN} -thresh=${BCK} -out=${tempdir}/BRAIN.mnc
 
-# extract 'non zero' 
-run_cmd ${BINDIR}/falcon_math thresh  -in=${SAMPLE_BRAIN} -thresh=0.01 -out=${tempdir}/NONZERO.mnc 
+# extract 'non zero'
+run_cmd ${BINDIR}/falcon_math thresh  -in=${SAMPLE_BRAIN} -thresh=0.01 -out=${tempdir}/NONZERO.mnc
 
 
 # close
-run_cmd ${BINDIR}/falcon_math closebrain -in=${tempdir}/GW.mnc -out=${tempdir}/GW_close.mnc    -radius=1 
+run_cmd ${BINDIR}/falcon_math closebrain -in=${tempdir}/GW.mnc -out=${tempdir}/GW_close.mnc    -radius=1
 
 # dilate WM
 run_cmd ${BINDIR}/falcon_math dilate -in=${tempdir}/GW_close.mnc -out=${tempdir}/GW_dilate.mnc -radius=1
@@ -116,17 +116,17 @@ run_cmd ${BINDIR}/falcon_math dilate -in=${tempdir}/BRAIN.mnc -out=${tempdir}/BR
 
 
 # extract CSF (everything above 0, outside of BRAIN
-run_cmd ${BINDIR}/falcon_math maskout -img=${tempdir}/NONZERO.mnc -mask=${tempdir}/BRAIN_dilate.mnc -out=${tempdir}/CSF.mnc 
+run_cmd ${BINDIR}/falcon_math maskout -img=${tempdir}/NONZERO.mnc -mask=${tempdir}/BRAIN_dilate.mnc -out=${tempdir}/CSF.mnc
 
 # laplace
 run_cmd ${BINDIR}/falcon_math laplacemap \
-                 -imglist=${tempdir}/GW.mnc,${tempdir}/GW_dilate.mnc -out=${tempdir}/GW_laplace.mnc -xyz=0.5,0.5,0.5 
+                 -imglist=${tempdir}/GW.mnc,${tempdir}/GW_dilate.mnc -out=${tempdir}/GW_laplace.mnc -xyz=0.5,0.5,0.5
 
 # shrink-wrap
 echo Shrink-Wrap
 run_cmd ${BINDIR}/falcon_cortex_shrinkwrap ${tempdir}/GW_dilate.mnc \
   ${tempdir}/GW_dilate_obj.ply \
-  --iter 50  --val 10 --elen 1 --clob 
+  --iter 50  --val 10 --elen 1 --clob --smooth 0.01
 
 # initics
 echo Init ICS
@@ -139,9 +139,9 @@ echo extract pial surface
 run_cmd ${BINDIR}/falcon_cortex_initocs ${SAMPLE_BRAIN} \
   ${tempdir}/BRAIN_dilate.mnc ${tempdir}/CSF.mnc ${tempdir}/GW.mnc \
   ${tempdir}/GW_init_ics.ply ${tempdir}/GW_init_ocs.ply \
-  --iter 50 --clob --max-thick 2.0 
+  --iter 50 --clob --max-thick 2.0
 
-echo 
+echo
 echo "refine (deform) both WM and pial surfaces"
 
 # refine (deform) both WM and pial surfaces
