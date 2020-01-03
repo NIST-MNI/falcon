@@ -392,8 +392,8 @@ if [[  -n "${leftmask}"  ]] || [[ -n "${rightmask}" ]]; then
   fi
 elif [[ ! -e ${fn}_GWI_mask_lt.mnc ]] || [[ ! -e ${fn}_GWI_mask_rt.mnc ]]; then
     ${FALCON_BIN}/falcon_midsag $gwimask --left ${tempdir}/${nm}_GWI_mask_lt.mnc --right ${tempdir}/${nm}_GWI_mask_rt.mnc
-    minccalc -labels -byte 'A[0]>0.5?1:0' ${tempdir}/${nm}_GWI_mask_lt.mnc ${fn}_GWI_mask_lt.mnc
-    minccalc -labels -byte 'A[0]>0.5?1:0' ${tempdir}/${nm}_GWI_mask_rt.mnc ${fn}_GWI_mask_rt.mnc
+    minccalc -labels -byte -express 'A[0]>0.5?1:0' ${tempdir}/${nm}_GWI_mask_lt.mnc ${fn}_GWI_mask_lt.mnc
+    minccalc -labels -byte -express 'A[0]>0.5?1:0' ${tempdir}/${nm}_GWI_mask_rt.mnc ${fn}_GWI_mask_rt.mnc
 fi
 
 leftmask=${fn}_GWI_mask_lt.mnc
