@@ -151,14 +151,14 @@ run_cmd ${BINDIR}/falcon_cortex_refine ${SAMPLE_BRAIN} \
                        ${tempdir}/GW_init_ics.ply ${tempdir}/GW_init_ocs.ply \
                        ${OUT}_ics.ply ${OUT}_ocs.ply \
                       -gradient-FWHM     1.0 1.0 \
-                      -divergence-FWHM  1.0 1.0 \
+                      -divergence-FWHM   1.0 1.0 \
                       -wimag     0.5     0.5 \
                       -wcurv     0.1     0.1 \
                       -wsmooth   1.0     1.0 \
                       -wssmooth  0.1     0.1 \
                       -wtsmooth  1.0     1.0 \
-                      -wgrad     0.2     0.2 \
-                      -wflux     0.15    0.15 \
+                      -wgrad     0.05    0.05 \
+                      -wflux     0.1     0.1 \
                       -wprox     0.5     0.5 \
                       -wbrain    1.0     1.0 \
                       -wvent     1.0     1.0 \

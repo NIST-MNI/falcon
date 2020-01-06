@@ -121,9 +121,9 @@ ENDMACRO(ADD_FALCON_TEST_PRL)
 
 ADD_FALCON_TEST(BINARY_MORPHOLOGY ${TESTDIR}/test_morphology.sh ${FALCON_BIN} ${OUTDIR}/morphology_temp ) 
 
-ADD_FALCON_TEST(SULCUS_PHANTOM    ${TESTDIR}/simple_cortex_thickness.sh ${FALCON_BIN} ${TESTDIR}/sulcus_2layers.mnc sulcus_phantom 250 90 3.8 ${OUTDIR}/sulcus_phantom_temp ) 
+ADD_FALCON_TEST(SULCUS_PHANTOM    ${TESTDIR}/simple_cortex_thickness.sh ${FALCON_BIN} ${TESTDIR}/sulcus_2layers.mnc sulcus_phantom 250 90 4.0 ${OUTDIR}/sulcus_phantom_temp ) 
 
-ADD_FALCON_TEST(SULCUS_PHANTOM_NOISY ${TESTDIR}/simple_cortex_thickness.sh ${FALCON_BIN} ${TESTDIR}/sulcus_2layers_noisy.mnc sulcus_phantom_noisy 250 90 3.8 ${OUTDIR}/sulcus_phantom_temp_noisy ) 
+ADD_FALCON_TEST(SULCUS_PHANTOM_NOISY ${TESTDIR}/simple_cortex_thickness.sh ${FALCON_BIN} ${TESTDIR}/sulcus_2layers_noisy.mnc sulcus_phantom_noisy 250 90 4.0 ${OUTDIR}/sulcus_phantom_temp_noisy ) 
 
 set_tests_properties(SULCUS_PHANTOM PROPERTIES TIMEOUT 1200)
 
@@ -148,7 +148,7 @@ add_custom_target(make_phantoms ALL
                   )
 
 ADD_FALCON_TEST(COMPLEX_PHANTOM ${TESTDIR}/simple_cortex_thickness.sh 
-    ${FALCON_BIN} ${CMAKE_CURRENT_BINARY_DIR}/complex_phantom.mnc complex_phantom 120 50 3.2 ${OUTDIR}/complex_phantom_temp 0.2 -complex ) 
+    ${FALCON_BIN} ${CMAKE_CURRENT_BINARY_DIR}/complex_phantom.mnc complex_phantom 120 50 3.2 ${OUTDIR}/complex_phantom_temp 0.1 -complex ) 
 
 set_tests_properties(COMPLEX_PHANTOM PROPERTIES TIMEOUT 1500)
 
