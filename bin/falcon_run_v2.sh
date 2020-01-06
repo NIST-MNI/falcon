@@ -722,7 +722,6 @@ if [[ ! -e ${OUTPUT}_ics-${ver}.ply ]];then
             ${priors} \
             -rungekutta
     else
-
       ${FALCON_BIN}/falcon_cortex_refine \
               ${scan} ${fn}_cerebral_brain_mask.mnc \
               ${ventmask} ${wmmask}  \

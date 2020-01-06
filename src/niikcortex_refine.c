@@ -690,17 +690,23 @@ int main(int argc,char *argv[],char *envp[]) {
 
   fprintf(stdout,"[%s] reading t1w image        %s\n",fcname,argv[1]);
   NIIK_EXIT(((dfm->t1img=niik_image_read(argv[1]))==NULL),fcname,"niik_image_read",9);
+
   fprintf(stdout,"[%s] reading brainmask image  %s\n",fcname,argv[2]);
   NIIK_EXIT(((dfm->brain_mask=niik_image_read(argv[2]))==NULL),fcname,"niik_image_read",9);
+
   fprintf(stdout,"[%s] reading CSF image        %s\n",fcname,argv[3]);
   NIIK_EXIT(((dfm->csf_mask=niik_image_read(argv[3]))==NULL),fcname,"niik_image_read",9);
+
   fprintf(stdout,"[%s] reading GWI image        %s\n",fcname,argv[4]);
   NIIK_EXIT(((dfm->gwi_mask=niik_image_read(argv[4]))==NULL),fcname,"niik_image_read",9);
+
   fprintf(stdout,"[%s] reading avoid image %s\n",fcname,argv[5]);
   NIIK_EXIT(((dfm->avoid_mask=niik_image_read(argv[5]))==NULL),fcname,"niik_image_read",9);
-  fprintf(stdout,"[%s] reading init ics object  %s\n",fcname,argv[7]);
+
+  fprintf(stdout,"[%s] reading init ics object  %s\n",fcname,argv[6]);
   NIIK_EXIT(((dfm->ctx[0]=off_kobj_read_offply(argv[6]))==NULL),fcname,"off_kobj_read_off",9);
-  fprintf(stdout,"[%s] reading init ocs object  %s\n",fcname,argv[8]);
+  
+  fprintf(stdout,"[%s] reading init ocs object  %s\n",fcname,argv[7]);
   NIIK_EXIT(((dfm->ctx[1]=off_kobj_read_offply(argv[7]))==NULL),fcname,"off_kobj_read_off",9);
 
   NIIK_EXIT((!niik_image_type_convert(dfm->brain_mask,  NIFTI_TYPE_UINT8   )),fcname,"niik_image_convert, brain_mask",1);

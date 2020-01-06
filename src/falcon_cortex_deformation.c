@@ -344,7 +344,7 @@ niikpt niikcortex_deform_calc_deformation_vertex_flux_term(kvert *v, nifti_image
   if(d<-1.0)     d=-1.0;
   else if(d>1.0) d= 1.0;
 
-  return niikpt_kmul(v->normal, d * (cortex_id==CORTEX_ICS?-1:1)); /*VF -1 ?*/
+  return niikpt_kmul(v->normal, -d); 
 } /* niikcortex_deform_calc_deformation_vertex_flux_term */
 
 

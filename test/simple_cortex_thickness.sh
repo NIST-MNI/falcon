@@ -17,12 +17,12 @@ CPLX=$9
 
 VERBOSE=yes
 
-if [ -z $BCK ];then
+if [[ -z $BCK ]];then
   echo "Usage $0 <bindir> <input> <output_prefix> <GM threshold> <BRAIN Threshold> [expected average thickness] [work directory] [threshold] [trace_flag] [cplx]"
   exit 1
 fi
 
-if [ -z $TMP ];then
+if [[ -z $TMP ]];then
   tempdir=$(mktemp -d -t FALCON.XXXXXX)
   trap "rm -rf $tempdir" 0 1 2 15
 else
@@ -34,7 +34,7 @@ else
 
   export FALCON_TRACE=$TMP/trace
 
-  if [ ! -z ${CPLX} ];then
+  if [[ -n "${CPLX}" ]];then
   export FALCON_TRACE_X=140
   export FALCON_TRACE_Y=100
   export FALCON_TRACE_Z=100
@@ -47,7 +47,7 @@ else
   fi
 fi
 
-if [ -z $THRESHOLD ];then
+if [[ -z $THRESHOLD ]];then
  THRESHOLD=0.1
 fi
 
@@ -83,7 +83,7 @@ function run_cmd {
 
 verify_files  ${SAMPLE_BRAIN}
 
-if [ -z $OMP_NUM_THREADS ];then OMP_NUM_THREADS=1;fi
+if [[ -z $OMP_NUM_THREADS ]];then OMP_NUM_THREADS=1;fi
 
 echo OMP_NUM_THREADS=${OMP_NUM_THREADS}
 
@@ -150,15 +150,15 @@ run_cmd ${BINDIR}/falcon_cortex_refine ${SAMPLE_BRAIN} \
                        ${tempdir}/zero.mnc \
                        ${tempdir}/GW_init_ics.ply ${tempdir}/GW_init_ocs.ply \
                        ${OUT}_ics.ply ${OUT}_ocs.ply \
-                      -gradient-FWHM    1.0 1.0 \
+                      -gradient-FWHM     1.0 1.0 \
                       -divergence-FWHM  1.0 1.0 \
                       -wimag     0.5     0.5 \
                       -wcurv     0.1     0.1 \
                       -wsmooth   1.0     1.0 \
                       -wssmooth  0.1     0.1 \
                       -wtsmooth  1.0     1.0 \
-                      -wgrad     0.0     0.0 \
-                      -wflux     0.1     0.1 \
+                      -wgrad     0.2     0.2 \
+                      -wflux     0.15    0.15 \
                       -wprox     0.5     0.5 \
                       -wbrain    1.0     1.0 \
                       -wvent     1.0     1.0 \
@@ -181,6 +181,6 @@ echo "Calculating cortical thickness"
 run_cmd ${BINDIR}/falcon_cortex_calc_thickness ${OUT}_ics.ply ${OUT}_ocs.ply ${OUT}_thickness.txt.gz  --clob
 
 # calculate average thickness using awk and compare against expected
-if [ ! -z $THICK ];then
-  zcat ${OUT}_thickness.txt.gz| awk "{s+=\$1;c+=1} END {th=s/c; if( (th-$THICK)>$THRESHOLD || (th-$THICK)<-$THRESHOLD ) {print \"Thickness: \" th \" expected $THICK\" ;exit 10 } else print \"Thickness OK\" }"
+if [[ -n "$THICK" ]];then
+  gzip -d -c ${OUT}_thickness.txt.gz| awk "{s+=\$1;c+=1} END {th=s/c; if( (th-$THICK)>$THRESHOLD || (th-$THICK)<-$THRESHOLD ) {print \"Thickness: \" th \" expected $THICK\" ;exit 10 } else print \"Thickness OK\" }"
 fi
