@@ -300,7 +300,8 @@ function atropos {
 if [[ -z $brainmask ]];then
   # use antsBrainExtraction.sh
 
-  ${FALCON_BIN}/falcon_antsBrainExtraction.sh -d 3 -s mnc \
+  ${FALCON_BIN}/falcon_antsBrainExtraction.sh -d 3 \
+    -s mnc \
     -a ${img} \
     -e ${icbm_template} \
     -m ${icbm_template_mask}  \
