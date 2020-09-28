@@ -102,6 +102,7 @@ function Usage {
   -verbose                       :  echo commands
   -hc                            :  Don't exclude Hippocampus from cortical fitting procedure
   -cb                            :  fit surfaces on cerebellum (experimental)
+  -atrophy                       :  for subjects with lots of atrophy (using AD template and priors)
 EOF
 }
 
@@ -128,7 +129,7 @@ while  [[ $# -gt 0 ]]; do
   if   [[ $1 = -help ]]; then Usage; exit 1
   elif [[ $1 = -u ]]; then Usage; exit 1
   elif [[ $1 = -omp ]]; then export OMP_NUM_THREADS=$2; export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=${OMP_NUM_THREADS}; shift 2
-  elif [[ $1 = -vent    ]]; then vent=$2;shift 2;
+  elif [[ $1 = -vent    ]]; then ventmask=$2;shift 2;
   elif [[ $1 = -cerebellum ]]; then cerebellum=$2;shift 2;
   elif [[ $1 = -brainstem ]]; then brainstem=$2;shift 2;
   elif [[ $1 = -cls     ]]; then cls=$2;     shift 2;
@@ -156,6 +157,8 @@ while  [[ $# -gt 0 ]]; do
   elif [[ $1 = -verbose ]];then VERBOSE=yes; shift;
   elif [[ $1 = -cb ]];then PROCESS_CB=yes; shift;
   elif [[ $1 = -hc ]];then KEEP_HC=yes; shift;
+  elif [[ $1 = -atrophy ]];then ATROPHY=yes; shift;
+  elif [[ $1 = -ad ]];then ATROPHY=yes; shift;
   else
     args=( ${args[@]} $1 )
     shift
@@ -189,10 +192,21 @@ tempdir=$(mktemp -d --tmpdir)
 trap "rm -rf $tempdir" 0 1 2 15
 fi
 
-icbm_template=${icbm_dir}/mni_icbm152_t1_tal_nlin_sym_09c.mnc
-icbm_template_mask=${icbm_dir}/mni_icbm152_t1_tal_nlin_sym_09c_mask.mnc
 
-prior=miccai2012_library
+
+if [[ -n "$ATROPHY" ]];then
+  prior_base=${icbm_dir}/miccai2012_challenge_ad
+  prior=miccai2012_challenge_ad
+  template=${icbm_dir}/adni_model_3d_v2/model_t1w.mnc
+  template_mask=${icbm_dir}/adni_model_3d_v2/model_t1w_mask.mnc
+else
+  prior_base=${icbm_dir}/miccai2012_challenge
+  prior=miccai2012_challenge
+  template=${icbm_dir}/mni_icbm152_t1_tal_nlin_sym_09c.mnc
+  template_mask=${icbm_dir}/mni_icbm152_t1_tal_nlin_sym_09c_mask.mnc
+fi
+
+
 
 function atropos {
   # 1. Ventricle CSF
@@ -216,7 +230,6 @@ function atropos {
   # 7. Cerebelum GM
   # 8. Additional CSF: extracerebral + 4th ventricle
 
-
   scan=$1
   mask=$2
   xfm=$3
@@ -228,7 +241,7 @@ function atropos {
   atropos_prior="Socrates[1]" # no real difference between Aristotle and Socrates
   atropos_model="Gaussian"
 
-  tissue_prior=${icbm_dir}/miccai2012_challenge/tissue_prior8
+  tissue_prior=${prior_base}/tissue_prior8
 
   for l in $(seq 1 8);do
     itk_resample  ${tissue_prior}_$l.mnc ${tempdir}/prior_${l}.mnc --transform $xfm --invert_transform --order 1  --like $scan --float
@@ -298,13 +311,11 @@ function atropos {
 
 
 if [[ -z $brainmask ]];then
-  # use antsBrainExtraction.sh
-
   ${FALCON_BIN}/falcon_antsBrainExtraction.sh -d 3 \
     -s mnc \
     -a ${img} \
-    -e ${icbm_template} \
-    -m ${icbm_template_mask}  \
+    -e ${template} \
+    -m ${template_mask}  \
     -o ${tempdir}/brain_
   cp ${tempdir}/brain_BrainExtractionMask.mnc  ${fn}_mask.mnc
   brainmask=${fn}_mask.mnc
@@ -319,15 +330,15 @@ if [[ -n "$nlxfm" ]]; then
 else
   if [[ ! -e ${fn}_nlstx.xfm ]];then
     antsRegistration \
-   --use-histogram-matching 1 \
-   --minc -a --dimensionality 3 \
-   --metric "CC[${img},${icbm_template},1,3,Regular,0.5]" \
-   --masks "[${brainmask},${icbm_template_mask}]" \
-   --convergence [150x50x50,1.e-9,20] \
-   --shrink-factors   8x4x2 \
-   --smoothing-sigmas 8x4x2 \
-   --transform "SyN[.25,2,0.5]" \
-   --output ${fn}_nlstx
+      --use-histogram-matching 1 \
+      --minc -a --dimensionality 3 \
+      --metric "CC[${img},${template},1,3,Regular,0.5]" \
+      --masks    "[${brainmask},${template_mask}]" \
+      --convergence [150x100x50,1.e-9,20] \
+      --shrink-factors   8x4x2 \
+      --smoothing-sigmas 8x4x2 \
+      --transform "SyN[.25,2,0.5]" \
+      --output ${fn}_nlstx
   fi
   nlxfm=${fn}_nlstx.xfm
 fi
@@ -383,7 +394,6 @@ fi
 ###############################################################
 # 1B.  Tissue split
 ###############################################################
-
 if [[ -z $csfmask ]];then
   csfmask=${tempdir}/${nm}_csfmask.mnc
   if [[ ! -e $csfmask ]];then
@@ -403,7 +413,7 @@ fi
 # 2. SEGMENTATION
 ###############################################################
 
-for l in  hc ventricles;do # brainstem cerebellum deep_gm
+for l in hc ventricles;do # brainstem cerebellum deep_gm
   if [[ ! -e ${tempdir}/${nm}_prior_${l}.mnc ]];then
   mincresample  ${icbm_dir}/miccai2012_challenge/prior_${l}.mnc \
         ${tempdir}/${nm}_prior_${l}.mnc \
@@ -462,6 +472,7 @@ fi
 
 # "non-ctx mask" # TODO: replace with something else ?
 if [[ ! -e ${fn}_nonctx_mask-${ver}.mnc ]]; then
+  # TODO: fix for large atrophy
   mincresample ${icbm_dir}/icbm152_model_09c/mni_icbm152_t1_tal_nlin_sym_09c_CLADA_nonctx_mask_2mm.mnc \
             $tempdir/${nm}_nonctx_mask.mnc \
             -like ${img} \
