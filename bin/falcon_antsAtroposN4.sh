@@ -304,6 +304,7 @@ if [[ -z "$ATROPOS_SEGMENTATION_MRF" ]];
       fi
   fi
 
+
 ATROPOS_SEGMENTATION_CONVERGENCE="[${ATROPOS_SEGMENTATION_NUMBER_OF_ITERATIONS},0.0]"
 
 ################################################################################
@@ -322,6 +323,11 @@ for (( i = 0; i < ${#ANATOMICAL_IMAGES[@]}; i++ ))
       exit 1
     fi
   done
+
+if [[ -z "${ATROPOS_SEGMENTATION_MASK}" ]];then
+  echo "Need mask (-x)"
+  exit 1
+fi
 
 FORMAT=${ATROPOS_SEGMENTATION_PRIORS}
 PREFORMAT=${FORMAT%%\%*}
@@ -425,13 +431,14 @@ if [[ ${DENOISE_ANATOMICAL_IMAGES} -ne 0 ]];
       fi
   fi
 
+
 ################################################################################
 #
 # Segmentation
 #
 ################################################################################
 
-SEGMENTATION_WEIGHT_MASK=${OUTPUT_PREFIX}SegmentationWeightMask.nii.gz
+SEGMENTATION_WEIGHT_MASK=${TEMPDIR}/SegmentationWeightMask.${OUTPUT_SUFFIX}
 SEGMENTATION_CONVERGENCE_FILE=${OUTPUT_PREFIX}SegmentationConvergence.txt
 SEGMENTATION_PREVIOUS_ITERATION=${OUTPUT_PREFIX}SegmentationPreviousIteration.${OUTPUT_SUFFIX}
 
@@ -483,7 +490,13 @@ for (( i = 0; i < ${N4_ATROPOS_NUMBER_OF_ITERATIONS}; i++ ))
           else
             cp ${ANATOMICAL_IMAGES[$j]} ${SEGMENTATION_N4_IMAGES[$j]}
           fi
-        exe_n4_correction="${N4} -d ${DIMENSION} -i ${SEGMENTATION_N4_IMAGES[$j]} -x ${ATROPOS_SEGMENTATION_MASK} -s ${N4_SHRINK_FACTOR} -c ${N4_CONVERGENCE} -b ${N4_BSPLINE_PARAMS} -o ${SEGMENTATION_N4_IMAGES[$j]} --verbose 1"
+        exe_n4_correction="${N4} -d ${DIMENSION} -i ${SEGMENTATION_N4_IMAGES[$j]} -s ${N4_SHRINK_FACTOR} -c ${N4_CONVERGENCE} -b ${N4_BSPLINE_PARAMS} -o ${SEGMENTATION_N4_IMAGES[$j]} --verbose 1"
+
+        if [[ -n ${ATROPOS_SEGMENTATION_MASK} ]];
+          then
+           exe_n4_correction="${exe_n4_correction} -x ${ATROPOS_SEGMENTATION_MASK}" 
+          fi
+        
         if [[ -f ${SEGMENTATION_WEIGHT_MASK} ]];
           then
             exe_n4_correction="${exe_n4_correction} -w ${SEGMENTATION_WEIGHT_MASK}"
@@ -518,8 +531,13 @@ for (( i = 0; i < ${N4_ATROPOS_NUMBER_OF_ITERATIONS}; i++ ))
         ATROPOS_LABEL_PROPAGATION_COMMAND_LINE="${ATROPOS_LABEL_PROPAGATION_COMMAND_LINE} -l ${ATROPOS_SEGMENTATION_LABEL_PROPAGATION[$j]}";
       done
 
-    exe_segmentation="${ATROPOS} -d ${DIMENSION} -x ${ATROPOS_SEGMENTATION_MASK} -c ${ATROPOS_SEGMENTATION_CONVERGENCE} ${ATROPOS_ANATOMICAL_IMAGES_COMMAND_LINE} ${ATROPOS_LABEL_PROPAGATION_COMMAND_LINE} --verbose 1"
+    exe_segmentation="${ATROPOS} -d ${DIMENSION} -c ${ATROPOS_SEGMENTATION_CONVERGENCE} ${ATROPOS_ANATOMICAL_IMAGES_COMMAND_LINE} ${ATROPOS_LABEL_PROPAGATION_COMMAND_LINE} --verbose 1"
     exe_segmentation="${exe_segmentation} -i ${INITIALIZATION} -k ${ATROPOS_SEGMENTATION_LIKELIHOOD} -m ${ATROPOS_SEGMENTATION_MRF} -o [${ATROPOS_SEGMENTATION},${ATROPOS_SEGMENTATION_POSTERIORS}] -r ${USE_RANDOM_SEEDING}"
+
+    if [[ -n ${ATROPOS_SEGMENTATION_MASK} ]];
+      then
+        exe_segmentation="${exe_segmentation} -x ${ATROPOS_SEGMENTATION_MASK}" 
+      fi
 
     if [[ $i -eq 0 ]];
       then

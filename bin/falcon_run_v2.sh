@@ -15,7 +15,7 @@
 
 MAJOR_VERSION=0
 MINOR_VERSION=9
-MICRO_VERSION=1
+MICRO_VERSION=3
 ver=${MAJOR_VERSION}.${MINOR_VERSION}.${MICRO_VERSION}
 
 progname=$(basename $0)
@@ -370,22 +370,27 @@ if [[ -z "$cls" ]];then
   prior_CB_GM=${fn}_atropos_infra_3.mnc
   prior_INFRA_CSF=${fn}_atropos_infra_4.mnc
 
-  prior_CSF=${fn}_atropos_CSF.mnc
-  prior_GM=${fn}_atropos_GM.mnc
-  prior_WM=${fn}_atropos_WM.mnc
-
-  if [[ ! -e $prior_CSF ]];then
-    minccalc -express 'clamp(A[0]+A[1],0,1)' $prior_SUPRA_CSF $prior_INFRA_CSF $prior_CSF
+  #CSF
+  if [[ -z $prior_CSF ]];then
+    prior_CSF=${fn}_atropos_CSF.mnc
+    if [[ ! -e $prior_CSF ]];then
+      minccalc -express 'clamp(A[0]+A[1],0,1)' $prior_SUPRA_CSF $prior_INFRA_CSF $prior_CSF
+    fi
   fi
-
-  if [[ ! -e $prior_WM ]];then
-    minccalc -express 'clamp(A[0]+A[1],0,1)' $prior_SUPRA_WM $prior_CB_WM $prior_WM
+  #GM
+  if [[ -z $prior_GM ]];then
+    prior_GM=${fn}_atropos_GM.mnc
+    if [[ ! -e $prior_GM ]];then
+      minccalc -express 'clamp(A[0]+A[1],0,1)' $prior_SUPRA_GM $prior_CB_GM $prior_GM
+    fi
   fi
-
-  if [[ ! -e $prior_GM ]];then
-    minccalc -express 'clamp(A[0]+A[1],0,1)' $prior_SUPRA_GM $prior_CB_GM $prior_GM
+  #WM
+  if [[ -z $prior_WM ]];then
+    prior_WM=${fn}_atropos_WM.mnc
+    if [[ ! -e $prior_WM ]];then
+      minccalc -express 'clamp(A[0]+A[1],0,1)' $prior_SUPRA_WM $prior_CB_WM $prior_WM
+    fi
   fi
-
 else
   echo "This version doesn't work with external cls"
   exit 1
@@ -412,7 +417,6 @@ fi
 ###############################################################
 # 2. SEGMENTATION
 ###############################################################
-
 for l in hc ventricles;do # brainstem cerebellum deep_gm
   if [[ ! -e ${tempdir}/${nm}_prior_${l}.mnc ]];then
   mincresample  ${icbm_dir}/miccai2012_challenge/prior_${l}.mnc \
@@ -456,23 +460,20 @@ if [[ ! -e ${fn}_brainstem_mask.mnc ]]; then
   minccalc -q -byte -labels  -express 'A[0]>=0.5?1:0' $prior_BS ${fn}_brainstem_mask.mnc
 fi
 
-# echo "white matter - gray matter interface segmentation" , fills deep GM, Ventricles and optionally HC too 
-if [[ -n "${gwimask}" ]]; then
-   echo "  using white-gray interface mask:  ${gwimask}"
+ventmaskd=${ventmask}
+# HACK for large atrophy, exclude area around ventricles
+# TODO: figure out if maybe always use D[3]
+if [[ -n "${ATROPHY}" ]];then
+  ventmaskd=$tempdir/${nm}_vent_mask_d.mnc
+  itk_morph --exp 'D[3]' ${ventmask} ${ventmaskd}
 else
-  gwimask=${fn}_GWI_mask.mnc
-  if [[ ! -e ${gwimask} ]]; then
-    if [[ -z ${KEEP_HC} ]]; then
-      minccalc -q -byte -labels  -express '(A[0]+A[1]+A[2]+A[3])>=0.5?1:0' $prior_SUPRA_WM ${tempdir}/${nm}_prior_ventricles.mnc $prior_DEEP ${tempdir}/${nm}_prior_hc.mnc ${gwimask}
-    else
-      minccalc -q -byte -labels  -express '(A[0]+A[1]+A[2])>=0.5?1:0' $prior_SUPRA_WM ${tempdir}/${nm}_prior_ventricles.mnc $prior_DEEP ${gwimask}
-    fi
-  fi
+  ventmaskd=$tempdir/${nm}_vent_mask_d.mnc
+  itk_morph --exp 'D[1]' ${ventmask} ${ventmaskd}
 fi
+
 
 # "non-ctx mask" # TODO: replace with something else ?
 if [[ ! -e ${fn}_nonctx_mask-${ver}.mnc ]]; then
-  # TODO: fix for large atrophy
   mincresample ${icbm_dir}/icbm152_model_09c/mni_icbm152_t1_tal_nlin_sym_09c_CLADA_nonctx_mask_2mm.mnc \
             $tempdir/${nm}_nonctx_mask.mnc \
             -like ${img} \
@@ -484,12 +485,27 @@ if [[ ! -e ${fn}_nonctx_mask-${ver}.mnc ]]; then
   # combine with ventricle mask, hippocampus masks and brainstem masks
   if [[ -z ${KEEP_HC} ]]; then
     minccalc -q -labels -byte -express 'A[0]>=0.5||A[1]>=0.5||A[2]>=0.5?1:0' \
-      $tempdir/${nm}_nonctx_mask.mnc ${ventmask} $prior_BS \
+      $tempdir/${nm}_nonctx_mask.mnc ${ventmaskd} $prior_BS \
       ${fn}_nonctx_mask-${ver}.mnc
   else
     minccalc -q -labels -byte -express 'A[0]>=0.5||A[1]>=0.5||A[2]>=0.5||A[3]>=0.5?1:0' \
-      $tempdir/${nm}_nonctx_mask.mnc ${ventmask} ${tempdir}/${nm}_prior_hc.mnc $prior_BS \
+      $tempdir/${nm}_nonctx_mask.mnc ${ventmaskd} ${tempdir}/${nm}_prior_hc.mnc $prior_BS \
       ${fn}_nonctx_mask-${ver}.mnc
+  fi
+fi
+
+# echo "white matter - gray matter interface segmentation" , fills deep GM, Ventricles and optionally HC too 
+if [[ -n "${gwimask}" ]]; then
+   echo "  using white-gray interface mask:  ${gwimask}"
+else
+  gwimask=${fn}_GWI_mask.mnc
+  if [[ ! -e ${gwimask} ]]; then
+    # ${tempdir}/${nm}_prior_ventricles.mnc - 
+    if [[ -z ${KEEP_HC} ]]; then
+      minccalc -q -byte -labels  -express '(A[0]+A[1]+A[2]+A[3])>=0.5?1:0' $prior_SUPRA_WM ${ventmaskd} $prior_DEEP ${tempdir}/${nm}_prior_hc.mnc ${gwimask}
+    else
+      minccalc -q -byte -labels  -express '(A[0]+A[1]+A[2])>=0.5?1:0'      $prior_SUPRA_WM ${ventmaskd} $prior_DEEP ${gwimask}
+    fi
   fi
 fi
 
@@ -637,7 +653,6 @@ fi
 # "initial pial surface"
 
 if [[ ! -e ${fn}_GWI_mask_init_ocs.ply ]];then
-  
   if [[ -n "$PROCESS_CB" ]];then
     ${FALCON_BIN}/falcon_cortex_initocs ${scan} \
           ${fn}_brain_mask2.mnc \
