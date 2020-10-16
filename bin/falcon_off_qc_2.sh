@@ -6,6 +6,10 @@ cmap=-spectral
 title=""
 column=""
 
+if [[ -z "$FALCON_HOME" ]];then
+  FALCON_HOME="${MINC_TOOLKIT}"
+fi
+
 if [[ -z "$FALCON_DATA"  ]]; then
   FALCON_DATA="${FALCON_HOME}/share/falcon"
 fi
@@ -153,13 +157,15 @@ Height=240
 # modify template for different orientations
 for angle in Front Back Top Bottom Left Right; do
 
+    echo "#version 3.6;"> $tempdir/render_${angle}.pov
+
     case "$angle" in
         Top|Bottom)
             height=$Width
             width=$Height
             min=$Height
 
-            echo "#include \"$tempdir/brain_lt.pov\"" >  $tempdir/render_${angle}.pov
+            echo "#include \"$tempdir/brain_lt.pov\"" >> $tempdir/render_${angle}.pov
             echo "#include \"$tempdir/brain_rt.pov\"" >> $tempdir/render_${angle}.pov
             sed -e "s/ANGLE/$angle/" -e "s/WIDTH/$width/" -e "s/HEIGHT/$height/" -e "s/MIN/$min/" $template >> $tempdir/render_${angle}.pov
 
@@ -174,7 +180,7 @@ for angle in Front Back Top Bottom Left Right; do
             height=$Height
             width=$Height
             min=$Height
-            echo "#include \"$tempdir/brain_lt.pov\"" > $tempdir/render_${angle}.pov
+            echo "#include \"$tempdir/brain_lt.pov\"" >> $tempdir/render_${angle}.pov
             echo "#include \"$tempdir/brain_rt.pov\"" >> $tempdir/render_${angle}.pov
             sed -e "s/ANGLE/$angle/" -e "s/WIDTH/$width/" -e "s/HEIGHT/$height/" -e "s/MIN/$min/" $template >> $tempdir/render_${angle}.pov
             echo -e "object {\n  brain_lt\n  rotate ObjectRotation${angle}\n}\n" >>$tempdir/render_${angle}.pov
@@ -189,8 +195,12 @@ for angle in Front Back Top Bottom Left Right; do
             height=$Height
             width=$Width
             min=$Height
-            echo "#include \"$tempdir/brain_lt.pov\"" > $tempdir/render_${angle}_lt.pov
-            echo "#include \"$tempdir/brain_rt.pov\"" > $tempdir/render_${angle}_rt.pov
+            echo "#version 3.6;"> $tempdir/render_${angle}_lt.pov
+            echo "#include \"$tempdir/brain_lt.pov\"" >> $tempdir/render_${angle}_lt.pov
+
+            echo "#version 3.6;"> $tempdir/render_${angle}_rt.pov
+            echo "#include \"$tempdir/brain_rt.pov\"" >> $tempdir/render_${angle}_rt.pov
+            
             sed -e "s/ANGLE/$angle/" -e "s/WIDTH/$width/" -e "s/HEIGHT/$height/" -e "s/MIN/$min/" $template >> $tempdir/render_${angle}_lt.pov
             sed -e "s/ANGLE/$angle/" -e "s/WIDTH/$width/" -e "s/HEIGHT/$height/" -e "s/MIN/$min/" $template >> $tempdir/render_${angle}_rt.pov
             echo -e "object {\n  brain_lt\n  rotate ObjectRotation${angle}\n}\n" >>$tempdir/render_${angle}_lt.pov

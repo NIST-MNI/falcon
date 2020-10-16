@@ -31,8 +31,8 @@ set -o pipefail -E -e -x
 export OMP_NUM_THREADS=2 # multi-threading for parallel for niik
 export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=${OMP_NUM_THREADS} # for itk
 
-if [[ -z "$FALCON_HOME"  ]]; then
-  FALCON_HOME="/opt/minc/1.9.17"
+if [[ -z "$FALCON_HOME" ]];then
+  FALCON_HOME="${MINC_TOOLKIT}"
 fi
 
 if [[ -z "$FALCON_DATA"  ]]; then

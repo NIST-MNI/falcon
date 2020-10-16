@@ -35,7 +35,7 @@ int niik_image_correct_for_cuberille(nifti_image *img,int flag)
  * -removes shared edges and vertices
  */
 {
-  char fcname[512]="niik_image_correct_for_cuberille";
+  const char *fcname="niik_image_correct_for_cuberille";
   int
   xdim,area,
        n,m,i,j,k,
@@ -349,9 +349,8 @@ kobj *off_cuberille_kobj(nifti_image *img,int flag_all_obj)
   kvert *v,*nv[4];
   kface *f;
   kedge *e,*et=NULL;
-  char
-  fname[512],
-        fcname[32]="off_cuberille_kobj";
+  char fname[512];
+  const char *fcname="off_cuberille_kobj";
   unsigned char *bimg,*btmp;
   int
   iter=0,
@@ -980,13 +979,11 @@ kobj *off_cuberille_kobj(nifti_image *img,int flag_all_obj)
   obj->nface = n-1;
   fprintf(stdout,"[%s] vfe %i %i %i\n",fcname,obj->nvert,obj->nface,obj->nedge);
 
-
-  /* pixel size */
-  fprintf(stdout,"[%s] pixel correction\n",fcname);
+  /* convert to world coordinates */
+  fprintf(stdout,"[%s] voxel to world conversion\n",fcname);
   for(v=obj->vert; v!=NULL; v=v->next) {
-    v->v.x *= img->pixdim[1];
-    v->v.y *= img->pixdim[2];
-    v->v.z *= img->pixdim[3];
+    niikpt p = v->v;
+    niik_ijk_to_world(img, &p, &v->v);
   }
 
   /* make edges */
@@ -1112,16 +1109,48 @@ kvert *off_cuberille_kobj_search_kvert(kobj *obj,kvert *vtail,int x,int y, int z
  *
  **********************************************************************************/
 
-int off_cuberille_find_largest_obj_mark_neighbors(kvert *vert,double w) {
-  int n;
-  for(n=0; n<vert->nei; n++) {
-    if(vert->neivert[n]->v.w==0) {
-      vert->neivert[n]->v.w=w;
-      off_cuberille_find_largest_obj_mark_neighbors(vert->neivert[n],w);
+int off_cuberille_find_largest_obj_mark_neighbors(kvert *vert,double w) 
+{
+  
+  kvert ** working_set = malloc(sizeof(kvert *));
+  kvert ** next_working_set = NULL;
+  int working_set_size=1;
+  working_set[0] = vert;
+
+  for(;;)
+  {
+    kvert **tmp;
+    int next_working_set_size=0;
+    int n;
+
+    // find neighbors connected and not labelled
+    for(n=0; n<working_set_size; n++) {
+      int i;
+      // maximum new entries
+      next_working_set=realloc(next_working_set, (next_working_set_size + working_set[n]->nei)*sizeof(kvert *));
+      for(i=0;i<working_set[n]->nei;++i)
+      {
+        if( (int)working_set[n]->neivert[i]->v.w == 0) //unassigned
+        {
+          working_set[n]->neivert[i]->v.w = w;
+          next_working_set[next_working_set_size] = working_set[n]->neivert[i];
+          next_working_set_size++; 
+        }
+      }
     }
+    if(!next_working_set_size) break; // no more vertices to process
+    //swap buffers
+    tmp = working_set;
+    working_set = next_working_set;
+    working_set_size = next_working_set_size;
+    next_working_set = tmp;
   }
+
+  free(working_set);
+  free(next_working_set);
   return 1;
 }
+
 
 int off_cuberille_find_largest_obj(kobj *obj)
 /* -finds the largest object and
@@ -1135,7 +1164,7 @@ int off_cuberille_find_largest_obj(kobj *obj)
   int
   verbose=1,
   m,n,w=1,fw=0,wsum=0,wmax=0;
-  char fcname[32]="off_cuberille_find_largest_obj";
+  const char *fcname="off_cuberille_find_largest_obj";
 
   if(verbose>=1) niik_fc_display(fcname,1);
   if(obj==NULL) {
@@ -1144,7 +1173,7 @@ int off_cuberille_find_largest_obj(kobj *obj)
   }
 
   off_kobj_update_num(obj);
-  fprintf(stdout,"[%s] vfe %i %i %i\n",fcname,obj->nvert,obj->nface,obj->nedge);
+  fprintf(stdout,"[%s] vfe before %i %i %i\n",fcname,obj->nvert,obj->nface,obj->nedge);
 
   /* initialize */
   if(verbose>=1) fprintf(stdout,"[%s] initialization v.w\n",fcname);
@@ -1169,7 +1198,7 @@ int off_cuberille_find_largest_obj(kobj *obj)
       wmax=wsum;
       fw=w;
     }
-    if(wmax>obj->nvert*0.51) break;
+    if(wmax > obj->nvert*0.51) break; //VF?
     w++;
   }
 
@@ -1181,19 +1210,20 @@ int off_cuberille_find_largest_obj(kobj *obj)
   }
   elist=(kedge **)calloc(n,sizeof(kedge *));
   for(e=obj->edge,n=0; e!=NULL; e=e->next) {
-    if((int)e->endpts[0]->v.w!=fw) {
+    if((int)e->endpts[0]->v.w != fw) {
       elist[n++]=e;
     }
   }
+  fprintf(stdout,"[%s] removing %d edges\n",fcname,n);
   for(m=0; m<n; m++) {
-    /*fprintf(stdout,"[%s]   removing edge %i [%i]\n",fcname,elist[m]->index,m);*/
+    /*fprintf(stdout,"[%s]   removing edge %i [%i]\n",fcname, elist[m]->index,m);*/
     off_kedge_remove(elist[m],obj);
   }
   free(elist);
 
   if(verbose>=1) fprintf(stdout,"[%s] clean up faces\n",fcname);
   for(f=obj->face,n=0; f!=NULL; f=f->next) {
-    if((int)f->vert[0]->v.w!=fw) {
+    if((int)f->vert[0]->v.w != fw) {
       n++;
     }
   }
@@ -1203,6 +1233,7 @@ int off_cuberille_find_largest_obj(kobj *obj)
       flist[n++]=f;
     }
   }
+  fprintf(stdout,"[%s] removing %d faces\n",fcname,n);
   for(m=0; m<n; m++) {
     /*fprintf(stdout,"[%s]   removing edge %i [%i]\n",fcname,elist[m]->index,m);*/
     off_kface_remove(flist[m],obj);
@@ -1211,24 +1242,26 @@ int off_cuberille_find_largest_obj(kobj *obj)
 
   if(verbose>=1) fprintf(stdout,"[%s] clean up verts\n",fcname);
   for(v=obj->vert,n=0; v!=NULL; v=v->next) {
-    if((int)v->v.w!=fw) {
+    if((int)v->v.w != fw) {
       n++;
     }
   }
   vlist=(kvert **)calloc(n,sizeof(kvert *));
   for(v=obj->vert,n=0; v!=NULL; v=v->next) {
-    if((int)v->v.w!=fw) {
+    if((int)v->v.w != fw) {
       vlist[n++]=v;
     }
   }
+  fprintf(stdout,"[%s] removing %d verts\n", fcname, n);
+
   for(m=0; m<n; m++) {
     /*fprintf(stdout,"[%s]   removing edge %i [%i]\n",fcname,elist[m]->index,m);*/
     off_kvert_remove(vlist[m],obj);
   }
   free(vlist);
 
-  off_kobj_update_num(obj);
-  fprintf(stdout,"[%s] vfe %i %i %i\n",fcname,obj->nvert,obj->nface,obj->nedge);
+  off_kobj_update_all_index(obj);
+  fprintf(stdout,"[%s] vfe after %i %i %i\n",fcname,obj->nvert,obj->nface,obj->nedge);
 
   if(verbose>=1) niik_fc_display(fcname,0);
   return 1;

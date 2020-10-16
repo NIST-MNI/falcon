@@ -295,6 +295,7 @@ int niik_off_write_pov(const char *fname,kobj *obj, double diffuse, double phong
     fprintf(fp,"1,\n");
     fprintf(fp,"texture{finish{ diffuse %f phong %f %s } pigment{rgb <%f,%f,%f>}}\n",
               diffuse, phong, metallic?"metallic":"", 0.8, 0.8, 0.8 );
+    fprintf(fp,"}\n");
   }
 
   fprintf(fp,"face_indices {\n");
