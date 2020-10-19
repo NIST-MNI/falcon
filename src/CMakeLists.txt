@@ -25,26 +25,25 @@ SET(FALCON_DATA_SOURCE  ${CMAKE_SOURCE_DIR})
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/falcon_config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/falcon_config.h @ONLY)
 
 INCLUDE_DIRECTORIES(
-   ${CMAKE_CURRENT_BINARY_DIR}
-   #surface_tools
-   rply-1.1.4
-   libcsv
-   NrrdIO
-   ${CMAKE_CURRENT_BINARY_DIR}/NrrdIO
+  ${CMAKE_CURRENT_BINARY_DIR}
+   3rd_party/rply-1.1.4
+   3rd_party/libcsv
+   3rd_party/NrrdIO
+   ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/NrrdIO
 )
 
 SET(RPLY_LIB_SRC
-    rply-1.1.4/rply.c
-    rply-1.1.4/rplyfile.h
-    rply-1.1.4/rply.h
+    3rd_party/rply-1.1.4/rply.c
+    3rd_party/rply-1.1.4/rplyfile.h
+    3rd_party/rply-1.1.4/rply.h
 )
 
 SET(CSV_LIB_SRC
-    libcsv/csv.h  libcsv/libcsv.c
+    3rd_party/libcsv/csv.h  3rd_party/libcsv/libcsv.c
 )
 
 # NrrdIO
-ADD_SUBDIRECTORY(NrrdIO)
+ADD_SUBDIRECTORY(3rd_party/NrrdIO)
 
 
 SET(FALCON_LIB_HDR
