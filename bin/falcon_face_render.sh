@@ -81,7 +81,7 @@ fi
 set -xe
 # convert off to povray mesh
 $FALCON_BIN/falcon_off2pov $in_off $tempdir/brain.pov \
-  --object brain --clobber
+  --object brain --clobber 
   
 
 # modify template for different orientations
@@ -115,7 +115,7 @@ for angle in Left Front Right; do
         $template >> $tempdir/render_${angle}.pov
     echo -e "object {\n  brain\n  rotate ObjectRotation${angle}\n}\n" >>$tempdir/render_${angle}.pov
 
-    povray $tempdir/render_${angle}.pov +o$tempdir/render_${angle}.png -D -GA +A +H${height} +W${width} -V  +UA 
+    povray $tempdir/render_${angle}.pov +o$tempdir/render_${angle}.png -D -GA +J +R5 +A +H${height} +W${width} -V  +UA
     convert $tempdir/render_${angle}.png -trim +repage $tempdir/render_${angle}.png
     convert $tempdir/render_${angle}.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}.png
 done
