@@ -225,7 +225,7 @@ int split_kobj(kobj *obj, kobj ***out, int attribute, int verbose) {
     {
       /*for sorting groups*/
       struct group_cm* groups_cm;
-      groups_cm=(struct group_cm *)calloc(sizeof(struct group_cm), g-1);
+      groups_cm=(struct group_cm *)calloc(sizeof(struct group_cm), num_groups);
 
       for(v=obj->vert; v!=NULL; v=v->next) {
         int gi = group_labels[v->index]-1;
