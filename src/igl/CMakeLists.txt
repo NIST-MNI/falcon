@@ -1,5 +1,9 @@
-add_executable(falcon_igl_view_field view_field.cpp )
-target_link_libraries(falcon_igl_view_field igl::core igl::opengl_glfw igl::opengl_glfw_imgui)
+IF(LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_GLFW AND LIBIGL_WITH_OPENGL_GLFW_IMGUI)
+    # Viewer APP
+    add_executable(falcon_igl_view_field view_field.cpp )
+    target_link_libraries(falcon_igl_view_field igl::core igl::opengl_glfw igl::opengl_glfw_imgui)
+    INSTALL( TARGETS  falcon_igl_view_field)
+ENDIF()
 
 add_executable(falcon_igl_field_eig field_eig.cpp )
 target_link_libraries(falcon_igl_field_eig igl::core )
@@ -19,5 +23,4 @@ INSTALL( TARGETS
         falcon_igl_field_resample
         falcon_igl_field_depth
         falcon_igl_field_eig
-        falcon_igl_view_field
-    )
+       )

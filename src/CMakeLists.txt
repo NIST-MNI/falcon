@@ -10,10 +10,6 @@
 #set_property(TARGET igl_eigen PROPERTY EXPORT_NAME Eigen3::Eigen)
 #add_library(Eigen3::Eigen ALIAS igl_eigen)
 
-SET(LIBIGL_WITH_TETGEN OFF)
-SET(LIBIGL_WITH_TRIANGLE OFF)
-SET(LIBIGL_WITH_EMBREE OFF)
-SET(LIBIGL_WITH_COMISO OFF)
 # libigl
 ADD_SUBDIRECTORY(3rd_party/libigl)
 

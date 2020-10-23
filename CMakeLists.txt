@@ -9,6 +9,21 @@ OPTION(USE_OPENMP  "Use OpenMP multi-threading" OFF)
 OPTION(BUILD_NVK   "Build viewer, requires GTK2" OFF)
 OPTION(HAVE_POVRAY "Is POVRAY available?" OFF)
 
+#LIBIGL options
+option(LIBIGL_USE_STATIC_LIBRARY     "Use libigl as static library" OFF)
+option(LIBIGL_WITH_COMISO            "Use CoMiso"                   OFF)
+option(LIBIGL_WITH_EMBREE            "Use Embree"                   OFF)
+option(LIBIGL_WITH_OPENGL            "Use OpenGL"                   OFF)
+option(LIBIGL_WITH_OPENGL_GLFW       "Use GLFW"                     OFF)
+option(LIBIGL_WITH_OPENGL_GLFW_IMGUI "Use ImGui"                    OFF)
+option(LIBIGL_WITH_PNG               "Use PNG"                      OFF)
+option(LIBIGL_WITH_TETGEN            "Use Tetgen"                   OFF)
+option(LIBIGL_WITH_TRIANGLE          "Use Triangle"                 OFF)
+#option(LIBIGL_WITH_PREDICATES        "Use exact predicates"         OFF)
+option(LIBIGL_WITH_XML               "Use XML"                      OFF)
+
+
+
 if (USE_OPENMP)
     FIND_PACKAGE(OpenMP)
     if(OPENMP_FOUND)
