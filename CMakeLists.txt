@@ -1,7 +1,9 @@
 PROJECT(FALCON)
 cmake_minimum_required(VERSION 2.8)
-
 enable_language(C CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 OPTION(USE_OPENMP  "Use OpenMP multi-threading" OFF)
 OPTION(BUILD_NVK   "Build viewer, requires GTK2" OFF)
