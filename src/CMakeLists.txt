@@ -2,15 +2,18 @@
 #adding 3rd party subprojects
 # Eigen 
 #ADD_SUBDIRECTORY(3rd_party/eigen)
-add_library(igl_eigen INTERFACE)
-target_include_directories(igl_eigen SYSTEM INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rd_party/eigen>
-  $<INSTALL_INTERFACE:include>
-)
-set_property(TARGET igl_eigen PROPERTY EXPORT_NAME Eigen3::Eigen)
-add_library(Eigen3::Eigen ALIAS igl_eigen)
+#add_library(igl_eigen INTERFACE)
+#target_include_directories(igl_eigen SYSTEM INTERFACE
+#  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rd_party/eigen>
+#  $<INSTALL_INTERFACE:include>
+#)
+#set_property(TARGET igl_eigen PROPERTY EXPORT_NAME Eigen3::Eigen)
+#add_library(Eigen3::Eigen ALIAS igl_eigen)
 
-
+SET(LIBIGL_WITH_TETGEN OFF)
+SET(LIBIGL_WITH_TRIANGLE OFF)
+SET(LIBIGL_WITH_EMBREE OFF)
+SET(LIBIGL_WITH_COMISO OFF)
 # libigl
 ADD_SUBDIRECTORY(3rd_party/libigl)
 
@@ -42,15 +45,13 @@ SET(FALCON_DATA_DEFAULT ${CMAKE_INSTALL_PREFIX} )
 SET(FALCON_DATA_SOURCE  ${CMAKE_SOURCE_DIR})
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/falcon_config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/falcon_config.h @ONLY)
 
-
-
-
-
 INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_BINARY_DIR}
    3rd_party/rply-1.1.4
    3rd_party/libcsv
    3rd_party/NrrdIO
+   3rd_party/
+   3rd_party/spectra/include
    ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/NrrdIO
 )
 
@@ -66,6 +67,10 @@ SET(CSV_LIB_SRC
 
 # NrrdIO
 ADD_SUBDIRECTORY(3rd_party/NrrdIO)
+
+
+# LibIGL based tools
+ADD_SUBDIRECTORY(igl)
 
 
 SET(FALCON_LIB_HDR
