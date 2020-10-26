@@ -219,6 +219,9 @@ int main(int argc, char *argv[])
         resample_field(sph1, sph2, D, oD, weighted_avg, knn);
       } else if( par["invexp"].as<bool>() ) {
         resample_field(sph1, sph2, D, oD, invexp_weighted_avg, knn);
+      } else {
+        std::cerr<< " Need to specify --weighted --invexp or --nearest" << std::endl;
+        return 1;
       }
 
       // aggregate information from k neighbors: average, make weighted average, take median, mode (for labels ) or highest probability (for labels)
