@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include <igl/read_triangle_mesh.h>
 #include <iostream>
 
@@ -7,6 +9,7 @@
 
 #include "csv/readCSV.h"
 #include "csv/writeCSV.h"
+
 #include "cxxopts.hpp"
 #include <algorithm>
 
@@ -44,18 +47,22 @@ void sph_to_xyz(const Eigen::MatrixXd& sph,
 }
 
 
-template <typename DerivedC, typename DerivedD, typename Aggregate> 
+template <typename Distance,
+          typename DerivedC, 
+          typename DerivedD, 
+          typename Aggregate
+          > 
   void resample_field(
     const Eigen::PlainObjectBase<DerivedC> & coord_src,
     const Eigen::PlainObjectBase<DerivedC> & coord_trg,
     const Eigen::PlainObjectBase<DerivedD> & in_data,
-    Eigen::PlainObjectBase<DerivedD> & out_data,
+    Eigen::PlainObjectBase<DerivedD>       & out_data,
     Aggregate agg,
     const int knn = 1,
     const int leaf_max_size = 10
     )
 {
-  typedef nanoflann::KDTreeEigenMatrixAdaptor< typename Eigen::PlainObjectBase<DerivedC> > kd_tree_t;
+  typedef nanoflann::KDTreeEigenMatrixAdaptor< typename Eigen::PlainObjectBase<DerivedC>,3, Distance > kd_tree_t;
     kd_tree_t idx(coord_src.cols() , coord_src, leaf_max_size );
     idx.index->buildIndex();
 
@@ -82,8 +89,9 @@ template <typename DerivedC, typename DerivedD, typename Aggregate>
         idx.index -> findNeighbors(resultSet, row_sph.data(), nanoflann::SearchParams());
 
         out_data.row(i) = agg(
-          Eigen::Array<typename DerivedD::Scalar,-1,-1>::NullaryExpr(num_results, in_data.cols(), [&] (Eigen::Index r, Eigen::Index c) { return in_data(ret_indexes(r), c);}),
-          out_dists_sqr );
+          Eigen::Array<typename DerivedD::Scalar,-1,-1>::NullaryExpr(num_results, in_data.cols(), 
+            [&] (Eigen::Index r, Eigen::Index c) { return in_data(ret_indexes(r), c);}),
+            out_dists_sqr );
     }
 
 }
@@ -109,6 +117,14 @@ int main(int argc, char *argv[])
     ("weighted", "Use weighted average ", cxxopts::value<bool>()->default_value("false"))
     ("invexp",   "Use inverse-exp weighted average ", cxxopts::value<bool>()->default_value("false"))
 
+    ("majority", "Use majority voting, mostly for labelled data", cxxopts::value<bool>()->default_value("false"))
+    ("majority_weighted", "Use weighted majority voting ", cxxopts::value<bool>()->default_value("false"))
+    ("majority_invexp",   "Use inverse-exp weighted majority voting ", cxxopts::value<bool>()->default_value("false"))
+
+    ("SO3",      "Use SO3 metric (angular distance)", cxxopts::value<bool>()->default_value("false"))
+
+    ("clobber", "Clobber output file ", cxxopts::value<bool>()->default_value("false"))
+
     ("help", "Print help") ;
   
   options.parse_positional({"source", "target" });
@@ -118,6 +134,12 @@ int main(int argc, char *argv[])
       par.count("target") && 
       par.count("output") )
   {
+    if ( !par["clobber"].as<bool>() && 
+         !access( par["output"].as<std::string>().c_str(), F_OK)) {
+      std::cerr << par["output"].as<std::string>()<<" Exists!"<<std::endl;
+      return 1;
+    }
+
     Eigen::MatrixXd V1,N1,UV1,D1;
     Eigen::MatrixXi F1,E1;
     std::vector<std::string> header1;
@@ -141,7 +163,6 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-
     if(par["verbose"].as<bool>())
     {
       std::cout << "Source Mesh 1:" << argv[1] << std::endl;
@@ -162,7 +183,7 @@ int main(int argc, char *argv[])
           std::cout<<i<<"\t";
       std::cout<<std::endl;
     }
-
+  
     Eigen::MatrixXd  PT1, PT2;
     Eigen::MatrixXd  sph1, sph2;
 
@@ -190,16 +211,37 @@ int main(int argc, char *argv[])
           std::cerr<<"Unexpected number of rows:"<< D.rows() <<" instead of:"<< sph1.rows() <<std::endl;
           return 1;
         }
+      } else {
+        // use fields from the input mesh
+        std::vector<int> out_idx;
+        for(int i=0;i<header1.size();++i)
+        {
+          if( header1[i]!="psi" && 
+              header1[i]!="the" )
+            out_idx.push_back(i);
+        }
+        header.resize(out_idx.size());
+        D.resize(PT1.rows(),out_idx.size());
+        for(int i=0;i<out_idx.size();++i)
+        {
+          header[i]=header1[out_idx[i]];
+          D.col(i)=PT1.col(out_idx[i]);
+        }
+      }
+      if(D.cols()==0)
+      {
+        std::cerr << "Empty input data, probably something is wrong "<<std::endl;
+        return 1;
       }
 
       Eigen::MatrixXd oD; 
 
-      // single nearest neighbor, the simples case
+      // single nearest neighbor, the simplest case, ignore dist completely
       auto nearest_neighbor_agg = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
            return data.row(0);
       };
 
-      // simple inv-weighted average
+      // simple inv-distance-weighted average
       auto weighted_avg = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
           Eigen::ArrayXd w = (dist+1e-6).cwiseInverse();
           w/=w.sum();
@@ -212,16 +254,119 @@ int main(int argc, char *argv[])
           return (data*w).colwise().sum();
       };
       
+      // simple majority voting, works for single dimension data only
+      auto majority_voting = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
+        Eigen::VectorXd r=Eigen::VectorXd::Zero(data.cols());
+        for(int c=0;c<data.cols();++c) 
+        {
+            std::unordered_map<double, int> cnts;
+            int max_vote_count=0;
+            double max_vote=data(0,c);
+            for(int i=0;i<data.rows();++i)
+            {
+              auto t = cnts.insert( std::make_pair(data(i,c),0) );
+              t.first->second++;
+              if(t.first->second>max_vote_count)
+              {
+                max_vote_count=t.first->second;
+                max_vote=data(i,c);
+              }
+            }
+            r[c]=max_vote;
+        }
+        return r;
+      };
+
+      // weighted majority voting, works for single dimension data only
+      auto majority_weighted_voting = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
+          Eigen::ArrayXd w = (dist+1e-6).cwiseInverse();
+          w/=w.sum();
+
+          Eigen::VectorXd r=Eigen::VectorXd::Zero(data.cols());
+          for(int c=0;c<data.cols();++c) 
+          {
+            std::unordered_map<double,double> cnts;
+            double max_vote_weight=0;
+            double max_vote=data(0,c);
+            for(int i=0;i<data.rows();++i)
+            {
+              auto t = cnts.insert( std::make_pair(data(i,c), 0.0) );
+              t.first->second+=w(i,0);
+              if(t.first->second>max_vote_weight)
+              {
+                max_vote_weight=t.first->second;
+                max_vote=data(i,c);
+              }
+            }
+            r[c]=max_vote;
+          }
+          return r;
+      };
+
+      // inverse-exponential weighted majority voting, works for single dimension data only
+      auto majority_invexp_weighted_voting = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
+          Eigen::ArrayXd w = Eigen::exp(-1.0*dist);
+          w/=w.sum();
+          Eigen::VectorXd r=Eigen::VectorXd::Zero(data.cols());
+
+          for(int c=0;c<data.cols();++c) 
+          {
+            std::unordered_map<double,double> cnts;
+            double max_vote_weight=0;
+            double max_vote=data(0,c);
+            for(int i=0;i<data.rows();++i)
+            {
+              auto t = cnts.insert( std::make_pair(data(i,c), 0.0) );
+              t.first->second+=w(i,0);
+              if(t.first->second>max_vote_weight)
+              {
+                max_vote_weight=t.first->second;
+                max_vote=data(i,c);
+              }
+            }
+            r[c]=max_vote;
+          }
+          return r;
+      };
+
       // TODO: make templated version with double and int
-      if( par["nearest"].as<bool>() ) {
-        resample_field(sph1, sph2, D, oD, nearest_neighbor_agg, knn);
-      } else if( par["weighted"].as<bool>() ) {
-        resample_field(sph1, sph2, D, oD, weighted_avg, knn);
-      } else if( par["invexp"].as<bool>() ) {
-        resample_field(sph1, sph2, D, oD, invexp_weighted_avg, knn);
+      // TODO: allow specifying different algorithm for different columns
+      if( par["SO3"].as<bool>() )
+      {
+        if( par["nearest"].as<bool>() ) {
+          resample_field<nanoflann::metric_SO3>(sph1, sph2, D, oD, nearest_neighbor_agg, knn);
+        } else if( par["weighted"].as<bool>() ) {
+          resample_field<nanoflann::metric_SO3>(sph1, sph2, D, oD, weighted_avg, knn);
+        } else if( par["invexp"].as<bool>() ) {
+          resample_field<nanoflann::metric_SO3>(sph1, sph2, D, oD, invexp_weighted_avg, knn);
+        } else if( par["majority"].as<bool>() ) {
+          resample_field<nanoflann::metric_SO3>(sph1, sph2, D, oD, majority_voting, knn);
+        } else if( par["majority_weighted"].as<bool>() ) {
+          resample_field<nanoflann::metric_SO3>(sph1, sph2, D, oD, majority_weighted_voting, knn);
+        } else if( par["majority_invexp"].as<bool>() ) {
+          resample_field<nanoflann::metric_SO3>(sph1, sph2, D, oD, majority_invexp_weighted_voting, knn);
+        }        
+        else {
+          std::cerr<< " Need to specify --weighted --invexp or --nearest" << std::endl;
+          return 1;
+        }
       } else {
-        std::cerr<< " Need to specify --weighted --invexp or --nearest" << std::endl;
-        return 1;
+        if( par["nearest"].as<bool>() ) {
+          resample_field<nanoflann::metric_L2>(sph1, sph2, D, oD, nearest_neighbor_agg, knn);
+        } else if( par["weighted"].as<bool>() ) {
+          resample_field<nanoflann::metric_L2>(sph1, sph2, D, oD, weighted_avg, knn);
+        } else if( par["invexp"].as<bool>() ) {
+          resample_field<nanoflann::metric_L2>(sph1, sph2, D, oD, invexp_weighted_avg, knn);
+        } else if( par["majority"].as<bool>() ) {
+          resample_field<nanoflann::metric_L2>(sph1, sph2, D, oD, majority_voting, knn);
+        } else if( par["majority_weighted"].as<bool>() ) {
+          resample_field<nanoflann::metric_L2>(sph1, sph2, D, oD, majority_weighted_voting, knn);
+        } else if( par["majority_invexp"].as<bool>() ) {
+          resample_field<nanoflann::metric_L2>(sph1, sph2, D, oD, majority_invexp_weighted_voting, knn);
+        } else {
+          std::cerr<< " Need to specify --weighted --invexp or --nearest" << std::endl;
+          return 1;
+        }
       }
 
       // aggregate information from k neighbors: average, make weighted average, take median, mode (for labels ) or highest probability (for labels)
