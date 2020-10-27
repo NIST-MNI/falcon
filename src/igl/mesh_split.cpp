@@ -1,36 +1,54 @@
 #include <iostream>
+#include <unistd.h>
 
 #include "igl/adjacency_matrix.h"
 #include "igl/vertex_components.h"
 #include "igl/readPLY.h"
 #include "igl/writePLY.h"
 
+#include "cxxopts.hpp"
 
 int main(int argc, char *argv[])
 {
-  if(argc>2)
+  cxxopts::Options options(argv[0], "Resample field");
+
+  options
+      .positional_help("<source> <output printf format>")
+      .show_positional_help();
+  
+  options.add_options()
+    ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
+    ("s,source",  "Source mesh ",   cxxopts::value<std::string>())
+    ("o,output",  "Output printf format ", cxxopts::value<std::string>())
+
+    ("help", "Print help") ;
+  
+  options.parse_positional({"source", "output"});
+  auto par = options.parse(argc, argv);
+
+  if( par.count("source") && 
+      par.count("output") )
   {
+
     Eigen::MatrixXd V,N,UV,D;
     Eigen::MatrixXi F,E;
     std::vector<std::string> header;
 
     double alpha=0.05;
 
-    if(igl::readPLY(argv[1], V, F, E, N, UV, D, header))
+    if(igl::readPLY(par["source"].as<std::string>(), V, F, E, N, UV, D, header))
     {
-      size_t k = 5;
+      if(par["verbose"].as<bool>()) {
+        std::cout << "Vertices: " << V.rows() << "x"<< V.cols() << std::endl;
+        std::cout << "Faces:    " << F.rows() << "x"<< F.cols() << std::endl;
+        std::cout << "Data:     " << D.rows() << "x"<< D.cols() << std::endl;
+        std::cout << "Edges:    " << E.rows() << "x"<< E.cols() << std::endl;
+        std::cout<<"header:";
 
-      if(argc>3) k=atoi(argv[3]);
-
-      std::cout << "Vertices: " << V.rows() << "x"<< V.cols() << std::endl;
-      std::cout << "Faces:    " << F.rows() << "x"<< F.cols() << std::endl;
-      std::cout << "Data:     " << D.rows() << "x"<< D.cols() << std::endl;
-      std::cout << "Edges:    " << E.rows() << "x"<< E.cols() << std::endl;
-      std::cout<<"header:";
-
-      for(auto h:header)
-        std::cout<<h<<"\t";
-      std::cout << std::endl;
+        for(auto h:header)
+          std::cout<<h<<"\t";
+        std::cout << std::endl;
+      }
 
       Eigen::SparseMatrix<typename Eigen::MatrixXi::Scalar> A;
       Eigen::VectorXi C, counts;
@@ -47,7 +65,7 @@ int main(int argc, char *argv[])
       if( E.rows()>0 )
        EC = Eigen::VectorXi::NullaryExpr( E.rows(), [&] (Eigen::Index row) {return C( E( row, 0)); } );
 
-      std::cout << "Connected components:" << counts.rows() << std::endl;
+      if(par["verbose"].as<bool>()) std::cout << "Connected components:" << counts.rows() << std::endl;
 
       for(typename Eigen::VectorXi::Scalar i=0; i<counts.rows(); ++i)
       {
@@ -92,7 +110,7 @@ int main(int argc, char *argv[])
         FC.visit(idx_f);
 
         // remap vertices
-        V1 = Eigen::MatrixXd::NullaryExpr(counts(i), V.cols(), [&] (Eigen::Index row, Eigen::Index col) { return V(idx_v.idx[row], col);} );
+        V1 = Eigen::MatrixXd::NullaryExpr(counts(i), V.cols(), [&] (Eigen::Index row, Eigen::Index col)     { return V(idx_v.idx[row], col);} );
 
         // remap faces
         F1 = Eigen::MatrixXi::NullaryExpr(idx_f.next, F.cols(), [&] (Eigen::Index row, Eigen::Index col)    { return  idx_v.rev_idx(F(idx_f.idx[row], col));} );
@@ -114,24 +132,28 @@ int main(int argc, char *argv[])
           D1 = Eigen::MatrixXd::NullaryExpr(counts(i), D.cols(), [&] (Eigen::Index row, Eigen::Index col) {return D(idx_v.idx[row], col);} );
 
         char tmp[1024];
-        sprintf(tmp, argv[2], i);
-        std::cout << tmp << std::endl;
-        std::cout << "  Vertices: " << V1.rows() << "x"<< V1.cols() << std::endl;
-        std::cout << "  Faces:    " << F1.rows() << "x"<< F1.cols() << std::endl;
-        std::cout << "  Data:     " << D1.rows() << "x"<< D1.cols() << std::endl;
-        std::cout << "  Edges:    " << E1.rows() << "x"<< E1.cols() << std::endl;
+        snprintf(tmp, 1023, par["output"].as<std::string>().c_str(), i);
+        if(par["verbose"].as<bool>()) {
+          std::cout << tmp << std::endl;
+          std::cout << "  Vertices: " << V1.rows() << "x"<< V1.cols() << std::endl;
+          std::cout << "  Faces:    " << F1.rows() << "x"<< F1.cols() << std::endl;
+          std::cout << "  Data:     " << D1.rows() << "x"<< D1.cols() << std::endl;
+          std::cout << "  Edges:    " << E1.rows() << "x"<< E1.cols() << std::endl;
+        }
 
-
-        igl::writePLY(tmp, V1, F1, E1, N1, UV1, D1, header );
+        if(!igl::writePLY(tmp, V1, F1, E1, N1, UV1, D1, header ))
+        {
+          std::cerr<<"Error writing:"<<tmp<<std::endl;
+          return 1;
+        }
       }
-      
-       
+             
     } else {
       std::cerr<<"Error reding ply:"<<argv[1]<<std::endl;
       return 1;
     }
   } else {
-    std::cerr<<"Usage:"<<argv[0]<<" input.ply output_base_%d.ply"<<std::endl;
+    std::cerr << options.help({"", "Group"}) << std::endl;
     return 1;
   }
   return 0;
