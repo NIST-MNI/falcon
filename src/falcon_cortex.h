@@ -165,8 +165,8 @@ niikcortex_deform *niikcortex_deform_free(niikcortex_deform *dfm);
 double niikcortex_calc_area_weighted_thickness(kobj *ics, kobj *ocs, double *thk, int filter_type, int filter_size);
 int niikcortex_calc_thickness(kobj *ics, kobj *ocs, double *thk, double *phi, double *the, int filter_type, int filter_size);
 int niikcortex_add_thickness_color(kobj *ics, kobj *ocs, double *thk, double omin, double omax);
-int niikcortex_add_color(kobj *obj, double *var, double omin, double omax,int color_map_type);
-
+int niikcortex_add_color(kobj *obj, double *var, double omin, double omax,int color_map_type,int color_levels);
+int niikcortex_add_color_discrete(kobj *obj, double *var, double omin, double omax, int color_map_type,int color_levels);
 
 /* falcon_cortex_initics.c */
 int    niikcortex_initics_expand(nifti_image *brain_img,double max_size,double step_size,kobj *obj);

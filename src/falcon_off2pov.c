@@ -45,10 +45,13 @@ void usage() {
           "\t--sphere        - use spherical coordinates instead of x,y,z\n"
           "\t--radius <n>    - sphere radius, default 50mm\n"
           "\t--colorize <map> - colorize surface using field\n"
+          "\t--discrete      - assume values are discrete, do not interpolate\n"
+          "\t--labels        - same as --discrete\n"
           "\t--min <f>\n"
           "\t--max <f>\n"
           "\t--column <name> - column name to use\n"
           "\t--column_id <name> - column id to use\n"
+          "\t--levels <N> - number of unique color levels, default 50\n"
            );
 }
 
@@ -79,6 +82,8 @@ int main(int argc,char *argv[],char *envp[]) {
   const char *column_name=NULL;
   int column_id=0;
   int print_range=0;
+  int color_levels=50;
+  int discrete_values=0;
 
   niiktable *meas_in;
 
@@ -96,12 +101,16 @@ int main(int argc,char *argv[],char *envp[]) {
     {"colorize", required_argument, 0, 'c'},
     {"column", required_argument,0,'C'},
     {"column_id", required_argument,0,'N'},
+    {"levels", required_argument, 0, 'l'},
 
     {"spectral", no_argument,&cmap,NIIK_COLORMAP_SPECTRAL},
     {"atrophy", no_argument,&cmap,NIIK_COLORMAP_ATROPHY},
     {"summer", no_argument,&cmap,NIIK_COLORMAP_SUMMER},
     {"jacobian", no_argument,&cmap,NIIK_COLORMAP_JACOBIAN},
     {"gray", no_argument,&cmap,NIIK_COLORMAP_GRAYSCALE},
+
+    {"discrete", no_argument, &discrete_values, 1},
+    {"labels", no_argument, &discrete_values, 1},
 
     {0, 0, 0, 0}
   };
@@ -111,7 +120,7 @@ int main(int argc,char *argv[],char *envp[]) {
     int option_index = 0;
     int c;
 
-    c = getopt_long (argc, argv, "d:p:o:i:a:c:C:N:", long_options, &option_index);
+    c = getopt_long (argc, argv, "d:p:o:i:a:c:C:N:l:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -147,6 +156,9 @@ int main(int argc,char *argv[],char *envp[]) {
       break;
     case 'N':
       column_id=atoi(optarg);
+      break;
+    case 'l':
+      color_levels=atoi(optarg);
       break;
     case '?':
     default:
@@ -198,7 +210,12 @@ int main(int argc,char *argv[],char *envp[]) {
       fprintf(stdout,"[%s] Using range %8.4f %8.4f\n",fcname, omin, omax);
     }
 
-    NIIK_EXIT( (niikcortex_add_color( obj, meas_in->col[column_id]->v, omin, omax, cmap ))==0,      fcname,"niikcortex_add_color",1 );
+    if(discrete_values) 
+    {
+      NIIK_EXIT( (niikcortex_add_color_discrete( obj, meas_in->col[column_id]->v, omin, omax, cmap, color_levels ))==0,      fcname,"niikcortex_add_color_discrete",1 );
+    } else {
+      NIIK_EXIT( (niikcortex_add_color( obj, meas_in->col[column_id]->v, omin, omax, cmap, color_levels ))==0,      fcname,"niikcortex_add_color",1 );
+    }
   }
 
   if(sphere && !obj->spherecoo)

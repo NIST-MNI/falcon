@@ -473,7 +473,7 @@ int niik_underscore_to_space(char *str) {
  *
  ***************************************************/
 
-niikmat *niik_colormap_get(int ctype,int num) {
+niikmat *niik_colormap_get(int ctype, int num) {
   niikmat *mat;
   switch(ctype) {
   case NIIK_COLORMAP_ATROPHY:

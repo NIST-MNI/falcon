@@ -1240,7 +1240,7 @@ int niikmesh_refine( niikcortex_deform *dfm) {
   }
 
   if(verbose>3) {
-    if(!niikcortex_add_color(dfm->ctx[0],dfm->mf_list,0.8,1.2,NIIK_COLORMAP_SPECTRAL)) {
+    if(!niikcortex_add_color(dfm->ctx[0],dfm->mf_list,0.8,1.2,NIIK_COLORMAP_SPECTRAL,50)) {
       fprintf(stderr,"[%s] ERROR: niikcortex_add_color\n",fcname);
       return 0;
     }

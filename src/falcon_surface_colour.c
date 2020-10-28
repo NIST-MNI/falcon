@@ -24,6 +24,10 @@ void show_usage (const char *name) {
           "\t--summer   - use summer colour map\n"
           "\t--jacobian - use jacobian colour map\n"
           "\t--gray     - use gray colour map\n"
+          "\t--levels <N> - number of unique color levels, default 50\n"
+          "\t--discrete      - assume values are discrete, do not interpolate\n"
+          "\t--labels        - same as --discrete\n"
+
           ,name);
 }
 
@@ -49,6 +53,8 @@ int main(int argc, char **argv) {
   kobj *obj=NULL;
   kobj **out_obj;
   const char *column_name=NULL;
+  int discrete_values=0;
+  int color_levels=50;
 
   struct option long_options[] = {
     {"clobber", no_argument, &clobber, 1},
@@ -62,6 +68,11 @@ int main(int argc, char **argv) {
     {"summer", no_argument,&cmap,NIIK_COLORMAP_SUMMER},
     {"jacobian", no_argument,&cmap,NIIK_COLORMAP_JACOBIAN},
     {"gray", no_argument,&cmap,NIIK_COLORMAP_GRAYSCALE},
+
+    {"levels", required_argument, 0, 'l'},
+
+    {"discrete", no_argument, &discrete_values, 1},
+    {"labels", no_argument, &discrete_values, 1},
 
     {0, 0, 0, 0}
   };
@@ -92,6 +103,9 @@ int main(int argc, char **argv) {
       break;
     case 'C':
       column_id=atoi(optarg);
+      break;
+    case 'l':
+      color_levels=atoi(optarg);
       break;
     case '?':
     default:
@@ -131,7 +145,12 @@ int main(int argc, char **argv) {
     fprintf(stdout,"[%s] Using range %8.4f %8.4f\n",fcname,omin,omax);
   }
 
-  NIIK_EXIT( (niikcortex_add_color( obj, meas_in, omin, omax, cmap ))==0,      fcname,"niikcortex_add_color",1 );
+  if(discrete_values)
+  {
+    NIIK_EXIT( (niikcortex_add_color_discrete( obj, meas_in, omin, omax, cmap, color_levels ))==0,      fcname,"niikcortex_add_color_discrete",1 );
+  } else {
+    NIIK_EXIT( (niikcortex_add_color( obj, meas_in, omin, omax, cmap, color_levels ))==0,      fcname,"niikcortex_add_color",1 );
+  }
   NIIK_EXIT((!off_kobj_write_offply(out_off,obj,0)),fcname,"off_kobj_write_off",1);
 
   off_kobj_free(obj);

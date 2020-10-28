@@ -34,6 +34,8 @@ function Usage {
   -gray     - use gray colour map
   -sphere   - output on the spherical map, using spherical coordinates instead of x,y,z
   -column  <n> - specify column name from txt file to use (default will use the first column)
+  -discrete  - don't interpolate values 
+  -levels <n> - number of different color levels 
 EOF
 }
 
@@ -55,7 +57,9 @@ while [ $# -gt 0 ]; do
   elif [ $1 = -gray  ]; then cmap=$1;  shift
   elif [ $1 = -sphere ];then sphere=--sphere;shift
   elif [ $1 = -title  ]; then title="$2";  shift 2
-  elif [ $1 = -column  ]; then column="--column $2";  shift 2
+  elif [ $1 = -column  ]; then column="--column $2"; shift 2
+  elif [ $1 = -discrete  ]; then discrete="--discrete"; shift
+  elif [ $1 = -levels  ]; then levels="--levels $2"; shift 2
   else
     args=( ${args[@]} $1 )
     shift
@@ -134,8 +138,8 @@ if [ -z $th_min ] || [ -z $th_max ];then
    range=($th_min $th_max)
 fi
 
-$FALCON_BIN/falcon_off2pov --colorize $in_txt_lt $column $in_off_lt $tempdir/brain_lt.pov --object brain_lt --clobber --metallic $sphere -$cmap --min ${range[0]} --max ${range[1]}
-$FALCON_BIN/falcon_off2pov --colorize $in_txt_rt $column $in_off_rt $tempdir/brain_rt.pov --object brain_rt --clobber --metallic $sphere -$cmap --min ${range[0]} --max ${range[1]}
+$FALCON_BIN/falcon_off2pov --colorize $in_txt_lt $column $in_off_lt $tempdir/brain_lt.pov --object brain_lt --clobber --metallic $sphere -$cmap --min ${range[0]} --max ${range[1]} $discrete $levels
+$FALCON_BIN/falcon_off2pov --colorize $in_txt_rt $column $in_off_rt $tempdir/brain_rt.pov --object brain_rt --clobber --metallic $sphere -$cmap --min ${range[0]} --max ${range[1]} $discrete $levels
 
 
 h=$(identify -format %h $colourbar)

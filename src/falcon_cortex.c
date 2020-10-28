@@ -1537,22 +1537,55 @@ int niikcortex_add_thickness_color(kobj *ics, kobj *ocs, double *thk, double omi
 }
 
 
-int niikcortex_add_color(kobj *obj, double *var, double omin, double omax, int color_map_type)
+int niikcortex_add_color(kobj *obj, double *var, double omin, double omax, int color_map_type,int color_levels)
 /* put color according to cortical thickness */
 {
   kface *f;
   double oran;
-  int n,num=50;
+  int n;
   niikmat *cm;
-  /*cm = niik_colormap_get(NIIK_COLORMAP_SPECTRAL,num);*/
-  /*niikmat_display(cm);*/
-  cm = niik_colormap_get(color_map_type,num);
-  oran = (omax-omin)/(num-1.0);
+  cm = niik_colormap_get(color_map_type, color_levels);
+  oran = (omax-omin)/(color_levels-1.0);
   off_kobj_add_color(obj);
   for(f=obj->face; f!=NULL; f=f->next) {
-    n = ((var[f->vert[0]->index-1] + var[f->vert[1]->index-1] + var[f->vert[2]->index-1]) / 3.0 - omin) / oran;
+    n = floor( ((var[f->vert[0]->index-1] + var[f->vert[1]->index-1] + var[f->vert[2]->index-1]) / 3.0 - omin) / oran + 0.5);
     if(n<0) n=0;
-    else if(n>=num) n=num-1;
+    else if(n>=color_levels) n=color_levels-1;
+    f->color[0] = cm->m[n][0];
+    f->color[1] = cm->m[n][1];
+    f->color[2] = cm->m[n][2];
+    f->color[3] = 0;
+  }
+  cm = niikmat_free(cm);
+  return 1;
+}
+
+static int compare_dbl (const void * a, const void * b)
+{
+    if (*(double*)a > *(double*)b) return 1;
+    else if (*(double*)a < *(double*)b) return -1;
+    else return 0;
+}
+
+int niikcortex_add_color_discrete(kobj *obj, double *var, double omin, double omax, int color_map_type,int color_levels)
+/* put color according to a value (without interpolating) */
+{
+  kface *f;
+  double oran;
+  int n;
+  niikmat *cm;
+  cm = niik_colormap_get(color_map_type, color_levels);
+  oran = (omax-omin)/(color_levels-1.0);
+  off_kobj_add_color(obj);
+  for(f=obj->face; f!=NULL; f=f->next) {
+    /*n = ((var[f->vert[0]->index-1] + var[f->vert[1]->index-1] + var[f->vert[2]->index-1]) / 3.0 - omin) / oran;*/
+    double v[3]={var[f->vert[0]->index-1], var[f->vert[1]->index-1], var[f->vert[2]->index-1]};
+    qsort(v,3,sizeof(double),compare_dbl);
+   
+    n=floor( ( (v[0]==v[1]?v[0]:v[1]==v[2]?v[2]:v[0])-omin) / oran + 0.5);
+
+    if(n<0) n=0;
+    else if(n>=color_levels) n=color_levels-1;
     f->color[0] = cm->m[n][0];
     f->color[1] = cm->m[n][1];
     f->color[2] = cm->m[n][2];

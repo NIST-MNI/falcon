@@ -22,7 +22,7 @@ progname=$(basename $0)
 
 pp=$$
 
-set -o pipefail -E -e -x
+set -o pipefail -E -e 
 
 ####################################
 # SCRIPT PARAMETERS
@@ -419,11 +419,11 @@ fi
 ###############################################################
 for l in hc ventricles;do # brainstem cerebellum deep_gm
   if [[ ! -e ${tempdir}/${nm}_prior_${l}.mnc ]];then
-  mincresample  ${icbm_dir}/miccai2012_challenge/prior_${l}.mnc \
-        ${tempdir}/${nm}_prior_${l}.mnc \
-        -like ${scan} \
-        -transformation ${nlxfm} \
-        -invert -q 
+    mincresample  ${icbm_dir}/miccai2012_challenge/prior_${l}.mnc \
+          ${tempdir}/${nm}_prior_${l}.mnc \
+          -like ${scan} \
+          -transformation ${nlxfm} \
+          -invert -q 
   fi
 done
 
@@ -864,6 +864,7 @@ for s in 0 1;do
     exit 1
   fi
 
+
   #thickness in native space + atlas
   if [[ ! -e ${OUTPUT}_thickness-${ver}_${hemi}.csv.gz ]];then
     # measure thickness
@@ -873,11 +874,12 @@ for s in 0 1;do
       ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv
 
     # resample atlas back into subject's space
-    ${FALCON_BIN}/falcon_resample_field_sph \
-            $atlas \
+    ${FALCON_BIN}/falcon_igl_field_resample \
+            -i $atlas \
             $model \
             ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
-            ${tempdir}/${nm}_thickness-${ver}_${hemi}_atlas.csv  --clob --nearest
+            -o ${tempdir}/${nm}_thickness-${ver}_${hemi}_atlas.csv  \
+            --majority_invexp --SO3 --knn 3
 
     paste -d ','  ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
                   ${tempdir}/${nm}_thickness-${ver}_${hemi}_atlas.csv \
@@ -886,11 +888,12 @@ for s in 0 1;do
 
   #thickness in ICBM space, updated
   if [[ ! -e ${OUTPUT}_thickness_icbm-${ver}_${hemi}.csv.gz ]];then
-    ${FALCON_BIN}/falcon_resample_field_sph \
-              ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
+    ${FALCON_BIN}/falcon_igl_field_resample \
+              -i ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
               ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
               ${model} \
-              ${tempdir}/${nm}_thickness_icbm-${ver}_${hemi}.csv --clob
+              -o ${tempdir}/${nm}_thickness_icbm-${ver}_${hemi}.csv \
+              --knn 3 --SO3  --invexp
 
     # unpack atlas
     gunzip -c $atlas > ${tempdir}/atlas_icbm_${hemi}.csv
@@ -913,30 +916,40 @@ for s in 0 1;do
 
     #thickness in ICBM space
     if [[ ! -e ${OUTPUT}_thickness_icbm-${ver}_${hemi}_sm_${smooth}.csv.gz ]];then
-      ${FALCON_BIN}/falcon_resample_field_sph \
-                ${OUTPUT}_thickness-${ver}_${hemi}_sm_${smooth}.csv.gz \
+      ${FALCON_BIN}/falcon_igl_field_resample \
+                -i ${OUTPUT}_thickness-${ver}_${hemi}_sm_${smooth}.csv.gz \
                 ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
                 ${model} \
-                ${tempdir}/${nm}_thickness_icbm-${ver}_${hemi}_sm_${smooth}.csv --clob
+                -o ${tempdir}/${nm}_thickness_icbm-${ver}_${hemi}_sm_${smooth}.csv \
+                --knn 3 --SO3  --invexp
 
       gunzip -c $atlas > ${tempdir}/atlas_icbm_${hemi}.csv
       paste -d ','  ${tempdir}/${nm}_thickness_icbm-${ver}_${hemi}_sm_${smooth}.csv \
                     ${tempdir}/atlas_icbm_${hemi}.csv \
                     | gzip -9 -c  > ${OUTPUT}_thickness_icbm-${ver}_${hemi}_sm_${smooth}.csv.gz
-
     fi
   fi
 
   if [[ ! -z $use_hr ]] && [[ ! -e ${OUTPUT}_thickness_icbm_hr-${ver}_${hemi}.csv.gz ]];then
+
+    if [[ ! -e ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv ]];then
+      ${FALCON_BIN}/falcon_cortex_calc_thickness \
+        ${tempdir}/${nm}_ics-${ver}_${s}.ply \
+        ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
+        ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv
+    fi
+
+
     # resample thickness into common (MNI-ICBM152) hires space
-    ${FALCON_BIN}/falcon_resample_field_sph \
-              ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
-              ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
-              ${icbm_dir}/icbm152_model_09c/mni_icbm152_ocs_${hemi}.ply \
-              ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv --clob
+    ${FALCON_BIN}/falcon_igl_field_resample \
+          -i ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
+          ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
+          ${icbm_dir}/icbm152_model_09c/mni_icbm152_ocs_${hemi}.ply \
+          -o ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv \
+          --knn 3 --SO3  --invexp
 
     paste -d ','  ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv \
-                  $atlas_hr | gzip -9  -c > ${OUTPUT}_thickness-${ver}_${hemi}.csv
+                  $atlas_hr | gzip -9  -c > ${OUTPUT}_thickness_icbm_hr-${ver}_${hemi}.csv.gz
   fi
 done
 
@@ -948,16 +961,27 @@ if [[ ! -e ${OUTPUT}_qc-${ver}.png ]];then
         ${OUTPUT}_qc-${ver}.png
 fi
 
-if [[ ! -e ${OUTPUT}_qc_ocs-${ver}.png ]];then
+if [[ ! -e ${OUTPUT}_qc_ocs_thickness-${ver}.png ]];then
   ${FALCON_SCRIPTS}/falcon_off_qc_2.sh \
         ${tempdir}/${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt.csv.gz \
         ${tempdir}/${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt.csv.gz \
-        ${OUTPUT}_qc_ocs-${ver}.png -min 0 -max 7
+        ${OUTPUT}_qc_ocs_thickness-${ver}.png \
+        -min 0 -max 7
 fi
 
-if [[ -n "${smooth}" ]] && [[ ! -e ${OUTPUT}_qc_ocs-${ver}_sm_${smooth}.png ]];then
+if [[ -n "${smooth}" ]] && [[ ! -e ${OUTPUT}_qc_ocs_thickness-${ver}_sm_${smooth}.png ]];then
   ${FALCON_SCRIPTS}/falcon_off_qc_2.sh  \
         ${tempdir}/${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt_sm_${smooth}.csv.gz \
         ${tempdir}/${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt_sm_${smooth}.csv.gz \
-        ${OUTPUT}_qc_ocs-${ver}_sm_${smooth}.png -min 0 -max 7
+        ${OUTPUT}_qc_ocs_thickness-${ver}_sm_${smooth}.png \
+        -min 0 -max 7
+fi
+
+if [[ ! -e ${OUTPUT}_qc_ocs_lobe-${ver}.png ]];then
+  ${FALCON_SCRIPTS}/falcon_off_qc_2.sh \
+        ${tempdir}/${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt.csv.gz \
+        ${tempdir}/${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt.csv.gz \
+        ${OUTPUT}_qc_ocs_lobe-${ver}.png \
+        -min 0 -max 255 \
+        -column lobe -discrete -levels 256
 fi

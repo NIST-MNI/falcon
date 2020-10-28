@@ -4290,7 +4290,7 @@ int main(int argc,char *argv[],char *envp[]) {
       }
       fprintf(stdout,"  min/max %8.4f %8.4f\n",omin,omax);
 
-      if(!niikcortex_add_color(obj, meas,omin,omax,NIIK_COLORMAP_SPECTRAL)) {
+      if(!niikcortex_add_color(obj, meas,omin,omax,NIIK_COLORMAP_SPECTRAL, 50)) {
         fprintf(stderr,"[niikmath] ERROR: niikcortex_add_color(ics,ocs,thk,omin,omax)\n");
         exit(1);
       }
