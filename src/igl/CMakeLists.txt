@@ -21,6 +21,10 @@ target_link_libraries(falcon_igl_field_resample igl::core )
 add_executable(falcon_igl_mesh_split mesh_split.cpp )
 target_link_libraries(falcon_igl_mesh_split igl::core )
 
+add_executable(falcon_igl_multilabel_overlap multilabel_overlap.cpp )
+target_link_libraries(falcon_igl_multilabel_overlap igl::core )
+
+
 #
 INSTALL( TARGETS 
         falcon_igl_mesh_split
