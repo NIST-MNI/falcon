@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 
     double tU=0.0;
     double tI=0.0;
-
+    //TODO: recode this to use vectorized operations
     for(int i=0; i<iL.rows(); ++i)
     {
       Eigen::VectorXd hist = Eigen::VectorXd::Zero(lmap.size());
