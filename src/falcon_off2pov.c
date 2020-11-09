@@ -180,11 +180,56 @@ int main(int argc,char *argv[],char *envp[]) {
   }
 
   niik_fc_display(fcname,1);
-  NIIK_EXIT(((obj=off_kobj_read_offply(in_off))==NULL),fcname,"niik_kobj_read_off",1);
+  if( !strncmp(in_off+(strlen(in_off)-4),".ply",4))
+  {
+    int n_meas;
+    char **meas_name;
+    double **meas;
+    int i;
+
+    NIIK_EXIT(((obj=off_kobj_read_ply_ex(in_off, &n_meas, &meas_name, &meas))==NULL),fcname,"off_kobj_read_ply_ex",1);
+
+    if(!in_txt) {
+      /* find the column from .ply file*/
+      for(i=0;i<n_meas;i++)
+        if(!strcmp(column_name, meas_name[i])) break;
+
+      if(i==n_meas)
+      {
+        fprintf(stderr,"[%s] Can't find column %s\n",fcname,column_name);
+        return 1;
+      } else {
+        fprintf(stdout,"Using attribute %s from ply file\n",column_name);
+      }
+      column_id=i;
+
+      if(omin==0.0 && omax==0.0) { /*TODO: use different way to set range*/
+        omax = niik_get_max_from_double_vector(meas[column_id], obj->nvert);
+        omin = niik_get_min_from_double_vector(meas[column_id], obj->nvert);
+        fprintf(stdout,"[%s] Using range %8.4f %8.4f\n",fcname, omin, omax);
+      }
+
+      if(discrete_values) 
+      {
+        NIIK_EXIT( (niikcortex_add_color_discrete( obj, meas[column_id], omin, omax, cmap, color_levels ))==0,      fcname,"niikcortex_add_color_discrete",1 );
+      } else {
+        NIIK_EXIT( (niikcortex_add_color( obj, meas[column_id], omin, omax, cmap, color_levels ))==0,      fcname,"niikcortex_add_color",1 );
+      }
+    }
+    /**/
+    for(i=0;i<n_meas;++i)
+    {
+      free(meas_name[i]);
+      free(meas[i]);
+    }
+    free(meas);
+    free(meas_name);
+  } else {
+    NIIK_EXIT(((obj=off_kobj_read_offply(in_off))==NULL),fcname,"niik_kobj_read_off",1);
+  }
 
   if(in_txt)
   {
-   
     NIIK_EXIT(((meas_in=niiktable_read(in_txt))==NULL),fcname,"niik_read_vector_ex",1);
 
     if(meas_in->col[0]->num!=obj->nvert) {
@@ -216,6 +261,8 @@ int main(int argc,char *argv[],char *envp[]) {
     } else {
       NIIK_EXIT( (niikcortex_add_color( obj, meas_in->col[column_id]->v, omin, omax, cmap, color_levels ))==0,      fcname,"niikcortex_add_color",1 );
     }
+
+    niiktable_free(meas_in);
   }
 
   if(sphere && !obj->spherecoo)

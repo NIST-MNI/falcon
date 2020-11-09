@@ -18,7 +18,8 @@ fi
 
 function Usage {
   cat <<EOF
-Usage: `basename $0` <input.off> <input_measurement.txt> <output.png> [foreground] [background]
+Usage: `basename $0` <input.off|ply> <input_measurement> <output.png> [foreground] [background]
+  input_measurement can be .csv or .txt or .csv.gz file, or of - is used , then use attribute from .ply file
   --- Optional parameters  ---
   -min <m> 
   -max <m> 
@@ -29,6 +30,7 @@ Usage: `basename $0` <input.off> <input_measurement.txt> <output.png> [foregroun
   -jacobian - use jacobian colour map
   -gray     - use gray colour map
   -sphere   - output on the spherical map, using spherical coordinates instead of x,y,z
+  -column <name> - column name
 EOF
 }
 
@@ -48,6 +50,9 @@ while [ $# -gt 0 ]; do
   elif [ $1 = -sphere ];then sphere=--sphere;shift
   elif [ $1 = -title  ]; then title="$2";  shift 2
   elif [ $1 = -column  ]; then column="--column $2";  shift 2
+  elif [ $1 = -discrete  ]; then discrete="--discrete"; shift
+  elif [ $1 = -levels  ]; then levels="--levels $2"; shift 2
+
   else
     args=( ${args[@]} $1 )
     shift
@@ -89,11 +94,25 @@ fi
 
 # figure out measurement range for colouring
 declare -a range
-if [ -z $th_min ] || [ -z $th_max ];then
-  range=( $(falcon_csv_stats $in_txt --range $column)  )
+
+if [[ -z $th_min ]] || [[ -z $th_max ]];then
+  if [[ "$in_txt" != "-" ]];then
+    range=( $(falcon_csv_stats $in_txt --range $column)  )
+  else
+    echo "Warning, can't determine range, using 0 - 1"
+    range=(0 1)
+  fi
 else
   range=($th_min $th_max)
 fi
+
+if [[ "$in_txt" != "-" ]];then
+colorize="--colorize $in_txt"
+else
+colorize=""
+fi
+
+
 
 h=$(identify -format %h $colourbar)
 
@@ -103,8 +122,11 @@ pos2=30
 convert -border 30 -fill ${foreground} -background ${background} -bordercolor ${background} -font Times-Bold -pointsize 20 -draw "text 2,$pos2 '${range[1]}'" -draw "text 2,$pos1 '${range[0]}'"  -alpha remove -alpha off  $colourbar $tempdir/bar.miff
 
 # convert off to povray mesh
-$FALCON_BIN/falcon_off2pov $in_off $tempdir/brain.pov --object brain --clobber $sphere \
-  --colorize $in_txt --min ${range[0]} --max ${range[1]} -$cmap
+$FALCON_BIN/falcon_off2pov $in_off $tempdir/brain.pov \
+  --object brain --clobber $sphere \
+  $colorize $column \
+  --min ${range[0]} --max ${range[1]} -$cmap \
+  $discrete $levels
 
 
 Width=320

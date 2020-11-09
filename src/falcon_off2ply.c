@@ -112,7 +112,8 @@ int main(int argc,char *argv[],char *envp[]) {
 
   old_locale = setlocale(LC_NUMERIC, NULL);
   setlocale(LC_NUMERIC, "C");
-  NIIK_EXIT(((obj=off_kobj_read_offply(in_off))==NULL),fcname,"niik_kobj_read_off",1);
+
+  NIIK_EXIT(((obj=off_kobj_read_offply(in_off))==NULL),fcname,"off_kobj_read_offply",1);
   if(in_meas) {
     meas=niik_read_double_vector(in_meas,&meas_num);
 

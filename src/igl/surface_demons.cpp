@@ -364,8 +364,8 @@ int main(int argc, char *argv[])
       // finally : update
       sph1     = sph1 + dX1 * demons_step;
 
-      progress(i,0)=cost_fw;
-      progress(i,1)=dX1.rowwise().norm().mean();
+      progress(i,0) = cost_fw;
+      progress(i,1) = dX1.rowwise().norm().mean();
       
       if(i>conv_iter){
         prev_convergence = convergence;
@@ -393,14 +393,15 @@ int main(int argc, char *argv[])
 
     if(par.count("debug"))
     {
-      Eigen::MatrixXd DO(D1.rows(),2);
+      Eigen::MatrixXd DO(D1.rows(),4);
 
-      DO << ( (PT1.col(0)*18).array().cos()>0.0 ^  
+      DO <<    PT1,
+            ( (PT1.col(0)*18).array().cos()>0.0 ^  
               (PT1.col(1)*18).array().cos()>0.0 ).cast<double>() ,
             ( (PT1_.col(0)*18).array().cos()>0.0 ^ 
               (PT1_.col(1)*18).array().cos()>0.0 ).cast<double>();
       
-      std::vector<std::string> headerO({"grid0","grid1"});
+      std::vector<std::string> headerO({"psi","the","grid0","grid1"});
 
       igl::writePLY(par["debug"].as<std::string>(), sph1_orig, F1, E1, N1, UV1, DO, headerO );
     }
