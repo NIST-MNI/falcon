@@ -213,8 +213,8 @@ int main(int argc, char *argv[])
     if(par["verbose"].as<bool>())
     {
       std::cout<<"Global GTC :";
-      std::cout<<tI/tU<<std::endl;
     }
+    std::cout<<tI/tU<<std::endl;
 
     std::vector<std::string> header{"majority", "overlap"};
 

@@ -103,7 +103,7 @@ inline static double off_avg_radians(double r1, double r2, double lim)
   } else {
     d=(r1+r2)/2.0;
   }
-  if(d<0) d+=NIIK_PI2;
+  if(d<0.0) d+=NIIK_PI2;
   if(d>NIIK_PI2) d-=NIIK_PI2;
   return d;
 }

@@ -2088,7 +2088,7 @@ pthick.x,pthick.y,pthick.z\n");
       for(r=0;r<5;r++)
       {
         off_remesh_dual_kobj(dfm->ctx, dfm->crv, 1 ); /*try not to do any smoothing of the surface*/
-        /*split into independent stages: splitting, collapsing, valence optirmization*/
+        /*split into independent stages: splitting, collapsing, valence optimization*/
         /*need to re-calculate everything...*/
         NIIK_RET0(!niicortex_deform_prepare(dfm),fcname,"niicortex_deform_prepare");
         for(cidx=0;cidx<2;cidx++) {

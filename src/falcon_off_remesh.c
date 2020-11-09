@@ -907,7 +907,7 @@ kvert *off_remesh_kedge_split(kobj *obj,kedge *edge) {
   kvert *v[4],*nv,*vv;
   kedge *e[4],*ne[3],*ee;
   int n;
-  int verbose=0;
+  const int verbose=0;
 
   if(edge==NULL) {
     fprintf(stderr,"ERROR: edge is a null pointer\n");
@@ -945,7 +945,7 @@ kvert *off_remesh_kedge_split(kobj *obj,kedge *edge) {
   nv->v = niikpt_avg(v[0]->v,v[1]->v); /* point is the mid point of the given edge  */
   nv->index=-1;
   if(obj->spherecoo==1) {
-    nv->sph = niiksph_avg_lim(v[0]->sph,v[1]->sph,NIIK_PI);
+    nv->sph = niiksph_avg_lim(v[0]->sph, v[1]->sph, NIIK_PI);
   } /* spherecoordinates */
 
   /* new faces */

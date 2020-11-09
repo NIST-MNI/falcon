@@ -86,7 +86,7 @@ template <typename Distance,
         assert(row_sph.size() == coord_src.cols());
         assert(row_sph.innerStride() == 1);
 
-        idx.index -> findNeighbors(resultSet, row_sph.data(), nanoflann::SearchParams());
+        idx.index->findNeighbors(resultSet, row_sph.data(), nanoflann::SearchParams());
 
         out_data.row(i) = agg(
           Eigen::Array<typename DerivedD::Scalar,-1,-1>::NullaryExpr(num_results, in_data.cols(), 
