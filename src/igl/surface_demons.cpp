@@ -113,9 +113,8 @@ int main(int argc, char *argv[])
     ("v,verbose", "Verbose output",     cxxopts::value<bool>()->default_value("false"))
     ("s,source", "Source mesh ",        cxxopts::value<std::string>())
     ("t,target", "Target mesh ",        cxxopts::value<std::string>())
-    ("i,input",  "Input  field (csv) ", cxxopts::value<std::string>())
-    ("chess",    "Generate input data as chessboard ", cxxopts::value<bool>()->default_value("false"))
-    ("o,output", "Output field (csv) ", cxxopts::value<std::string>())
+    ("o,output", "Output mesh",         cxxopts::value<std::string>())
+    ("d,debug",  "Debug Output mesh",   cxxopts::value<std::string>())
 
     ("a,alpha", "Alpha parameter for surface depth", cxxopts::value<double>()->default_value("0.03"))
     ("step",    "Step size", cxxopts::value<double>()->default_value("0.1"))
@@ -193,12 +192,12 @@ int main(int argc, char *argv[])
 
     Eigen::VectorXd dp1,dp2;
     
-    if(!depth_potential(V1,F1,alpha,dp1)) {
+    if(!depth_potential(V1, F1, alpha, dp1)) {
         std::cerr<<"Solving failed for Mesh 1"<<std::endl;
         return 1;
     }
-
-    if(!depth_potential(V2,F2,alpha,dp2)) {
+ 
+    if(!depth_potential(V2, F2, alpha, dp2)) {
         std::cerr<<"Solving failed for Mesh 2"<<std::endl;
         return 1;
     }
@@ -207,7 +206,7 @@ int main(int argc, char *argv[])
     dp1.array() -= dp1.mean(); dp1.array() /= sqrt( (dp1.array().pow(2).sum())/(dp1.size()-1) );
     dp2.array() -= dp2.mean(); dp2.array() /= sqrt( (dp2.array().pow(2).sum())/(dp2.size()-1) );
 
-    Eigen::MatrixXd  PT1, PT2;
+    Eigen::MatrixXd  PT1,  PT2;
     Eigen::MatrixXd  sph1, sph2;
 
     // convert spherical coordinates to x,y,z on sphere 
@@ -221,18 +220,16 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-    // registration parameters
-    int    smooth_gradients = 50;
-    double smooth_sigma  = 1.0;
-    double demons_sigma_x =  1.0;
-    double demons_sigma_x2= demons_sigma_x*demons_sigma_x;
-
-    int smooth_partial_grad = 20;
-    int smooth_update       = 20;
+    int smooth_gradients    = 50;
+    int smooth_update       = 50;
     //int smooth_cost      = 10;
-    double conv_tol      = 1e-5;
-    int conv_iter        = 10;
-    int grad_update_iter = 40;
+    double conv_tol         = 1e-5;
+    int conv_iter            = 10;
+    double vanishing_gradients_thr = 1e-6;
+    double giant_gradient_thr = 1e6;
+
+    double convergence=1e10;
+    double prev_convergence=1e10;
 
     // avg edge length on embedding
     double dx_X1 = igl::avg_edge_length(sph1, F1); 
@@ -245,6 +242,8 @@ int main(int argc, char *argv[])
     igl::adjacency_matrix(F2,Wtarget);
 
     // create smoothing matrix (es)
+    Wsource = Wsource + Eigen::SparseMatrix<double> ( Eigen::VectorXd::Ones(Wsource.cols()).asDiagonal());
+    Wtarget = Wtarget + Eigen::SparseMatrix<double> ( Eigen::VectorXd::Ones(Wtarget.cols()).asDiagonal());
     Eigen::SparseMatrix<double> Lsource = Eigen::SparseMatrix<double>((Wsource * Eigen::VectorXd::Ones(Wsource.cols())).cwiseInverse().asDiagonal()) * Wsource;
     Eigen::SparseMatrix<double> Ltarget = Eigen::SparseMatrix<double>((Wtarget * Eigen::VectorXd::Ones(Wtarget.cols())).cwiseInverse().asDiagonal()) * Wtarget;
 
@@ -256,7 +255,6 @@ int main(int argc, char *argv[])
 
     Eigen::MatrixXd C1s = dp1;
     Eigen::MatrixXd C2s = dp2;
-
 
     // gradient of the target feature
     Eigen::MatrixXd dC1s,dC2s;
@@ -271,14 +269,17 @@ int main(int argc, char *argv[])
     //Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double > > solver;
     Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::DiagonalPreconditioner<double> > solver;
 
+    // progress history
+    Eigen::MatrixXd progress(demons_iter,2);
+
     for(int i=0; i<demons_iter; ++i)
     {
-  //    igl::grad(sph1, F1, Gsource); fix_grad(Gsource,1e6);
-      igl::grad(sph2, F2, Gtarget); fix_grad(Gtarget,1e6);
+      igl::grad(sph1, F1, Gsource); fix_grad(Gsource,giant_gradient_thr);
+      igl::grad(sph2, F2, Gtarget); fix_grad(Gtarget,giant_gradient_thr);
 
       // calculate smooth gradient on the mesh
-//      smooth_grad(C1s, Gsource, F2V1, Lsource, 10, dC1s);
-      smooth_grad(C2s, Gtarget, F2V2, Ltarget, smooth_partial_grad, dC2s);
+      smooth_grad(C1s, Gsource, F2V1, Lsource, smooth_gradients, dC1s);
+      smooth_grad(C2s, Gtarget, F2V2, Ltarget, smooth_gradients, dC2s);
 
       // find matching vertices
       find_correspondence(sph1, sph2, match1);
@@ -290,23 +291,24 @@ int main(int argc, char *argv[])
       double cost_fw = sqrt( diff1.squaredNorm()/diff1.rows() );
 
       Eigen::MatrixXd avg_grad1 = Eigen::MatrixXd::NullaryExpr(C1s.rows(), dC2s.cols(),
-          [&dC1s, &dC2s, &match1](auto r, auto c) { return dC2s(match1(r), c); }); 
+          [&dC1s, &dC2s, &match1](auto r, auto c) { return 0.5*dC1s(r,c) + 0.5*dC2s(match1(r), c); }); 
       //Eigen::MatrixXd avg_grad1 = dC1s;
 
       Eigen::ArrayXd normg1 = avg_grad1.rowwise().stableNorm();
       Eigen::ArrayXd scale1 = diff1.array() / (normg1.array() + diff1.array().pow(2) * lambda  ); // % levenberg-marquart descent
 
       // % vanishing gradients
-      // vanishing_grad_fw = (normg1 + diff1.array().pow(2) < 1e-6
+      Eigen::ArrayXd vanishing_grad = (normg1 + diff1.array().pow(2) > vanishing_gradients_thr).cast<double>();
       // scale[ vanishing_grad_fw ] = 0.0
 
       //Eigen::VectorXd diff2 = dp2 - apply_index(dp1,match1);
       //double cost_bw = diff2.squaredNorm()/dp2.rows();
 
       Eigen::MatrixXd dX1(avg_grad1.rows(),avg_grad1.cols());
-      dX1<< avg_grad1.col(0).array() * scale1.array(),
-            avg_grad1.col(1).array() * scale1.array(),
-            avg_grad1.col(2).array() * scale1.array(); //# bsxfun(@times, (.5*dC1s + .5*dC2s(corr12d,:)), scale);         % symmetric
+      dX1<< avg_grad1.col(0).array() * scale1.array() * vanishing_grad ,
+            avg_grad1.col(1).array() * scale1.array() * vanishing_grad ,
+            avg_grad1.col(2).array() * scale1.array() * vanishing_grad ; //# bsxfun(@times, (.5*dC1s + .5*dC2s(corr12d,:)), scale);         % symmetric
+
       //Eigen::MatrixXd dX1 =(avg_grad1.array()*avg_grad1.array())*-1.0/ (avg_grad1.array()*diff1.array()+lambda);
       // simple case (no damping)
 
@@ -357,27 +359,52 @@ int main(int argc, char *argv[])
 
       // TODO:Smooth update
       for(auto j=0; j<smooth_update; ++j)      
-          dX1 = (Lsource * dX1).eval();
+           dX1 = (Lsource * dX1).eval();
 
       // finally : update
       sph1     = sph1 + dX1 * demons_step;
 
+      progress(i,0)=cost_fw;
+      progress(i,1)=dX1.rowwise().norm().mean();
+      
+      if(i>conv_iter){
+        prev_convergence = convergence;
+        convergence = progress.block(i-conv_iter,1,conv_iter,1).mean();
+      }
+      double cnv=0.0;
+      if(i>(conv_iter+1))
+        cnv = prev_convergence - convergence;
       // re-project on the surface here?
       sph1.rowwise().normalize();
 
-      std::cout<<i<<"\t:" << cost_fw<<":" << dX1.rowwise().norm().mean() << "\t"<<std::endl; //solver.error()<< 
+      std::cout<<i<<"\t:" << progress(i,0)<<":" << progress(i,1) << "\t"<<cnv<<std::endl; 
     }
 
-    Eigen::MatrixXd DO(D1.rows(),5);
+    Eigen::MatrixXd DO(D1.rows(),3);
     //HACK: don't preserve any other user data here
-    xyz_to_sph(sph1,PT1);
+    Eigen::MatrixXd  PT1_(D1.rows(),2);
+    xyz_to_sph(sph1, PT1_);
 
-    DO<<PT1, C1s, Lsource*Lsource*Lsource * C1s,
-      (sph1.array()*sph1_orig.array()).rowwise().sum().acos()*180.0/M_PI ;
-
-    std::vector<std::string> headerO({"psi","the","dp","sdp","da"});
+    DO<<PT1_,
+      (sph1.array() * sph1_orig.array()).rowwise().sum().acos()*180.0/M_PI ;
+    std::vector<std::string> headerO({"psi","the","da"});
     
     igl::writePLY(par["output"].as<std::string>(), V1, F1, E1, N1, UV1, DO, headerO );
+
+    if(par.count("debug"))
+    {
+      Eigen::MatrixXd DO(D1.rows(),2);
+
+      DO << ( (PT1.col(0)*18).array().cos()>0.0 ^  
+              (PT1.col(1)*18).array().cos()>0.0 ).cast<double>() ,
+            ( (PT1_.col(0)*18).array().cos()>0.0 ^ 
+              (PT1_.col(1)*18).array().cos()>0.0 ).cast<double>();
+      
+      std::vector<std::string> headerO({"grid0","grid1"});
+
+      igl::writePLY(par["debug"].as<std::string>(), sph1_orig, F1, E1, N1, UV1, DO, headerO );
+    }
+
   } else {
     std::cerr << options.help({"", "Group"}) << std::endl;
     return 1;
