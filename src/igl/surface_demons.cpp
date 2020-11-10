@@ -6,6 +6,8 @@
 
 #include "igl/readPLY.h"
 #include "igl/writePLY.h"
+#include "csv/writeCSV.h"
+
 #include "nanoflann.hpp"
 
 #include "cxxopts.hpp"
@@ -114,17 +116,17 @@ int main(int argc, char *argv[])
     ("s,source", "Source mesh ",        cxxopts::value<std::string>())
     ("t,target", "Target mesh ",        cxxopts::value<std::string>())
     ("o,output", "Output mesh",         cxxopts::value<std::string>())
-    ("d,debug",  "Debug Output mesh",   cxxopts::value<std::string>())
-
-    ("a,alpha", "Alpha parameter for surface depth", cxxopts::value<double>()->default_value("0.03"))
-    ("step",    "Step size", cxxopts::value<double>()->default_value("0.1"))
-    ("lambda",  "Regularization lambda", cxxopts::value<double>()->default_value("1.0"))
-    ("iter",    "Iter number", cxxopts::value<int>()->default_value("1000"))
-
-    ("SO3",      "Use SO3 metric (angular distance)", cxxopts::value<bool>()->default_value("false"))
-
     ("clobber", "Clobber output file ", cxxopts::value<bool>()->default_value("false"))
 
+    ("a,alpha", "Alpha parameter for surface depth", cxxopts::value<double>()->default_value("0.03"))
+    ("step",    "Step size", cxxopts::value<double>()->default_value("0.01"))
+    ("lambda",  "Regularization lambda", cxxopts::value<double>()->default_value("1.0"))
+    ("iter",    "Iter number", cxxopts::value<int>()->default_value("200"))
+    // DEBUG options
+    ("d,debug",  "Debug Output mesh",   cxxopts::value<std::string>())
+    ("debug-progress",  "Generate debug meshes each itaration, use this as prefix",   cxxopts::value<std::string>())
+    ("progress",  "Convergence progress output",   cxxopts::value<std::string>())
+    // 
     ("help", "Print help") ;
   
   options.parse_positional({"source", "target" });
@@ -220,11 +222,11 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-    int smooth_gradients    = 50;
-    int smooth_update       = 50;
-    //int smooth_cost      = 10;
-    double conv_tol         = 1e-5;
-    int conv_iter            = 10;
+    int   smooth_gradients    = 50;
+    int   smooth_update       = 50;
+    //int smooth_cost         = 10;
+    double conv_tol           = 1e-5;
+    int    conv_iter            = 10;
     double vanishing_gradients_thr = 1e-6;
     double giant_gradient_thr = 1e6;
 
@@ -267,10 +269,25 @@ int main(int argc, char *argv[])
     Eigen::MatrixXd  sph1_orig=sph1;
 
     //Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double > > solver;
-    Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::DiagonalPreconditioner<double> > solver;
+    //Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::DiagonalPreconditioner<double> > solver;
+
+    auto save_debug=[&](const std::string &fname, auto sph, auto diff) {
+      Eigen::MatrixXd DO(D1.rows(),4);
+      Eigen::MatrixXd PT(sph.rows(),2);
+      xyz_to_sph(sph, PT);
+
+      DO <<      PT1, diff, 
+            ( ( (PT.col(0)*18).array().cos()>0.0) ^ 
+              ( (PT.col(1)*18).array().cos()>0.0) ).cast<double>();
+      
+      std::vector<std::string> headerO({"psi","the","diff","grid"});
+
+      igl::writePLY(fname, sph1_orig, F1, E1, N1, UV1, DO, headerO );
+      };
 
     // progress history
-    Eigen::MatrixXd progress(demons_iter,2);
+    Eigen::MatrixXd progress(demons_iter, 2);
+    Eigen::VectorXd diff1; // to debug outside of loop
 
     for(int i=0; i<demons_iter; ++i)
     {
@@ -285,29 +302,24 @@ int main(int argc, char *argv[])
       find_correspondence(sph1, sph2, match1);
       //find_correspondence(sph2, sph1, match2);
 
-      Eigen::VectorXd diff1 = Eigen::VectorXd::NullaryExpr(C1s.rows(),
+      diff1 = Eigen::VectorXd::NullaryExpr(C1s.rows(),
         [ &C1s, &C2s, &match1 ](auto r) { return C1s(r) - C2s(match1(r)); });
       
       double cost_fw = sqrt( diff1.squaredNorm()/diff1.rows() );
 
       Eigen::MatrixXd avg_grad1 = Eigen::MatrixXd::NullaryExpr(C1s.rows(), dC2s.cols(),
           [&dC1s, &dC2s, &match1](auto r, auto c) { return 0.5*dC1s(r,c) + 0.5*dC2s(match1(r), c); }); 
-      //Eigen::MatrixXd avg_grad1 = dC1s;
 
       Eigen::ArrayXd normg1 = avg_grad1.rowwise().stableNorm();
       Eigen::ArrayXd scale1 = diff1.array() / (normg1.array() + diff1.array().pow(2) * lambda  ); // % levenberg-marquart descent
 
-      // % vanishing gradients
-      Eigen::ArrayXd vanishing_grad = (normg1 + diff1.array().pow(2) > vanishing_gradients_thr).cast<double>();
-      // scale[ vanishing_grad_fw ] = 0.0
+      // eliminate vanishingn gradients
+      Eigen::ArrayXd non_vanishing_grad = (normg1 + diff1.array().pow(2) > vanishing_gradients_thr).cast<double>();
 
-      //Eigen::VectorXd diff2 = dp2 - apply_index(dp1,match1);
-      //double cost_bw = diff2.squaredNorm()/dp2.rows();
-
-      Eigen::MatrixXd dX1(avg_grad1.rows(),avg_grad1.cols());
-      dX1<< avg_grad1.col(0).array() * scale1.array() * vanishing_grad ,
-            avg_grad1.col(1).array() * scale1.array() * vanishing_grad ,
-            avg_grad1.col(2).array() * scale1.array() * vanishing_grad ; //# bsxfun(@times, (.5*dC1s + .5*dC2s(corr12d,:)), scale);         % symmetric
+      Eigen::MatrixXd dX1(avg_grad1.rows(), avg_grad1.cols());
+      dX1<< avg_grad1.col(0).array() * scale1.array() * non_vanishing_grad ,
+            avg_grad1.col(1).array() * scale1.array() * non_vanishing_grad ,
+            avg_grad1.col(2).array() * scale1.array() * non_vanishing_grad ; //# bsxfun(@times, (.5*dC1s + .5*dC2s(corr12d,:)), scale);         % symmetric
 
       //Eigen::MatrixXd dX1 =(avg_grad1.array()*avg_grad1.array())*-1.0/ (avg_grad1.array()*diff1.array()+lambda);
       // simple case (no damping)
@@ -364,8 +376,8 @@ int main(int argc, char *argv[])
       // finally : update
       sph1     = sph1 + dX1 * demons_step;
 
-      progress(i,0) = cost_fw;
-      progress(i,1) = dX1.rowwise().norm().mean();
+      progress(i, 0) = cost_fw;
+      progress(i, 1) = dX1.rowwise().norm().mean();
       
       if(i>conv_iter){
         prev_convergence = convergence;
@@ -376,6 +388,15 @@ int main(int argc, char *argv[])
         cnv = prev_convergence - convergence;
       // re-project on the surface here?
       sph1.rowwise().normalize();
+
+      if(par.count("debug-progress"))
+      {
+        char tmp[1024];
+        sprintf(tmp,"%s_%03d.ply",par["debug-progress"].as<std::string>().c_str(),i);
+
+
+        save_debug(tmp,sph1,diff1);
+      }
 
       std::cout<<i<<"\t:" << progress(i,0)<<":" << progress(i,1) << "\t"<<cnv<<std::endl; 
     }
@@ -392,18 +413,12 @@ int main(int argc, char *argv[])
     igl::writePLY(par["output"].as<std::string>(), V1, F1, E1, N1, UV1, DO, headerO );
 
     if(par.count("debug"))
+      save_debug(par["output"].as<std::string>(), sph1, diff1);
+
+
+    if(par.count("progress"))
     {
-      Eigen::MatrixXd DO(D1.rows(),4);
-
-      DO <<    PT1,
-            ( (PT1.col(0)*18).array().cos()>0.0 ^  
-              (PT1.col(1)*18).array().cos()>0.0 ).cast<double>() ,
-            ( (PT1_.col(0)*18).array().cos()>0.0 ^ 
-              (PT1_.col(1)*18).array().cos()>0.0 ).cast<double>();
-      
-      std::vector<std::string> headerO({"psi","the","grid0","grid1"});
-
-      igl::writePLY(par["debug"].as<std::string>(), sph1_orig, F1, E1, N1, UV1, DO, headerO );
+      igl::writeCSV(par["progress"].as<std::string>(), progress, {"cost","update"});
     }
 
   } else {
