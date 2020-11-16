@@ -23,19 +23,25 @@ function Usage {
  Usage: 
   `basename $0` <input_lt.ply> <input_measurement_lt.txt/csv> <input_rt.ply> <input_measurement_rt.txt/csv> <output.png> \
     [foreground] [background] 
-  --- Optional parameters  ---
-  -min <m> 
+  --- Data parameters  ---
+  -min <m>
   -max <m> 
   -title <title>
-  -spectral - use spectral colour map (default)
-  -atrophy  - use atrophy colour map
-  -summer   - use summer colour map
-  -jacobian - use jacobian colour map
-  -gray     - use gray colour map
-  -sphere   - output on the spherical map, using spherical coordinates instead of x,y,z
   -column  <n> - specify column name from txt file to use (default will use the first column)
-  -discrete  - don't interpolate values 
-  -levels <n> - number of different color levels 
+
+  --- Visualization parameters ---
+  -sphere    - output on the spherical map, using spherical coordinates instead of x,y,z
+  -spectral  - use spectral colour map (default)
+  -atrophy   - use atrophy colour map
+  -summer    - use summer colour map
+  -jacobian  - use jacobian colour map
+  -gray      - use gray colour map
+  -discrete  - don't interpolate values (usefull for labels)
+  -levels <n> - number of different color levels
+
+  --- Rendering parameters ---
+  -hq        - render with high quality, increase pixel density
+  -nobar     - remove colour bar on the right
 EOF
 }
 
@@ -60,6 +66,8 @@ while [ $# -gt 0 ]; do
   elif [ $1 = -column  ]; then column="--column $2"; shift 2
   elif [ $1 = -discrete  ]; then discrete="--discrete"; shift
   elif [ $1 = -levels  ]; then levels="--levels $2"; shift 2
+  elif [ $1 = -hq ];then hq="-density 200x200";shift 1
+  elif [ $1 = -nobar ];then nobar=YES;shift 1
   else
     args=( ${args[@]} $1 )
     shift
@@ -141,22 +149,36 @@ fi
 $FALCON_BIN/falcon_off2pov --colorize $in_txt_lt $column $in_off_lt $tempdir/brain_lt.pov --object brain_lt --clobber --metallic $sphere -$cmap --min ${range[0]} --max ${range[1]} $discrete $levels
 $FALCON_BIN/falcon_off2pov --colorize $in_txt_rt $column $in_off_rt $tempdir/brain_rt.pov --object brain_rt --clobber --metallic $sphere -$cmap --min ${range[0]} --max ${range[1]} $discrete $levels
 
-
 h=$(identify -format %h $colourbar)
 
+
+if [ -z $hq ];then
+Width=320
+Height=240
 pos1=$(($h+60))
 pos2=30
+b=30
+else
+Width=640
+Height=480
+pos1=$(($h+100))
+pos2=50
+b=50
+fi
 
-convert -border 30 \
-  -fill ${foreground} -background ${background} -bordercolor ${background} -font Times-Bold -pointsize 20 \
+
+if [ -z $nobar ];then
+convert $hq \
+  -border $b \
+  -fill ${foreground} -background ${background} -bordercolor ${background} \
+  -font Times-Bold -pointsize 20 \
   -draw "text 2,$pos2 '${range[1]}'" \
   -draw "text 2,$pos1 '${range[0]}'"  \
   -alpha remove -alpha off  \
   $colourbar $tempdir/bar.miff
+fi
 
-
-Width=320
-Height=240
+povray_common="-GA -V +UA +Q11 +A"
 
 # modify template for different orientations
 for angle in Front Back Top Bottom Left Right; do
@@ -176,9 +198,9 @@ for angle in Front Back Top Bottom Left Right; do
             echo -e "object {\n  brain_lt\n  rotate ObjectRotation${angle}\n}\n" >>$tempdir/render_${angle}.pov
             echo -e "object {\n  brain_rt\n  rotate ObjectRotation${angle}\n}\n" >>$tempdir/render_${angle}.pov
 
-            povray  $tempdir/render_${angle}.pov +o$tempdir/render_${angle}.png -D -GA +A +H${height} +W${width} -V  +UA -Q12 # >/dev/null  2>&1 
-            convert $tempdir/render_${angle}.png -trim +repage $tempdir/render_${angle}.png
-            convert $tempdir/render_${angle}.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}.png
+            povray  $tempdir/render_${angle}.pov +o$tempdir/render_${angle}.png  +H${height} +W${width} $povray_common # >/dev/null  2>&1 
+            convert $hq $tempdir/render_${angle}.png -trim +repage $tempdir/render_${angle}.png
+            convert $hq $tempdir/render_${angle}.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}.png
             ;;
         Front|Back)
             height=$Height
@@ -190,9 +212,9 @@ for angle in Front Back Top Bottom Left Right; do
             echo -e "object {\n  brain_lt\n  rotate ObjectRotation${angle}\n}\n" >>$tempdir/render_${angle}.pov
             echo -e "object {\n  brain_rt\n  rotate ObjectRotation${angle}\n}\n" >>$tempdir/render_${angle}.pov
 
-            povray $tempdir/render_${angle}.pov +o$tempdir/render_${angle}.png -D -GA +A +H${height} +W${width} -V  +UA -Q12 # >/dev/null  2>&1 
-            convert $tempdir/render_${angle}.png -trim +repage $tempdir/render_${angle}.png
-            convert $tempdir/render_${angle}.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}.png
+            povray $tempdir/render_${angle}.pov +o$tempdir/render_${angle}.png +H${height} +W${width} $povray_common  # >/dev/null  2>&1 
+            convert $hq $tempdir/render_${angle}.png -trim +repage $tempdir/render_${angle}.png
+            convert $hq $tempdir/render_${angle}.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}.png
             ;;
 
         Left|Right)
@@ -210,13 +232,13 @@ for angle in Front Back Top Bottom Left Right; do
             echo -e "object {\n  brain_lt\n  rotate ObjectRotation${angle}\n}\n" >>$tempdir/render_${angle}_lt.pov
             echo -e "object {\n  brain_rt\n  rotate ObjectRotation${angle}\n}\n" >>$tempdir/render_${angle}_rt.pov
 
-            povray $tempdir/render_${angle}_lt.pov +o$tempdir/render_${angle}_lt.png -D -GA +A +H${height} +W${width} -V  +UA -Q12 # >/dev/null  2>&1 
-            povray $tempdir/render_${angle}_rt.pov +o$tempdir/render_${angle}_rt.png -D -GA +A +H${height} +W${width} -V  +UA -Q12 # >/dev/null  2>&1 
-            convert $tempdir/render_${angle}_lt.png -trim +repage $tempdir/render_${angle}_lt.png
-            convert $tempdir/render_${angle}_rt.png -trim +repage $tempdir/render_${angle}_rt.png
+            povray $tempdir/render_${angle}_lt.pov +o$tempdir/render_${angle}_lt.png +H${height} +W${width} $povray_common # >/dev/null  2>&1 
+            povray $tempdir/render_${angle}_rt.pov +o$tempdir/render_${angle}_rt.png +H${height} +W${width} $povray_common # >/dev/null  2>&1 
+            convert $hq $tempdir/render_${angle}_lt.png -trim +repage $tempdir/render_${angle}_lt.png
+            convert $hq $tempdir/render_${angle}_rt.png -trim +repage $tempdir/render_${angle}_rt.png
             
-            convert $tempdir/render_${angle}_lt.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}_lt.png
-            convert $tempdir/render_${angle}_rt.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}_rt.png
+            convert $hq $tempdir/render_${angle}_lt.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}_lt.png
+            convert $hq $tempdir/render_${angle}_rt.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}_rt.png
             
 #             montage -geometry +0+0 -tile 2x -background ${background} -bordercolor ${background} -fill ${background} \
 #                     $tempdir/render_${angle}_lt.png $tempdir/render_${angle}_rt.png $tempdir/render_${angle}.png
@@ -224,7 +246,7 @@ for angle in Front Back Top Bottom Left Right; do
     esac
 done
 
-montage \
+montage $hq \
  -geometry ${Width}x${Height}+5+5 \
  -tile 2x4 \
  -background ${background} \
@@ -245,7 +267,8 @@ montage \
 #title="-title '${title}'"
 #fi
 
-montage \
+if [ -z $nobar ];then
+montage $hq \
  -geometry +0+0 \
  -tile 2x1 \
  -background ${background} \
@@ -255,3 +278,14 @@ montage \
  $tempdir/pik.miff \
  $tempdir/bar.miff \
  $output
+else
+montage $hq \
+ -geometry +0+0 \
+ -tile 1x1 \
+ -background ${background} \
+ -fill   ${foreground} \
+ -stroke ${foreground} \
+ -title  "$title"  \
+ $tempdir/pik.miff \
+ $output
+fi

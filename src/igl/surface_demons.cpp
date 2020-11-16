@@ -112,21 +112,26 @@ int main(int argc, char *argv[])
       .show_positional_help();
   
   options.add_options()
-    ("v,verbose", "Verbose output",     cxxopts::value<bool>()->default_value("false"))
-    ("s,source", "Source mesh ",        cxxopts::value<std::string>())
-    ("t,target", "Target mesh ",        cxxopts::value<std::string>())
-    ("o,output", "Output mesh",         cxxopts::value<std::string>())
-    ("clobber", "Clobber output file ", cxxopts::value<bool>()->default_value("false"))
+    ("v,verbose", "Verbose output",      cxxopts::value<bool>()->default_value("false"))
+    ("s,source", "Source mesh ",         cxxopts::value<std::string>())
+    ("t,target", "Target mesh ",         cxxopts::value<std::string>())
+    ("o,output", "Output mesh",          cxxopts::value<std::string>())
+    ("clobber",  "Clobber output file ", cxxopts::value<bool>()->default_value("false"))
 
+    // registration parameters
     ("a,alpha", "Alpha parameter for surface depth", cxxopts::value<double>()->default_value("0.03"))
-    ("step",    "Step size", cxxopts::value<double>()->default_value("0.01"))
+    ("step",    "Step size",             cxxopts::value<double>()->default_value("0.01"))
     ("lambda",  "Regularization lambda", cxxopts::value<double>()->default_value("1.0"))
-    ("iter",    "Iter number", cxxopts::value<int>()->default_value("200"))
+    ("iter",    "Iter number",           cxxopts::value<int>()->default_value("1000"))
+    ("su",      "Smooth Update Iter",    cxxopts::value<int>()->default_value("50"))
+    ("sg",      "Smooth Gradient Iter",  cxxopts::value<int>()->default_value("50"))
+
     // DEBUG options
     ("d,debug",  "Debug Output mesh",   cxxopts::value<std::string>())
     ("debug-progress",  "Generate debug meshes each itaration, use this as prefix",   cxxopts::value<std::string>())
-    ("progress",  "Convergence progress output",   cxxopts::value<std::string>())
-    // 
+    ("progress",  "Convergence progress output into file",   cxxopts::value<std::string>())
+
+    // help
     ("help", "Print help") ;
   
   options.parse_positional({"source", "target" });
@@ -135,7 +140,7 @@ int main(int argc, char *argv[])
   double alpha           = par["alpha"].as<double>();
   double demons_step     = par["step"].as<double>();
   double lambda          = par["lambda"].as<double>();
-  int    demons_iter     = par["iter"].as<int>();;
+  int    demons_iter     = par["iter"].as<int>();
   bool   verbose         = par["verbose"].as<bool>();
 
   if( par.count("source") && 
@@ -222,16 +227,18 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-    int   smooth_gradients    = 50;
-    int   smooth_update       = 50;
+    int   smooth_gradients    = par["sg"].as<int>();
+    int   smooth_update       = par["su"].as<int>();
     //int smooth_cost         = 10;
     double conv_tol           = 1e-5;
     int    conv_iter            = 10;
+    // remove updated gradients below this threshold
     double vanishing_gradients_thr = 1e-6;
-    double giant_gradient_thr = 1e6;
+    // remove giant gradients, caused by nodes being too close
+    double giant_gradient_thr = 1e20;
 
-    double convergence=1e10;
-    double prev_convergence=1e10;
+    double convergence      = 1e10;
+    double prev_convergence = 1e10;
 
     // avg edge length on embedding
     double dx_X1 = igl::avg_edge_length(sph1, F1); 
@@ -310,7 +317,7 @@ int main(int argc, char *argv[])
       Eigen::MatrixXd avg_grad1 = Eigen::MatrixXd::NullaryExpr(C1s.rows(), dC2s.cols(),
           [&dC1s, &dC2s, &match1](auto r, auto c) { return 0.5*dC1s(r,c) + 0.5*dC2s(match1(r), c); }); 
 
-      Eigen::ArrayXd normg1 = avg_grad1.rowwise().stableNorm();
+      Eigen::ArrayXd normg1 = avg_grad1.rowwise().squaredNorm();
       Eigen::ArrayXd scale1 = diff1.array() / (normg1.array() + diff1.array().pow(2) * lambda  ); // % levenberg-marquart descent
 
       // eliminate vanishingn gradients
@@ -394,11 +401,11 @@ int main(int argc, char *argv[])
         char tmp[1024];
         sprintf(tmp,"%s_%03d.ply",par["debug-progress"].as<std::string>().c_str(),i);
 
-
         save_debug(tmp,sph1,diff1);
       }
 
-      std::cout<<i<<"\t:" << progress(i,0)<<":" << progress(i,1) << "\t"<<cnv<<std::endl; 
+      if(verbose)
+        std::cout<<i<<"\t:" << progress(i,0)<<":" << progress(i,1) << "\t"<<cnv<<std::endl; 
     }
 
     Eigen::MatrixXd DO(D1.rows(),3);
@@ -408,13 +415,12 @@ int main(int argc, char *argv[])
 
     DO<<PT1_,
       (sph1.array() * sph1_orig.array()).rowwise().sum().acos()*180.0/M_PI ;
-    std::vector<std::string> headerO({"psi","the","da"});
+    std::vector<std::string> headerO({"psi", "the", "da"});
     
     igl::writePLY(par["output"].as<std::string>(), V1, F1, E1, N1, UV1, DO, headerO );
 
     if(par.count("debug"))
-      save_debug(par["output"].as<std::string>(), sph1, diff1);
-
+      save_debug(par["debug"].as<std::string>(), sph1, diff1);
 
     if(par.count("progress"))
     {
