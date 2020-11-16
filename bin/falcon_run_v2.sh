@@ -61,7 +61,9 @@ icbm_dir=$FALCON_DATA/data
 function Usage {
   cat <<EOF
 
-  ${progname} version ${ver} 
+  ${progname} version ${ver}
+    This program will extract cortical surfaces and 
+    will generate output files with suffix "${ver}"
 
   ${progname} <input.mnc> <output_base> 
 
