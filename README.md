@@ -1,4 +1,5 @@
 # FALCON cortical surface extraction tool
+[![DOI](https://zenodo.org/badge/157914556.svg)](https://zenodo.org/badge/latestdoi/157914556)
 ![Example Thickness map](https://github.com/vfonov/falcon/blob/gh-pages/examples/OASIS-TRT-20-18_thickness-s66_lt.png?raw=true)
 
 ## Preliminary results
