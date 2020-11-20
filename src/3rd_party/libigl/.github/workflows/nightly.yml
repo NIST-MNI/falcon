@@ -88,12 +88,12 @@ jobs:
 
             if [ "${{ matrix.compiler }}" = "gcc" ]; then
               sudo apt-get install -y g++-${{ matrix.version }}
-              echo "::set-env name=CC::gcc-${{ matrix.version }}"
-              echo "::set-env name=CXX::g++-${{ matrix.version }}"
+              echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
+              echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
             else
               sudo apt-get install -y clang-${{ matrix.version }}
-              echo "::set-env name=CC::clang-${{ matrix.version }}"
-              echo "::set-env name=CXX::clang++-${{ matrix.version }}"
+              echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
+              echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
             fi
 
             sudo apt-get install \
@@ -164,7 +164,7 @@ jobs:
 
       - name: Set env
         run: |
-          echo "::set-env name=BOOST_ROOT::$env:BOOST_ROOT_1_69_0"
+          echo "BOOST_ROOT=$env:BOOST_ROOT_1_72_0" >> ${env:GITHUB_ENV}
 
         # We run configure + build in the same step, since they both need to call VsDevCmd
         # Also, cmd uses ^ to break commands into multiple lines (in powershell this is `)
