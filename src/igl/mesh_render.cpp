@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
     ("rz",        "Rotation around Z ", cxxopts::value<double>()->default_value("0.0"))
 
     ("view",      "preset view: front back top bottom left right",     cxxopts::value<std::string>())
+    ("six",       "Display all six views on one rendering, multiply output size X*2 x Y*3",     cxxopts::value<bool>()->default_value("false"))
 
     ("flat",    "Flat color per face (average of corners)",  cxxopts::value<bool>()->default_value("false"))
     ("ortho",   "Use orthographic projection",  cxxopts::value<bool>()->default_value("false"))
@@ -204,49 +205,81 @@ int main(int argc, char *argv[])
 
       Eigen::Matrix3d rot_matrix;
 
-      auto  make_rot_matrix = [](auto rx,auto ry,auto rz) {
-        return  Eigen::AngleAxisd( rx*M_PI/180.0, Eigen::Vector3d::UnitX())
-              * Eigen::AngleAxisd( ry*M_PI/180.0, Eigen::Vector3d::UnitY())
-              * Eigen::AngleAxisd( rz*M_PI/180.0, Eigen::Vector3d::UnitZ());
+      auto  make_rot_matrix = [](auto rx,auto ry,auto rz)->Eigen::Matrix3d {
+        Eigen::Matrix3d r;
+        r=  Eigen::AngleAxisd( rx*M_PI/180.0, Eigen::Vector3d::UnitX())
+          * Eigen::AngleAxisd( ry*M_PI/180.0, Eigen::Vector3d::UnitY())
+          * Eigen::AngleAxisd( rz*M_PI/180.0, Eigen::Vector3d::UnitZ());
+        return r;
       };
-      
-      if(par.count("view"))
-      { // front back top bottom left right
-        if(par["view"].as<std::string>()=="top")
-          rot_matrix =  make_rot_matrix(0,0,0);  
-        else if(par["view"].as<std::string>()=="bottom")
-          rot_matrix =  make_rot_matrix(0,180,0);  
-        else if(par["view"].as<std::string>()=="front")
-          rot_matrix =  make_rot_matrix(90,0,180);  
-        else if(par["view"].as<std::string>()=="back")
-          rot_matrix =  make_rot_matrix(-90,0,0);  
-        else if(par["view"].as<std::string>()=="left")
-          rot_matrix =  make_rot_matrix(0,90,90);  
-        else if(par["view"].as<std::string>()=="rigth")
-          rot_matrix =  make_rot_matrix(0,-90,-90);  
-        else 
-        {
-          std::cerr<<"Unknown view:"<<par["view"].as<std::string>()<<std::endl;
-          return 1;
-        }
-      } else {      
-        rot_matrix =  make_rot_matrix(par["rx"].as<double>(),par["ry"].as<double>(),par["rz"].as<double>());
-      }
-
       er.set_zoom(par["zoom"].as<double>());
-      er.set_rot(rot_matrix);
       er.set_orthographic(par["ortho"].as<bool>());
+      
+      if(par["six"].as<bool>())
+      {
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> R(width*2, height*3);
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> G(width*2, height*3);
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> B(width*2, height*3);
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> A(width*2, height*3);
 
-      // render view using embree
-      Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> R(width, height);
-      Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> G(width, height);
-      Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> B(width, height);
-      Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> A(width, height);
+        std::vector< Eigen::Matrix3d> views {
+          make_rot_matrix(0,0,0),   make_rot_matrix(0,180,0),
+          make_rot_matrix(90,0,180),make_rot_matrix(-90,0,0),
+          make_rot_matrix(0,90,90), make_rot_matrix(0,-90,-90)
+        };
+        for(int i=0;i<views.size();++i)
+        {
+          er.set_rot(views[i]);
+          // render view using embree
+          Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> r(width, height);
+          Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> g(width, height);
+          Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> b(width, height);
+          Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> a(width, height);
+          er.render_buffer(r,g,b,a);
+          R.block( (i%2)*width,(i/2)*height,width,height )=r;
+          G.block( (i%2)*width,(i/2)*height,width,height )=g;
+          B.block( (i%2)*width,(i/2)*height,width,height )=b;
+          A.block( (i%2)*width,(i/2)*height,width,height )=a;
+        }
 
-      er.render_buffer(R,G,B,A);
+        igl::png::writePNG(R,G,B,A,par["output"].as<std::string>());
+        
+      } else {
+        if(par.count("view"))
+        { // front back top bottom left right
+          if(par["view"].as<std::string>()=="top")
+            rot_matrix =  make_rot_matrix(0,0,0);
+          else if(par["view"].as<std::string>()=="bottom")
+            rot_matrix =  make_rot_matrix(0,180,0);
+          else if(par["view"].as<std::string>()=="front")
+            rot_matrix =  make_rot_matrix(90,0,180);
+          else if(par["view"].as<std::string>()=="back")
+            rot_matrix =  make_rot_matrix(-90,0,0); 
+          else if(par["view"].as<std::string>()=="left")
+            rot_matrix =  make_rot_matrix(0,90,90);  
+          else if(par["view"].as<std::string>()=="rigth")
+            rot_matrix =  make_rot_matrix(0,-90,-90);
+          else 
+          {
+            std::cerr<<"Unknown view:"<<par["view"].as<std::string>()<<std::endl;
+            return 1;
+          }
+        } else {      
+          rot_matrix =  make_rot_matrix(par["rx"].as<double>(),par["ry"].as<double>(),par["rz"].as<double>());
+        }
 
-      igl::png::writePNG(R,G,B,A,par["output"].as<std::string>());
+        er.set_rot(rot_matrix);
 
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> R(width, height);
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> G(width, height);
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> B(width, height);
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> A(width, height);
+
+        // render view using embree
+        er.render_buffer(R,G,B,A);
+
+        igl::png::writePNG(R,G,B,A,par["output"].as<std::string>());
+      }
     } else {
       std::cerr<<"Error reading ply:"<<argv[1]<<std::endl;
       return 1;
