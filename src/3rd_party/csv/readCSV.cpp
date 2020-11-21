@@ -3,7 +3,7 @@
 #include "rapidcsv.h"
 
 #ifdef HAVE_ZLIB
-#include "zstr/zstr.hpp"
+#include "zstr.hpp"
 #endif
 
 namespace zstr

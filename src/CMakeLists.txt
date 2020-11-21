@@ -47,6 +47,7 @@ INCLUDE_DIRECTORIES(
    3rd_party/libcsv
    3rd_party/NrrdIO
    3rd_party/
+   3rd_party/zstr/src
    3rd_party/spectra/include
    ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/NrrdIO
 )

@@ -36,6 +36,8 @@ target_link_libraries(falcon_igl_mesh_decimate igl::core )
 add_executable(falcon_igl_mesh_debug mesh_debug.cpp )
 target_link_libraries(falcon_igl_mesh_debug igl::core )
 
+add_executable(falcon_igl_mesh_render mesh_render.cpp )
+target_link_libraries(falcon_igl_mesh_render igl::core igl::png igl::embree )
 
 #
 INSTALL( TARGETS 
