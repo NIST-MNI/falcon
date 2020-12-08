@@ -21,6 +21,7 @@
 
 
 #include  <chrono>
+#include  <iostream>
 
 
 bool depth_potential(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,double alpha,Eigen::VectorXd &dp_out)
