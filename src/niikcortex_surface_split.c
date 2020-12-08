@@ -23,14 +23,17 @@ static int compare_ints(const void *a, const void *b) {
   return (*(const int *)a - *(const int *)b);
 }
 
-struct group_cm {
+struct group_cm_ {
   int id;
   niikpt cm;
   int c;
 };
 
+typedef struct group_cm_ group_cm;
+
+
 static int compare_groups(const void *a, const void *b) {
-  return (((const struct group_cm *)a)->cm.x - ((const struct group_cm *)b)->cm.x)>0;
+  return (((const group_cm *)a)->cm.x - ((const group_cm *)b)->cm.x)>0;
 }
 
 
@@ -224,31 +227,31 @@ int split_kobj(kobj *obj, kobj ***out, int attribute, int verbose) {
     /*sort according to the x coordiantes */
     {
       /*for sorting groups*/
-      struct group_cm* groups_cm;
-      groups_cm=(struct group_cm *)calloc(sizeof(struct group_cm), num_groups);
+      group_cm* _cm;
+      _cm=(group_cm *)calloc(sizeof(group_cm), num_groups);
 
       for(v=obj->vert; v!=NULL; v=v->next) {
         int gi = group_labels[v->index]-1;
-        groups_cm[gi].cm = niikpt_add(groups_cm[gi].cm, v->v);
-        groups_cm[gi].c++;
+        _cm[gi].cm = niikpt_add(_cm[gi].cm, v->v);
+        _cm[gi].c++;
       }
 
       for(i=0; i<num_groups; i++) {
-        groups_cm[i].id=i+1;
-        if(groups_cm[i].c>0)
-          groups_cm[i].cm=niikpt_kmul( groups_cm[i].cm, 1.0/(double)groups_cm[i].c);
+        _cm[i].id=i+1;
+        if(_cm[i].c>0)
+          _cm[i].cm=niikpt_kmul( _cm[i].cm, 1.0/(double)_cm[i].c);
       }
 
-      qsort(groups_cm, num_groups, sizeof(groups_cm), compare_groups);
+      qsort(_cm, num_groups, sizeof(group_cm), compare_groups);
       for(i=0; i<num_groups; i++) {
-        trans[groups_cm[i].id] = i+1;
+        trans[_cm[i].id] = i+1;
       }
 
       for(i=1; i<=obj->nvert ; i++) {
         group_labels[i] = trans[ group_labels[i] ];
       }
 
-      free(groups_cm);
+      free(_cm);
     }
 
     if(!attribute)
