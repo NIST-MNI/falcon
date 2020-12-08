@@ -2738,10 +2738,8 @@ int g_niikmat_decompose_affine_obj_func_dof;
 double *g_niikmat_decompose_affine_obj_func_ipar;
 
 int niikmat_decompose_affine(niikmat *mat,double *par,int dof) {
-  int
-  verbose=0,
-  m,n,
-  ndim,iter=165536;
+  const int verbose=0;
+  int m,n,ndim,iter=165536;
   niikmat *p=NULL,*matout=NULL;
   double
   dout=0,
@@ -2879,12 +2877,12 @@ int niikmat_decompose_affine(niikmat *mat,double *par,int dof) {
 
 double niikmat_decompose_affine_obj_func(double *v) {
   niikmat *m;
-  int
-  i,j,
-  verbose=0;
+  int i,j;
+  const int verbose=0;
   double out=0,tmp[25];
   static double optout=1e9;
   static int iter=0;
+
   if(v==NULL) {
     optout=1e9;
     iter=0;
