@@ -250,4 +250,7 @@ namespace igl
   }
 }
 
+#ifndef IGL_STATIC_LIBRARY
+#  include "EmbreeRenderer.cpp"
+#endif
 #endif //IGL_EMBREE_EMBREE_RENDERER_H
