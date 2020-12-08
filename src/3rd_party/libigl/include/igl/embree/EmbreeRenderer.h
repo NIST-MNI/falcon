@@ -56,6 +56,7 @@ namespace igl
       typedef Eigen::Matrix<float,Eigen::Dynamic,3> PointMatrixType;
       typedef Eigen::Matrix<float,Eigen::Dynamic,3> ColorMatrixType;
       typedef Eigen::Matrix<int,  Eigen::Dynamic,3> FaceMatrixType;
+      typedef Eigen::Matrix<float,Eigen::Dynamic,3> NormalMatrixType;
       
       typedef Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> PixelMatrixType;
 

@@ -360,6 +360,11 @@ igl::embree::EmbreeRenderer
           R(x,y) = clamp(face_proj*c(0));
           G(x,y) = clamp(face_proj*c(1));
           B(x,y) = clamp(face_proj*c(2));
+        } else {
+          // backface?
+          R(x,y)=0;
+          G(x,y)=0;
+          B(x,y)=0;
         }
         // give the same alpha to all points with something behind
         A(x,y)=255; 
