@@ -83,8 +83,4 @@ namespace igl
   }
 }
 
-#ifndef IGL_STATIC_LIBRARY
-#  include "EmbreeDevice.cpp"
-#endif
-
 #endif // IGL_EMBREE_EMBREE_DEVICE_H
