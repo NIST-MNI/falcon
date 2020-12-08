@@ -30,13 +30,15 @@ int main(int argc, char *argv[])
       par.count("output") )
   {
 
-    Eigen::MatrixXd V,N,UV,D;
+    Eigen::MatrixXd V,N,UV,D,FD,ED;
     Eigen::MatrixXi F,E;
     std::vector<std::string> header;
+    std::vector<std::string> headerF,headerE;
+    std::vector<std::string> comments;
 
     double alpha=0.05;
 
-    if(igl::readPLY(par["source"].as<std::string>(), V, F, E, N, UV, D, header))
+    if(igl::readPLY(par["source"].as<std::string>(), V, F, E, N, UV, D, header, FD,headerF,ED,headerE,comments ))
     {
       if(par["verbose"].as<bool>()) {
         std::cout << "Vertices: " << V.rows() << "x"<< V.cols() << std::endl;
@@ -69,8 +71,10 @@ int main(int argc, char *argv[])
 
       for(typename Eigen::VectorXi::Scalar i=0; i<counts.rows(); ++i)
       {
-        Eigen::MatrixXd V1,N1,UV1,D1;
+        Eigen::MatrixXd V1,N1,UV1,D1,FD1,ED1;
         Eigen::MatrixXi F1,E1;
+
+        std::vector<std::string> header1F,header1E;
 
         struct collect_idx {
           Eigen::VectorXi idx;
@@ -141,7 +145,7 @@ int main(int argc, char *argv[])
           std::cout << "  Edges:    " << E1.rows() << "x"<< E1.cols() << std::endl;
         }
 
-        if(!igl::writePLY(tmp, V1, F1, E1, N1, UV1, D1, header ))
+        if(!igl::writePLY(tmp, V1, F1, E1, N1, UV1, D1, header, FD1, header1F, ED1, header1E, comments, igl::FileEncoding::Binary ))
         {
           std::cerr<<"Error writing:"<<tmp<<std::endl;
           return 1;

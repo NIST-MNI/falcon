@@ -73,11 +73,12 @@ int main(int argc, char *argv[])
   if( par.count("input") )
   {
 
-    Eigen::MatrixXd V,N,UV,D;
+    Eigen::MatrixXd V,N,UV,D,FD,ED;
     Eigen::MatrixXi F,E;
-    std::vector<std::string> header;
+    std::vector<std::string> header,headerF,headerE;
+    std::vector<std::string> comments;
 
-    if(igl::readPLY(par["input"].as<std::string>(), V, F, E, N, UV, D, header))
+    if(igl::readPLY(par["input"].as<std::string>(), V, F, E, N, UV, D, header, FD, headerF, ED, headerE, comments))
     {
       std::cout << "Vertices: " << V.rows() << "x"<< V.cols() << std::endl;
       std::cout << "Faces:    " << F.rows() << "x"<< F.cols() << std::endl;
@@ -137,7 +138,7 @@ int main(int argc, char *argv[])
         Eigen::MatrixXd D1(D.rows(), D.cols()+1);
         D1<<D,zero_length_count;
 
-        igl::writePLY(par["output"].as<std::string>(), V, F, E, N, UV, D1, header );
+        igl::writePLY(par["output"].as<std::string>(), V, F, E, N, UV, D1, header, FD, headerF, ED, headerE, comments, igl::FileEncoding::Binary  );
       }
              
     } else {

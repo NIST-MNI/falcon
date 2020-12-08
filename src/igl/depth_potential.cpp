@@ -1,3 +1,5 @@
+#include  <iostream>
+
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
@@ -17,11 +19,9 @@
 #include <Eigen/OrderingMethods>
 
 #include <Eigen/IterativeLinearSolvers>
-#include <unsupported/Eigen/IterativeSolvers>
 
 
 #include  <chrono>
-#include  <iostream>
 
 
 bool depth_potential(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,double alpha,Eigen::VectorXd &dp_out)
@@ -84,7 +84,10 @@ bool depth_potential(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,double a
 }
 
 
+#if 0
+#include <unsupported/Eigen/IterativeSolvers>
 
+// benchmarking code
 bool depth_potential_benchmark(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,double alpha,Eigen::VectorXd &dp_out)
 {
     #if 1
@@ -242,3 +245,4 @@ bool depth_potential_benchmark(const Eigen::MatrixXd &V, const Eigen::MatrixXi &
 
     return true;
 }
+#endif 

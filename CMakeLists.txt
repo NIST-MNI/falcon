@@ -22,8 +22,6 @@ option(LIBIGL_WITH_TRIANGLE          "Use Triangle"                 OFF)
 #option(LIBIGL_WITH_PREDICATES        "Use exact predicates"         OFF)
 option(LIBIGL_WITH_XML               "Use XML"                      OFF)
 
-
-
 if (USE_OPENMP)
     FIND_PACKAGE(OpenMP)
     if(OPENMP_FOUND)

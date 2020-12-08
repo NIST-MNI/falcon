@@ -153,24 +153,28 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-    Eigen::MatrixXd V1,N1,UV1,D1;
+    Eigen::MatrixXd V1,N1,UV1,D1,FD1,ED1;
     Eigen::MatrixXi F1,E1;
     std::vector<std::string> header1;
+    std::vector<std::string> header1F,header1E;
+    std::vector<std::string> comment1;
 
-    Eigen::MatrixXd V2,N2,UV2,D2;
+    Eigen::MatrixXd V2,N2,UV2,D2,FD2,ED2;
     Eigen::MatrixXi F2,E2;
     std::vector<std::string> header2;
+    std::vector<std::string> header2F,header2E;
+    std::vector<std::string> comment2;
 
     Eigen::MatrixXd D;
     std::vector<std::string> header;
 
-    if(! igl::readPLY(par["source"].as<std::string>(), V1, F1, E1, N1, UV1, D1, header1))
+    if(! igl::readPLY(par["source"].as<std::string>(), V1, F1, E1, N1, UV1, D1, header1, FD1,header1F,ED1,header1E,comment1))
     {
       std::cerr<<"Error reding ply:"<<par["source"].as<std::string>()<<std::endl;
       return 1;
     }
 
-    if(! igl::readPLY(par["target"].as<std::string>(), V2, F2, E2, N2, UV2, D2, header2) )
+    if(! igl::readPLY(par["target"].as<std::string>(), V2, F2, E2, N2, UV2, D2, header2,  FD2,header2F,ED2,header2E,comment2) )
     {
       std::cerr<<"Error reding ply:"<<par["target"].as<std::string>()<<std::endl;
       return 1;
@@ -289,7 +293,7 @@ int main(int argc, char *argv[])
       
       std::vector<std::string> headerO({"psi","the","diff","grid"});
 
-      igl::writePLY(fname, sph1_orig, F1, E1, N1, UV1, DO, headerO );
+      igl::writePLY(fname, sph1_orig, F1, E1, N1, UV1, DO, headerO, FD1,header1F, ED1,header1E, comment1, igl::FileEncoding::Binary );
       };
 
     // progress history
@@ -417,7 +421,7 @@ int main(int argc, char *argv[])
       (sph1.array() * sph1_orig.array()).rowwise().sum().acos()*180.0/M_PI ;
     std::vector<std::string> headerO({"psi", "the", "da"});
     
-    igl::writePLY(par["output"].as<std::string>(), V1, F1, E1, N1, UV1, DO, headerO );
+    igl::writePLY(par["output"].as<std::string>(), V1, F1, E1, N1, UV1, DO, headerO, FD1,header1F, ED1,header1E,comment1, igl::FileEncoding::Binary );
 
     if(par.count("debug"))
       save_debug(par["debug"].as<std::string>(), sph1, diff1);

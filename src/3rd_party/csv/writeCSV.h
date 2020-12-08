@@ -26,8 +26,20 @@ template <typename Derived>
 
 }
 
+bool inline igl::check_ext(const std::string &path, const std::string &ext)
+{
+  auto idx=path.rfind('.');
+  if(idx != std::string::npos)
+  {
+      std::string _extension = path.substr(idx+1);
+      return _extension==ext;
+  }
+  return false;
+}
+
+
 #ifndef IGL_STATIC_LIBRARY
-#  include "writeCSV.cpp"
+#  include "writeCSV.cpp" 
 #endif
 
 #endif

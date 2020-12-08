@@ -8,8 +8,8 @@
 
 #include <Eigen/Sparse>
 
-#include "igl/readPLY.h"
-#include "igl/writePLY.h"
+#include <igl/readPLY.h>
+#include <igl/writePLY.h>
 
 #include "depth_potential.h"
 #include "cxxopts.hpp"
@@ -55,13 +55,15 @@ int main(int argc, char *argv[])
           return 1;
     }
     
-    Eigen::MatrixXd V,N,UV,D;
+    Eigen::MatrixXd V,N,UV,D,FD,ED;
     Eigen::MatrixXi F,E;
     std::vector<std::string> header;
+    std::vector<std::string> headerF,headerE,comments;
 
     double alpha=par["alpha"].as<double>();
 
-    if(igl::readPLY(par["input"].as<std::string>(), V, F, E, N, UV, D, header))
+    if(igl::readPLY(par["input"].as<std::string>(), V, F, E, N, UV, D, header, 
+       FD,headerF, ED,headerE, comments))
     {
 
       if(par.count("verbose"))
@@ -93,7 +95,7 @@ int main(int argc, char *argv[])
           ND << D,dp;
           header.push_back("dp");
 
-          igl::writePLY(out, V, F, E, N, UV, ND, header );
+          igl::writePLY(out, V, F, E, N, UV, ND, header, FD, headerF, ED, headerE, comments, igl::FileEncoding::Binary );
         } else {
           igl::writeCSV(out, dp, {"dp"}); 
         }

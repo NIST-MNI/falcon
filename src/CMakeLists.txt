@@ -65,6 +65,9 @@ SET(CSV_LIB_SRC
 # NrrdIO
 ADD_SUBDIRECTORY(3rd_party/NrrdIO)
 
+# RapidCSV
+ADD_SUBDIRECTORY(3rd_party/csv)
+
 
 # LibIGL based tools
 ADD_SUBDIRECTORY(igl)

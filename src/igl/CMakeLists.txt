@@ -15,29 +15,28 @@ add_executable(falcon_igl_field_eig field_eig.cpp )
 target_link_libraries(falcon_igl_field_eig igl::core )
 
 add_executable(falcon_igl_field_depth field_depth.cpp depth_potential.cpp)
-target_link_libraries(falcon_igl_field_depth igl::core )
+target_link_libraries(falcon_igl_field_depth igl::csv igl::core )
 
 add_executable(falcon_igl_field_resample field_resample.cpp )
-target_link_libraries(falcon_igl_field_resample igl::core )
+target_link_libraries(falcon_igl_field_resample igl::csv igl::core )
 
 add_executable(falcon_igl_mesh_split mesh_split.cpp )
 target_link_libraries(falcon_igl_mesh_split igl::core )
 
 add_executable(falcon_igl_multilabel_overlap multilabel_overlap.cpp )
-target_link_libraries(falcon_igl_multilabel_overlap igl::core )
+target_link_libraries(falcon_igl_multilabel_overlap igl::csv igl::core )
 
 add_executable(falcon_igl_surface_demons surface_demons.cpp depth_potential.cpp)
-target_link_libraries(falcon_igl_surface_demons igl::core )
+target_link_libraries(falcon_igl_surface_demons igl::csv igl::core )
 
 add_executable(falcon_igl_mesh_decimate mesh_decimate.cpp )
 target_link_libraries(falcon_igl_mesh_decimate igl::core )
-
 
 add_executable(falcon_igl_mesh_debug mesh_debug.cpp )
 target_link_libraries(falcon_igl_mesh_debug igl::core )
 
 add_executable(falcon_igl_mesh_render mesh_render.cpp )
-target_link_libraries(falcon_igl_mesh_render igl::core igl::png igl::embree )
+target_link_libraries(falcon_igl_mesh_render  igl::core  igl::embree ) # igl::png
 
 #
 INSTALL( TARGETS 

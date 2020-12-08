@@ -1,5 +1,8 @@
-#include <igl/read_triangle_mesh.h>
 #include <iostream>
+#include <set>
+
+
+#include <igl/read_triangle_mesh.h>
 #include <igl/jet.h>
 #include <igl/parula.h>
 #include <igl/png/writePNG.h>
@@ -59,11 +62,13 @@ int main(int argc, char *argv[])
   bool verbose=par["verbose"].as<bool>();
   if(par.count("mesh")&&par.count("output"))
   {
-    Eigen::MatrixXd V,N,UV,D;
+    Eigen::MatrixXd V,N,UV,D,FD,ED;
     Eigen::MatrixXi F,E;
     std::vector<std::string> header;
+    std::vector<std::string> headerF, headerE, comments;
  
-    if(igl::readPLY(par["mesh"].as<std::string>(), V, F, E, N, UV, D, header))
+    if(igl::readPLY(par["mesh"].as<std::string>(), V, F, E, N, UV, D, header,
+              FD,headerF, ED,headerE, comments))
     {
       const size_t k = 5;
       int idx_field = par["n"].as<int>();
@@ -196,7 +201,7 @@ int main(int argc, char *argv[])
         }
       } else {
         // using uniform colour
-        er.set_uniform_color(Eigen::RowVector3d(1.0,0.0,0.0));
+        er.set_colors(Eigen::RowVector3d(1.0,0.0,0.0));
       }
 
       // the  viewport

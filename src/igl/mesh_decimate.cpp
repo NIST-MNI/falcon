@@ -30,11 +30,13 @@ int main(int argc, char *argv[])
       par.count("n") )
   {
 
-    Eigen::MatrixXd V,N,UV,D;
+    Eigen::MatrixXd V,N,UV,D,FD,ED;
     Eigen::MatrixXi F,E;
     std::vector<std::string> header;
+    std::vector<std::string> headerF,headerE,comments;
 
-    if(igl::readPLY(par["input"].as<std::string>(), V, F, E, N, UV, D, header))
+    if(igl::readPLY(par["input"].as<std::string>(), V, F, E, N, UV, D, header,
+                    FD,headerF, ED,headerE, comments))
     {
       if(par["verbose"].as<bool>()) {
         std::cout << "Vertices: " << V.rows() << "x"<< V.cols() << std::endl;
@@ -48,11 +50,10 @@ int main(int argc, char *argv[])
         std::cout << std::endl;
       }
 
-      Eigen::MatrixXd V1,N1,UV1;
+      Eigen::MatrixXd V1,N1,UV1,FD1,ED1;
       Eigen::MatrixXi F1,E1;
-
       Eigen::VectorXi J,I;
-
+      std::vector<std::string> header1F,header1E;
 
       //decimating
       if(!igl::decimate(V, F, par["n"].as<int>(), V1, F1, J, I))
@@ -66,7 +67,8 @@ int main(int argc, char *argv[])
           });
 
       //TODO: populate E1!
-      if(!igl::writePLY(par["output"].as<std::string>(), V1, F1, E1, N1, UV1, D1, header ))
+      if(!igl::writePLY(par["output"].as<std::string>(), V1, F1, E1, N1, UV1, D1, header,
+                  FD1, header1F, ED1, header1E, comments, igl::FileEncoding::Binary ))
       {
         std::cerr<<"Error writing:" << par["output"].as<std::string>() << std::endl;
         return 1;
