@@ -5,7 +5,12 @@
 #include <igl/read_triangle_mesh.h>
 #include <igl/jet.h>
 #include <igl/parula.h>
+
+#ifdef STB_PNG
+#include <writePNG.h>
+#else
 #include <igl/png/writePNG.h>
+#endif
 
 #include <Eigen/Geometry> 
 
@@ -212,9 +217,9 @@ int main(int argc, char *argv[])
 
       auto  make_rot_matrix = [](auto rx,auto ry,auto rz)->Eigen::Matrix3d {
         Eigen::Matrix3d r;
-        r=  Eigen::AngleAxisd( rx*M_PI/180.0, Eigen::Vector3d::UnitX())
-          * Eigen::AngleAxisd( ry*M_PI/180.0, Eigen::Vector3d::UnitY())
-          * Eigen::AngleAxisd( rz*M_PI/180.0, Eigen::Vector3d::UnitZ());
+        r =  Eigen::AngleAxisd( rx*M_PI/180.0, Eigen::Vector3d::UnitX())
+           * Eigen::AngleAxisd( ry*M_PI/180.0, Eigen::Vector3d::UnitY())
+           * Eigen::AngleAxisd( rz*M_PI/180.0, Eigen::Vector3d::UnitZ());
         return r;
       };
       er.set_zoom(par["zoom"].as<double>());

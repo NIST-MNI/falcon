@@ -56,11 +56,13 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-    Eigen::MatrixXd V,N,UV,D;
+    Eigen::MatrixXd V,N,UV,D,FD,ED;
     Eigen::MatrixXi F,E;
     std::vector<std::string> header,eig_header;
- 
-    if(igl::readPLY(par["input"].as<std::string>(), V, F, E, N, UV, D, header))
+    std::vector<std::string> headerF, headerE, comments;
+
+    if(igl::readPLY(par["input"].as<std::string>(), V, F, E, N, UV, D, header,
+              FD,headerF, ED,headerE, comments))
     {
       size_t k = par["k"].as<int>();
 
@@ -146,7 +148,8 @@ int main(int argc, char *argv[])
               for(auto const &h:eig_header)
                 header.push_back(h);
 
-              igl::writePLY(out, V, F, E, N, UV, ND, header );
+              igl::writePLY(out, V, F, E, N, UV, ND, header,
+                  FD, headerF, ED, headerE, comments, igl::FileEncoding::Binary );
             } else {
               igl::writeCSV(out, U, eig_header ); 
             }

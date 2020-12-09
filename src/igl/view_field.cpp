@@ -47,11 +47,13 @@ int main(int argc, char *argv[])
 
   if(par.count("mesh"))
   {
-    Eigen::MatrixXd V,N,UV,D;
+    Eigen::MatrixXd V,N,UV,D,FD,ED;
     Eigen::MatrixXi F,E;
     std::vector<std::string> header;
- 
-    if(igl::readPLY(par["mesh"].as<std::string>(), V, F, E, N, UV, D, header))
+    std::vector<std::string> headerF,headerE,comments;
+
+    if(igl::readPLY(par["mesh"].as<std::string>(), V, F, E, N, UV, D, header,
+                  FD,headerF, ED,headerE, comments))
     {
       const size_t k = 5;
       static int idx_field = 0;
@@ -105,11 +107,10 @@ int main(int argc, char *argv[])
       {
           std::cout<<"Field:"<<idx_field<<" "<<D.col(idx_field).minCoeff()<<" "<<D.col(idx_field).maxCoeff()<<std::endl;
 
-          //viewer.data().set_data(D.col(idx_field));
           Eigen::MatrixXd C;
-          igl::jet(D.col(idx_field),D.col(idx_field).minCoeff(),D.col(idx_field).maxCoeff(),C);
+          Eigen::MatrixXd _D=D.col(idx_field);
+          igl::colormap(igl::COLOR_MAP_TYPE_JET, _D , _D.minCoeff(), _D.maxCoeff(), C);
 
-          //viewer.data().set_data(Z);
           viewer.data().set_colors(C);
       }
 
@@ -124,11 +125,9 @@ int main(int argc, char *argv[])
 
         if(ImGui::Combo("Measure", &idx_field, header))
         {
-          //viewer.data().set_data(D.col(idx_field));
           Eigen::MatrixXd C;
-          igl::jet(D.col(idx_field),D.col(idx_field).minCoeff(),D.col(idx_field).maxCoeff(),C);
-
-          //viewer.data().set_data(Z);
+          Eigen::MatrixXd _D=D.col(idx_field);
+          igl::colormap(igl::COLOR_MAP_TYPE_JET, _D , _D.minCoeff(), _D.maxCoeff(), C);
           viewer.data().set_colors(C);
         }
       };
