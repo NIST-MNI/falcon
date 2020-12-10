@@ -14,7 +14,7 @@
 #include "falcon_surfaces.h"
 
 int off_kobj_test_common_neighbor(kedge *edge);
-
+int off_remesh_kobj_fix_nei(kobj *obj);
 /****************************
  * reinitialize element ids
  * 
@@ -273,6 +273,12 @@ int off_remesh_kobj_ex(kobj *obj,double emin,double emax, int maxiter,int wmark,
       }
     }
 
+    // HACK: fixes strange bug whe the same verex maybe mentioned twice in neighbor list
+    // TODO: figure out how it can happen
+    n=off_remesh_kobj_fix_nei(obj);
+    if(n>0)
+      fprintf(stdout,"[%s] fixing nei:%d\n", fcname, n);
+
     if(!off_remesh_kobj_collapse_correction(obj)) {
       fprintf(stderr,"ERROR: off_remesh_kobj_collapse_correction\n");
       return 0;
@@ -457,6 +463,127 @@ int off_remesh_kedge_collapse2(kobj *obj,kedge *edge) {
 }
 
 
+/***************************************************************************
+*
+* off_remesh_kobj_fix_nei
+*
+* - HACK to fix corrupted neighborhood information 
+* - TODO: finc the source of curruption 
+*
+*
+***************************************************************************/
+
+int off_remesh_kobj_fix_nei(kobj *obj) {
+  kvert *v;
+  int fixed=0;
+  for(v=obj->vert; v!=NULL; v=v->next) {
+    int m,n;
+    int found=0;
+    for(m=0; m<v->nei; ++m)
+    {
+      for(n=m+1; n<v->nei; ++n)
+      {
+        if(v->neivert[m] == v->neivert[n])
+        {
+          // fprintf(stdout,"Found duplicate neighbor in %p(%d) , %p(%d)\n",v,v->index,v->neivert[n],v->neivert[n]->index);
+          // --v->nei;
+          // if(v->nei > n)
+          //   memmove(v->neivert+n, v->neivert+n+1, (v->nei-n)*sizeof(kvert*));
+          // --n;
+          ++found;
+        }
+      }
+    }
+    if(found>0) 
+    {
+      kface *neiface[4096];
+      kedge *neiedge[4096];
+      kvert *neivert[4096];
+
+      kface *f;
+      kedge *e;
+      int fcnt,ecnt,vcnt;
+
+      ++fixed;
+      fprintf(stdout,"[%s] Found strange configuration in %p(%d) neighbors\n",__func__,v,v->index);
+      /*
+      fprintf(stdout,"\t vertices:\n");
+      for(n=0;n<v->nei;++n)
+      {
+        fprintf(stdout,"\t\t%p (%s:%d)\n",v->neivert[n],v->neivert[n]->file,v->neivert[n]->line);
+      }
+
+      fprintf(stdout,"\t faces:\n");
+      for(n=0;n<v->nei;++n)
+      {
+        fprintf(stdout,"\t\t");
+        for(m=0;m<3;m++)
+        {
+          fprintf(stdout,"%p ",v->neiface[n]->vert[m]);
+        }
+        fprintf(stdout,"(%s:%d)",v->neiface[n]->file, v->neiface[n]->line);
+        fprintf(stdout,"\n");
+      }
+      fprintf(stdout,"\t edges:\n");
+      for(n=0;n<v->nei;++n)
+      {
+        fprintf(stdout,"\t\t");
+        for(m=0;m<2;m++)
+        {
+          fprintf(stdout,"%p ",v->neiedge[n]->endpts[m]);
+        }
+        fprintf(stdout,"(%s:%d)",v->neiedge[n]->file, v->neiedge[n]->line);
+        fprintf(stdout,"\n");
+      }
+      */
+     
+      /*restore local neighborhood from edges and faces*/
+      for(f=obj->face,fcnt=0; f!=NULL&&fcnt<4096; f=f->next) {
+        for(m=0;m<3;m++)
+        {
+          if(f->vert[m]==v) {
+            neiface[fcnt++]=f;
+            break;
+          }
+        }
+      }
+      for(e=obj->edge,ecnt=0; e!=NULL&&ecnt<4096; e=e->next) {
+        for(m=0;m<2;m++)
+        {
+          if(e->endpts[m]==v) {
+            neiedge[ecnt++]=e;
+            break;
+          }
+        }
+      }
+    
+      for(m=0,vcnt=0;m<fcnt;++m)
+        for(n=0;n<3;++n)
+        {
+          int q;
+          for(q=0;q<vcnt;++q) 
+            if(neivert[q]==neiface[m]->vert[n])
+              break;
+          if(q==vcnt)
+          {
+            neivert[vcnt++]=neiface[m]->vert[n];
+          }
+        }
+
+      fprintf(stdout,"[%s] found %d faces and %d edges and %d vertices\n",__func__ ,fcnt ,ecnt, vcnt);
+      if(vcnt == fcnt && vcnt == ecnt)
+      {
+        free(v->neiedge);free(v->neiface);free(v->neivert);
+        v->nei=vcnt;
+        v->neivert=malloc(sizeof(kvert*)*vcnt);memmove(v->neivert,neivert,sizeof(kvert*)*vcnt);
+        v->neiface=malloc(sizeof(kface*)*vcnt);memmove(v->neiface,neiface,sizeof(kface*)*vcnt);
+        v->neiedge=malloc(sizeof(kedge*)*vcnt);memmove(v->neiedge,neiedge,sizeof(kedge*)*vcnt);
+        fprintf(stdout,"\tfixed\n");
+      }
+    }
+  }
+  return fixed;
+}
 
 /***************************************************************************
 *
@@ -475,12 +602,29 @@ int off_remesh_kedge_collapse2(kobj *obj,kedge *edge) {
 int off_remesh_kobj_collapse_correction(kobj *obj) {
   kedge *e;
   int nei,cnt=1;
-  int verbose=0;
+  int m,n;
+  const int verbose=0;
   while(cnt) {
     for(e=obj->edge,cnt=0; e!=NULL; e=e->next) {
-      nei=off_kobj_test_common_neighbor(e);
+      nei = off_kobj_test_common_neighbor(e);
       if(nei==2) continue;
       cnt++;
+
+      /*DEBUG*/
+      /*
+      fprintf(stdout,"[%s] found %d neihbors between %p and %p\n",__func__,nei,e->endpts[0],e->endpts[1]);
+      fprintf(stdout,"\t");
+      for(n=0; n<e->endpts[0]->nei; n++) {
+        for(m=0; m<e->endpts[1]->nei; m++) {
+          if(e->endpts[0]->neivert[n] == e->endpts[1]->neivert[m]) {
+            fprintf(stdout,"%p ",e->endpts[0]->neivert[n]);
+          }
+        }
+      }
+      fprintf(stdout,"\n");
+      */
+      /*DEBUG*/
+
       if(!off_remesh_kedge_collapse_correction(obj,e)) {
         fprintf(stderr,"ERROR: off_remesh_kobj_collapse_correction \n");
         return 0;
@@ -492,12 +636,12 @@ int off_remesh_kobj_collapse_correction(kobj *obj) {
 }
 
 
-int off_remesh_kedge_collapse_correction(kobj *obj,kedge *edge) {
+int off_remesh_kedge_collapse_correction(kobj *obj, kedge *edge) {
   kface *f[4];
   kvert *v[4];
   kedge *e=NULL;
   int n,m;
-  int verbose=0;
+  const int verbose=0;
   const char *fcname="off_remesh_kedge_collapse_correction";
 
   if(verbose) fprintf(stdout,"[%s]  off_remesh_kedge_collapse_correction edge = %i \n",fcname,edge->index);
@@ -514,7 +658,7 @@ int off_remesh_kedge_collapse_correction(kobj *obj,kedge *edge) {
 
   /* make sure we didn't flip */
   for(m=0; m<3; m++)
-    if(f[0]->vert[m]==v[1])
+    if( f[0]->vert[m] == v[1])
       if(f[0]->vert[(m+1)%3]!=v[0]) {
         v[0]=edge->endpts[1];
         v[1]=edge->endpts[0];
@@ -535,11 +679,11 @@ int off_remesh_kedge_collapse_correction(kobj *obj,kedge *edge) {
   }
 
   /* there should be additional point */
-  for(n=0,e=NULL; n<edge->endpts[0]->nei&&e==NULL; n++) {
-    for(m=0; m<edge->endpts[1]->nei&&e==NULL; m++) {
-      if(edge->endpts[0]->neivert[n]==edge->endpts[1]->neivert[m]) {
-        if(edge->endpts[1]->neivert[m]==v[2]) continue;
-        if(edge->endpts[1]->neivert[m]==v[3]) continue;
+  for(n=0,e=NULL; n<edge->endpts[0]->nei && e==NULL; n++) {
+    for(m=0; m<edge->endpts[1]->nei && e==NULL; m++) {
+      if(edge->endpts[0]->neivert[n] == edge->endpts[1]->neivert[m]) {
+        if(edge->endpts[1]->neivert[m] == v[2]) continue;
+        if(edge->endpts[1]->neivert[m] == v[3]) continue;
         e = edge->endpts[1]->neiedge[m];
       }
     }
@@ -550,12 +694,28 @@ int off_remesh_kedge_collapse_correction(kobj *obj,kedge *edge) {
       fprintf(stdout,"[%s] %i \n",fcname,e->index);
     }
   } else if(e==NULL) {
+    char tmp_output[4096];
+    snprintf(tmp_output,sizeof(tmp_output)-1,"%s_collapse_correction.ply",obj->fname);
     /* problem situation
     * -writes a smoothed output for me to visually inspect */
     fprintf(stderr,"[%s]  no edge!\n",fcname);
-    fprintf(stderr,"  looking for v[3] %i \n",v[3]->index);
+
+    fprintf(stderr,"[%s]  matching vertices:\n",fcname);
+    for(n=0; n<edge->endpts[0]->nei; n++) {
+      for(m=0; m<edge->endpts[1]->nei; m++) {
+        if(edge->endpts[0]->neivert[n] == edge->endpts[1]->neivert[m]) {
+          fprintf(stderr,"\t  %p(%d) %d:%d\n",edge->endpts[0]->neivert[n],edge->endpts[0]->neivert[n]->index,n,m);
+        }
+      }
+    }
+    fprintf(stderr,"[%s]  two faces:\n",fcname);
+    for(m=0; m<4; m++) {
+      fprintf(stderr,"\t  %p(%d)\n",v[m],v[m]->index);
+    }
+
+    fprintf(stderr,"  looking for v[3] %p(%d) \n", v[3], v[3]->index);
     for(n=0,e=NULL; n<v[2]->nei; n++) {
-      fprintf(stderr,"     v[2]->neivert[%i] = %i\n",n,v[2]->neivert[n]->index);
+      fprintf(stderr,"     v[2]->neivert[%i] = %p(%d)\n", n, v[2]->neivert[n],v[2]->neivert[n]->index);
     }
     off_kobj_add_color(obj);
     for(n=0; n<2; n++) {
@@ -565,10 +725,11 @@ int off_remesh_kedge_collapse_correction(kobj *obj,kedge *edge) {
     for(v[0]=obj->vert; v[0]!=NULL; v[0]=v[0]->next) off_remesh_kvert_relocate(v[0]);
     for(v[0]=obj->vert; v[0]!=NULL; v[0]=v[0]->next) off_remesh_kvert_relocate(v[0]);
     for(v[0]=obj->vert; v[0]!=NULL; v[0]=v[0]->next) off_remesh_kvert_relocate(v[0]);
-    fprintf(stderr,"  writing tmp_prob.ply for error checking, look for red vertex \n");
+
+    fprintf(stderr,"  writing %s for error checking, look for red vertex \n",tmp_output);
     off_obj_renumber(obj);
 
-    if(!off_kobj_write_offply("tmp_prob.ply",obj,0)) {
+    if(!off_kobj_write_offply(tmp_output,obj,0)) {
       fprintf(stderr,"[%s] ERROR: off_kobj_write_off \n",fcname);
     }
     return 0;
@@ -909,7 +1070,7 @@ kvert *off_remesh_kedge_split(kobj *obj,kedge *edge) {
   int n;
   const int verbose=0;
 
-  if(edge==NULL) {
+  if(edge == NULL) {
     fprintf(stderr,"ERROR: edge is a null pointer\n");
     return NULL;
   }
@@ -1185,7 +1346,7 @@ kvert *off_remesh_kedge_split(kobj *obj,kedge *edge) {
 * -no addition or removal
 *
 ******************************************************/
-int off_remesh_kedge_flip(kobj *obj,kedge *edge) {
+int off_remesh_kedge_flip(kobj *obj, kedge *edge) {
   kvert *v[4];
   kedge *e[4];
   kface *f[2];
@@ -1208,7 +1369,7 @@ int off_remesh_kedge_flip(kobj *obj,kedge *edge) {
   for(n=0; n<4; n++) e[n]=NULL;
 
   /* get the original configuration */
-  if(off_remesh_kedge_local_info(edge,v,f,e)==0) {
+  if(off_remesh_kedge_local_info(edge, v, f, e)==0) {
     fprintf(stderr,"ERROR: off_remesh_kedge_local_info \n");
     return 0;
   }
@@ -1408,18 +1569,18 @@ int off_remesh_kobj_valence_minimization_kedge(kobj *obj,kedge *edge) {
   /* find 4 vertices around these faces */
   for(m=0; m<2; m++) {
     for(n=0; n<3; n++) {
-      if(f[m]->vert[n]==v[0]) continue;
-      if(f[m]->vert[n]==v[1]) continue;
-      v[m+2]=f[m]->vert[n];
+      if(f[m]->vert[n] == v[0]) continue;
+      if(f[m]->vert[n] == v[1]) continue;
+      v[m+2] = f[m]->vert[n];
       break;
     }
   }
-  if(verbose>1) fprintf(stdout,"\t  %i %i %i %i \n",v[0]->nei,v[1]->nei,v[2]->nei,v[3]->nei);
+  if(verbose>1) fprintf(stdout,"\t  %i %i %i %i \n", v[0]->nei, v[1]->nei, v[2]->nei, v[3]->nei);
 
   /* calculate the sum of valence */
   for(n=neisum=0; n<4; n++) {
     m = v[n]->nei - 6;
-    neisum+=m*m*m*m;
+    neisum += m*m*m*m;
   }
   if(m==0) return 0; /* can't get any better; m<=1 didn't work */
 
@@ -1427,9 +1588,9 @@ int off_remesh_kobj_valence_minimization_kedge(kobj *obj,kedge *edge) {
   for(n=neisum2=0; n<4; n++) {
     if(n<2) m = v[n]->nei - 7;
     else    m = v[n]->nei - 5;
-    neisum2+=m*m*m*m;
+    neisum2 += m*m*m*m;
   } /* neisum2+=m*m; }*/
-  if(neisum<=neisum2) return 0;
+  if( neisum<=neisum2 ) return 0;
 
   if(verbose) {
     fprintf(stdout,"\tedge %i flip (%i -> %i)! \n",edge->index,neisum,neisum2);
@@ -1437,7 +1598,7 @@ int off_remesh_kobj_valence_minimization_kedge(kobj *obj,kedge *edge) {
   }
 
   /* flip if valence is smaller */
-  if(!off_remesh_kedge_flip(obj,edge)) {
+  if(!off_remesh_kedge_flip(obj, edge)) {
     fprintf(stderr,"ERROR: off_remesh_kedge_flip %i\n",edge->index);
     return -1;
   }
@@ -1557,9 +1718,10 @@ int off_kobj_test(kobj *obj) {
   kvert *v;
   kface *f;
   int n,m,hit;
+  const int verbose=0;
 
   /* is is connected to other vertices? */
-  fprintf(stdout,"[%s] Each vertex is connected to at least one other vertex\n",fcname);
+  if(verbose>0) fprintf(stdout,"[%s] Each vertex is connected to at least one other vertex\n",fcname);
   for(v=obj->vert; v!=NULL; v=v->next) {
     if(v->nei==0) {
       fprintf(stderr,"\n\nERROR: lonely vertex\n");
@@ -1592,7 +1754,7 @@ int off_kobj_test(kobj *obj) {
   }
 
   /* Am I my neighbor's neighbor? */
-  fprintf(stdout,"[%s] Check neighbor's neighbors include the vertex itself\n",fcname);
+  if(verbose>0) fprintf(stdout,"[%s] Check neighbor's neighbors include the vertex itself\n",fcname);
   for(v=obj->vert; v!=NULL; v=v->next) {
     hit=0;
     for(n=0; n<v->nei; n++) {
@@ -1613,7 +1775,7 @@ int off_kobj_test(kobj *obj) {
   }
 
   /* Correspondence between neiedge and neivert */
-  fprintf(stdout,"[%s] Check the vertex's conneting edge has itself as the endpoint\n",fcname);
+  if(verbose>0) fprintf(stdout,"[%s] Check the vertex's conneting edge has itself as the endpoint\n",fcname);
   for(v=obj->vert; v!=NULL; v=v->next) {
     hit=0;
     for(n=0; n<v->nei; n++) {
@@ -1628,7 +1790,7 @@ int off_kobj_test(kobj *obj) {
   }
 
   /* Valence is too small */
-  fprintf(stdout,"[%s] Check valence is too small <=3\n",fcname);
+  if(verbose>0) fprintf(stdout,"[%s] Check valence is too small <=3\n",fcname);
   for(v=obj->vert; v!=NULL; v=v->next) {
     if(v->nei<=3) {
       fprintf(stderr,"ERROR: valence is too small\n");
@@ -1638,11 +1800,11 @@ int off_kobj_test(kobj *obj) {
   }
 
   /* Endpoint should have only 2 common neighbors */
-  fprintf(stdout,"[%s] Checking the neighboring\n",fcname);
+  if(verbose>0) fprintf(stdout,"[%s] Checking the neighboring\n",fcname);
 
 
   /* Endpoint should have only 2 common neighbors */
-  fprintf(stdout,"[%s] 2 common neighbors by 2 endpoints on an edge\n",fcname);
+  if(verbose>0) fprintf(stdout,"[%s] 2 common neighbors by 2 endpoints on an edge\n",fcname);
   for(e=obj->edge; e!=NULL; e=e->next) {
     if((hit=off_kobj_test_common_neighbor(e))!=2) {
       fprintf(stdout,"\nERROR: edge[%i]'s endpts(%i,%i) have %i common neighbors\n",
@@ -1666,15 +1828,15 @@ int off_kobj_test(kobj *obj) {
       for(n=1; n<=4; n++)
         e->adjface[0]->color[n]=e->adjface[1]->color[n]=0.0;
       fprintf(stdout,"\n");
-      /*fprintf(stdout,"vertex around this edge:\n");
+      fprintf(stdout,"vertex around this edge:\n");
       for(v=obj->vert;v!=NULL;v=v->next){
-        if     (niikpt_distance(v->v,e->endpts[0]->v)<1.2){
+        if     (niikpt_distance(v->v,e->endpts[0]->v)<0.1){
           off_display_vert_info(v,20); }
-        else if(niikpt_distance(v->v,e->endpts[1]->v)<1.2){
+        else if(niikpt_distance(v->v,e->endpts[1]->v)<0.1){
           off_display_vert_info(v,20); }
-          }*/
-      fprintf(stderr,"  writing tmp_prob.off.gz for error checking \n");
-      if(!off_kobj_write_offply("tmp_prob.off.gz",obj,0)) {
+          }
+      fprintf(stderr,"  writing tmp_prob.ply for error checking \n");
+      if(!off_kobj_write_offply("tmp_prob.ply",obj,0)) {
         fprintf(stderr,"ERROR: off_kobj_write_off \n");
         exit(0);
       }
@@ -1682,17 +1844,17 @@ int off_kobj_test(kobj *obj) {
     }
   }
 
-  fprintf(stdout,"[%s] testing links (face)\n",fcname);
+  if(verbose>0) fprintf(stdout,"[%s] testing links (face)\n",fcname);
   if(!off_kface_test_link(obj->face)) {
     fprintf(stderr,"ERROR: face link broken\n");
     return 0;
   }
-  fprintf(stdout,"[%s] testing links (vert)\n",fcname);
+  if(verbose>0) fprintf(stdout,"[%s] testing links (vert)\n",fcname);
   if(!off_kvert_test_link(obj->vert)) {
     fprintf(stderr,"ERROR: vert link is broken\n");
     return 0;
   }
-  fprintf(stdout,"[%s] testing links (edge)\n",fcname);
+  if(verbose>0) fprintf(stdout,"[%s] testing links (edge)\n",fcname);
   if(!off_kedge_test_link(obj->edge)) {
     fprintf(stderr,"ERROR: edge link is broken\n");
     return 0;
@@ -1706,7 +1868,7 @@ int off_kobj_test_common_neighbor(kedge *edge) {
   int hit=0,m,n;
   for(n=0; n<edge->endpts[0]->nei; n++) {
     for(m=0; m<edge->endpts[1]->nei; m++) {
-      if(edge->endpts[0]->neivert[n]==edge->endpts[1]->neivert[m]) {
+      if(edge->endpts[0]->neivert[n] == edge->endpts[1]->neivert[m]) {
         hit++;
       }
     }
@@ -1745,12 +1907,12 @@ int off_remesh_kedge_local_info(kedge *edge,kvert **v,kface **f,kedge **e) {
   int m,n;
 
   /* adjacent face */
-  f[0]=edge->adjface[0];
-  f[1]=edge->adjface[1];
+  f[0] = edge->adjface[0];
+  f[1] = edge->adjface[1];
 
   /* end points */
-  v[0]=edge->endpts[0];
-  v[1]=edge->endpts[1];
+  v[0] = edge->endpts[0];
+  v[1] = edge->endpts[1];
 
   /* make sure we didn't flip */
   for(m=0; m<3; m++)
@@ -1827,11 +1989,11 @@ int off_remesh_kedge_local_info(kedge *edge,kvert **v,kface **f,kedge **e) {
   }
 
   for(n=0; n<3; n++)
-    if(f[1]->edge[n]==edge) continue;
-    else if(f[1]->edge[n]->endpts[0]==v[1]) {
+    if( f[1]->edge[n] == edge ) continue;
+    else if( f[1]->edge[n]->endpts[0] == v[1] ) {
       e[2]=f[1]->edge[n];
       break;
-    } else if(f[1]->edge[n]->endpts[1]==v[1]) {
+    } else if( f[1]->edge[n]->endpts[1] == v[1] ) {
       e[2]=f[1]->edge[n];
       break;
     }
