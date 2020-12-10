@@ -43,8 +43,10 @@ int niik_write_double_vector_ex(const char *fname,double *v,int num, const char 
       return 0;
     }
     if(csv_format)
+    {
       if(colname) gzprintf(gp,"%s\n",colname);
       else gzprintf(gp,"V1\n");
+    }
 
     for(n=0; n<num; n++) {
       gzprintf(gp,"%15.9f\n",v[n]);
@@ -57,8 +59,10 @@ int niik_write_double_vector_ex(const char *fname,double *v,int num, const char 
     }
 
     if(csv_format)
+    {
       if(colname) fprintf(fp,"%s\n",colname);
       else fprintf(fp,"V1\n");
+    }
 
     for(n=0; n<num; n++) {
       fprintf(fp,"%15.9f\n",v[n]);
@@ -206,9 +210,11 @@ int niik_write_int_vector_ex(const char *fname,int *v,int num,const char *colnam
       return 0;
     }
 
-    if(csv_format)
+    if(csv_format) 
+    {
       if(colname) gzprintf(gp,"%s\n",colname);
       else gzprintf(gp,"%s\n","V1");
+    }
 
     for(n=0; n<num; n++) {
       gzprintf(gp,"%i\n",v[n]);
@@ -221,8 +227,10 @@ int niik_write_int_vector_ex(const char *fname,int *v,int num,const char *colnam
     }
 
     if(csv_format)
+    {
       if(colname) fprintf(fp,"%s\n",colname);
       else fprintf(fp,"%s\n","V1");
+    }
 
     for(n=0; n<num; n++) {
       fprintf(fp,"%i\n",v[n]);
@@ -1005,7 +1013,7 @@ int niiktable_write(const char *fname,const niiktable *t)
           __printf(fp,gp,"V%d",j+1);
 
         }
-        if(j<(t->ncol-1)) __printf(fp,gp,"%c",sep);
+        if(j<(t->ncol-1)) { __printf(fp,gp,"%c",sep); }
       }
       __printf(fp,gp,"\n");
   }
@@ -1014,7 +1022,7 @@ int niiktable_write(const char *fname,const niiktable *t)
         for(j=0; j<t->ncol; j++)
         {
             __printf(fp,gp,"%.15g",t->col[j]->v[i]);
-            if(j<(t->ncol-1)) __printf(fp,gp,"%c",sep);
+            if(j<(t->ncol-1)) { __printf(fp,gp,"%c",sep); }
         }
         __printf(fp,gp,"\n");
   }
