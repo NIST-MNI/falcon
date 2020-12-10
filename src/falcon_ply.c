@@ -173,9 +173,9 @@ int off_kobj_write_ply_ex(const char *fname, kobj *obj,
         PLY_CHECK(ply_write(oply,f->color[2]*255));
       } else {
         /*output default color ?*/
-        PLY_CHECK(ply_write(oply,0));
-        PLY_CHECK(ply_write(oply,0));
-        PLY_CHECK(ply_write(oply,0));
+        PLY_CHECK(ply_write(oply,0.0));
+        PLY_CHECK(ply_write(oply,0.0));
+        PLY_CHECK(ply_write(oply,0.0));
       }
     }
   }
