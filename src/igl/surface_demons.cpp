@@ -421,7 +421,9 @@ int main(int argc, char *argv[])
       (sph1.array() * sph1_orig.array()).rowwise().sum().acos()*180.0/M_PI ;
     std::vector<std::string> headerO({"psi", "the", "da"});
     
-    igl::writePLY(par["output"].as<std::string>(), V1, F1, E1, N1, UV1, DO, headerO, FD1,header1F, ED1,header1E,comment1, igl::FileEncoding::Binary );
+    igl::writePLY(par["output"].as<std::string>(), V1, F1, E1, N1, UV1, DO, headerO, 
+        FD1, header1F, 
+        ED1, header1E, comment1, igl::FileEncoding::Binary );
 
     if(par.count("debug"))
       save_debug(par["debug"].as<std::string>(), sph1, diff1);

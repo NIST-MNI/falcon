@@ -273,7 +273,7 @@ ENDIF(BICPL_FOUND)
 ADD_EXECUTABLE(falcon_off2ply        falcon_off2ply.c)
 ADD_EXECUTABLE(falcon_ply2off        falcon_ply2off.c)
 ADD_EXECUTABLE(falcon_off2pov        falcon_off2pov.c)
-
+ADD_EXECUTABLE(falcon_ply_info       falcon_ply_info.c)
 
 INSTALL( TARGETS 
 #  falcon_calc
