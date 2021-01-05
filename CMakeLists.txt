@@ -1,0 +1,34 @@
+# CMakeFiles.txt for the minc2-simple
+#
+# Vladimir S. FONOV - vladimir.fonov@gmail.com
+
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+
+PROJECT(minc2-simple)
+INCLUDE(CTest)
+
+FIND_PATH( MINC_TOOLKIT_DIR bin/mincstats  HINTS $ENV{MINC_TOOLKIT} DOC "minc-toolkit install prefix")
+FIND_PACKAGE( LIBMINC REQUIRED HINTS ${MINC_TOOLKIT_DIR}/lib${LIB_SUFFIX})
+
+OPTION(BUILD_EXAMPLES "Build examples." OFF)
+
+ENABLE_TESTING()
+
+INCLUDE( ${LIBMINC_USE_FILE} )
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+SET(CMAKE_MACOSX_RPATH ON)
+SET(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX})
+
+
+ADD_SUBDIRECTORY(src)
+
+if(BUILD_EXAMPLES)
+  ADD_SUBDIRECTORY(example)
+endif(BUILD_EXAMPLES)
+
+IF(BUILD_TESTING)
+    ADD_SUBDIRECTORY(test)
+ENDIF(BUILD_TESTING)
+
+#kate: indent-width 2; replace-tabs on; 
