@@ -18,12 +18,7 @@ endif()
 igl_download_tutorial_data()
 
 ### Output directories
-if(MSVC)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR})
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR})
-else()
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-endif()
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 ### Choose which chapters to compile
 option(TUTORIALS_CHAPTER1 "Compile chapter 1" ON)
@@ -40,16 +35,30 @@ add_library(tutorials INTERFACE)
 target_compile_definitions(tutorials INTERFACE "-DTUTORIAL_SHARED_PATH=\"${TUTORIAL_SHARED_PATH}\"")
 target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
+
+#######################
+if(NOT (LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_GLFW) )
+  message(WARNING 
+    "Most tutorial executables depend on OpenGL and glfw. Use `cmake ../ -DLIBIGL_WITH_OPENGL=ON -DLIBIGL_WITH_OPENGL_GLFW=ON`
+      will build non-visual tutorials only now."
+  )
+endif()
+
+# Non-visual tutorials
 # Chapter 1
 if(TUTORIALS_CHAPTER1)
   add_subdirectory("101_FileIO")
 endif()
 
-#######################
-if(NOT (LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_GLFW) )
-  message(WARNING "Most tutorial executables depend on OpenGL and glfw. Use `cmake ../ -DLIBIGL_WITH_OPENGL=ON -DLIBIGL_WITH_OPENGL_GLFW=ON`")
-  return()
+if(TUTORIALS_CHAPTER6)
+  if(LIBIGL_WITH_PNG AND LIBIGL_WITH_EMBREE)
+    add_subdirectory("608_RayTrace")
+  endif()
 endif()
+
+
+if(LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_GLFW)
+# visual tutorials
 
 if(TUTORIALS_CHAPTER1)
   add_subdirectory("102_DrawMesh")
@@ -63,6 +72,7 @@ if(TUTORIALS_CHAPTER1)
   add_subdirectory("108_MultipleViews")
   if(LIBIGL_WITH_OPENGL_GLFW_IMGUI)
     add_subdirectory("109_ImGuizmo")
+    add_subdirectory("112_Selection")
   endif()
   add_subdirectory("110_MshView")
 endif()
@@ -75,6 +85,7 @@ if(TUTORIALS_CHAPTER2)
   add_subdirectory("204_Gradient")
   add_subdirectory("205_Laplacian")
   add_subdirectory("206_GeodesicDistance")
+  add_subdirectory("207_PolygonLaplacian")
 endif()
 
 # Chapter 3
@@ -97,7 +108,9 @@ if(TUTORIALS_CHAPTER4)
   add_subdirectory("406_FastAutomaticSkinningTransformations")
   add_subdirectory("407_BiharmonicCoordinates")
   add_subdirectory("408_DirectDeltaMush")
-  add_subdirectory("409_Kelvinlets")
+  if(LIBIGL_WITH_OPENGL_GLFW_IMGUI)
+	  add_subdirectory("409_Kelvinlets")
+  endif()
 endif()
 
 # Chapter 5
@@ -115,6 +128,7 @@ endif()
 
 # Chapter 6
 if(TUTORIALS_CHAPTER6)
+ if( LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_GLFW)
   if(LIBIGL_WITH_XML)
     add_subdirectory("601_Serialization")
   endif()
@@ -134,13 +148,11 @@ if(TUTORIALS_CHAPTER6)
     add_subdirectory("111_MatCap")
     add_subdirectory("607_ScreenCapture")
   endif()
-  if(LIBIGL_WITH_PNG AND LIBIGL_WITH_EMBREE)
-    add_subdirectory("608_RayTrace")
-  endif()
   if(LIBIGL_WITH_CGAL)
     add_subdirectory("609_Boolean")
     add_subdirectory("610_CSGTree")
   endif()
+ endif()
 endif()
 
 # Chapter 7
@@ -175,4 +187,6 @@ if(TUTORIALS_CHAPTER7)
   add_subdirectory("720_BlueNoise")
   add_subdirectory("721_VectorFieldSmoothing")
   add_subdirectory("722_VectorParallelTransport")
+endif()
+
 endif()

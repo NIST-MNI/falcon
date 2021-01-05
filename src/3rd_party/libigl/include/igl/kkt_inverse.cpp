@@ -5,7 +5,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public License 
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can 
 // obtain one at http://mozilla.org/MPL/2.0/.
-#include "min_quad_dense.h"
+#include "kkt_inverse.h"
 
 #include <Eigen/Core>
 #include <Eigen/LU>
@@ -13,7 +13,7 @@
 #include <cstdio>
 
 template <typename T>
-IGL_INLINE void igl::min_quad_dense_precompute(
+IGL_INLINE void igl::kkt_inverse(
   const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& A,
   const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& Aeq,    
   const bool use_lu_decomposition,
@@ -68,7 +68,7 @@ IGL_INLINE void igl::min_quad_dense_precompute(
       }
     }
 
-    printf("min_quad_dense_precompute: %i singular values zeroed (threshold = %e)\n", zeroed, treshold);
+    printf("kkt_inverse : %i singular values zeroed (threshold = %e)\n", zeroed, treshold);
     Eigen::DiagonalMatrix<T, Eigen::Dynamic> pi_diag(pi_singVals);
 
     LMpinv = v * pi_diag * u.transpose();
@@ -93,5 +93,5 @@ IGL_INLINE void igl::min_quad_dense_precompute(
 
 #ifdef IGL_STATIC_LIBRARY
 // Explicit template instantiation
-template void igl::min_quad_dense_precompute<double>(Eigen::Matrix<double, -1, -1, 0, -1, -1> const&, Eigen::Matrix<double, -1, -1, 0, -1, -1> const&, bool, Eigen::Matrix<double, -1, -1, 0, -1, -1>&);
+template void igl::kkt_inverse<double>(Eigen::Matrix<double, -1, -1, 0, -1, -1> const&, Eigen::Matrix<double, -1, -1, 0, -1, -1> const&, bool, Eigen::Matrix<double, -1, -1, 0, -1, -1>&);
 #endif

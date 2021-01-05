@@ -44,6 +44,15 @@ if(MSVC)
   )
 endif(MSVC)
 
+if(LIBIGL_WITH_PNG)
+  file(GLOB TEST_SRC_FILES ./include/igl/png/*.cpp )
+  file(GLOB TEST_INC_FILES ./include/igl/png/*.h )
+  target_sources(libigl_tests PRIVATE ${TEST_SRC_FILES} ${TEST_INC_FILES})
+
+  target_link_libraries(libigl_tests PUBLIC igl::png)
+endif()
+
+
 # Process code in each subdirectories: add in decreasing order of complexity
 # (last added will run first and those should be the fastest tests)
 if(LIBIGL_WITH_MOSEK)
@@ -52,6 +61,11 @@ if(LIBIGL_WITH_MOSEK)
   target_sources(libigl_tests PRIVATE ${TEST_SRC_FILES} ${TEST_INC_FILES})
 
   target_link_libraries(libigl_tests PUBLIC igl::mosek)
+  # fix mosek
+  IF(APPLE)
+    INCLUDE(../cmake/OSXFixDylibReferences.cmake)
+    OSX_FIX_DYLIB_REFERENCES(libigl_tests "${MOSEK_LIBRARIES}")
+  ENDIF()
 endif()
 
 if(LIBIGL_WITH_CGAL)
@@ -87,7 +101,7 @@ if(LIBIGL_WITH_EMBREE)
   target_link_libraries(libigl_tests PUBLIC igl::embree)
 endif()
 
-if(LIBIGL_WITH_PREDICATES)
+if(LIBIGL_WITH_PREDICATES AND LIBIGL_WITH_TRIANGLE)
   file(GLOB TEST_SRC_FILES ./include/igl/predicates/*.cpp)
   file(GLOB TEST_INC_FILES ./include/igl/predicates/*.h ./include/igl/predicates/*.inl)
   target_sources(libigl_tests PRIVATE ${TEST_SRC_FILES} ${TEST_INC_FILES})
