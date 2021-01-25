@@ -41,7 +41,6 @@ if(NOT TARGET igl::png)
     set_property(TARGET igl_png PROPERTY EXPORT_NAME igl::png)
 endif()
 
-
 add_executable(falcon_igl_field_eig field_eig.cpp )
 target_link_libraries(falcon_igl_field_eig igl::csv igl::core )
 
@@ -68,6 +67,10 @@ target_link_libraries(falcon_igl_mesh_debug igl::core )
 
 add_executable(falcon_igl_mesh_render mesh_render.cpp )
 target_link_libraries(falcon_igl_mesh_render igl::png igl::csv igl::core  igl::embree )
+
+
+add_executable(falcon_igl_marching_cubes marching_cubes.cpp)
+target_link_libraries(falcon_igl_marching_cubes igl::core minc2-simple )
 
 #
 INSTALL( TARGETS 

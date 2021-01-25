@@ -13,8 +13,6 @@
 # libigl
 ADD_SUBDIRECTORY(3rd_party/libigl)
 
-
-
 INCLUDE( ${LIBMINC_USE_FILE} )
 
 IF(HAVE_BICPL)
@@ -68,6 +66,20 @@ ADD_SUBDIRECTORY(3rd_party/NrrdIO)
 # RapidCSV
 ADD_SUBDIRECTORY(3rd_party/csv)
 
+
+# minc2-simple
+#ADD_SUBDIRECTORY(3rd_party/minc2-simple/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/3rd_party/minc2-simple/src)
+
+add_library(minc2-simple STATIC 
+             3rd_party/minc2-simple/src/minc2-simple.c
+             3rd_party/minc2-simple/src/minc2-matrix-ops.c
+             3rd_party/minc2-simple/src/minc2-simple.h
+             3rd_party/minc2-simple/src/minc2-simple-int.h
+)
+
+target_include_directories(minc2-simple INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/3rd_party/minc2-simple/src)
+set_property(TARGET minc2-simple PROPERTY EXPORT_NAME minc2-simple)
 
 # LibIGL based tools
 ADD_SUBDIRECTORY(igl)
