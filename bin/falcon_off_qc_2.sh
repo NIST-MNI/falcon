@@ -178,7 +178,7 @@ convert $hq \
   $colourbar $tempdir/bar.miff
 fi
 
-povray_common="-GA -V +UA +Q11 +A"
+povray_common="-GA -V +UA +Q11 +A -D"
 
 # modify template for different orientations
 for angle in Front Back Top Bottom Left Right; do

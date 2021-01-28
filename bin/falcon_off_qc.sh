@@ -158,7 +158,7 @@ for angle in Front Back Top Bottom Left Right; do
     sed -e "s/ANGLE/$angle/" -e "s/WIDTH/$width/" -e "s/HEIGHT/$height/" -e "s/MIN/$min/" $template >> $tempdir/render_${angle}.pov
     echo -e "object {\n  brain\n  rotate ObjectRotation${angle}\n}\n" >>$tempdir/render_${angle}.pov
 
-    povray $tempdir/render_${angle}.pov +o$tempdir/render_${angle}.png -D -GA +A +H${height} +W${width} -V  +UA 
+    povray $tempdir/render_${angle}.pov +o$tempdir/render_${angle}.png -D -GA +A +H${height} +W${width} -V  +UA -D
     convert $tempdir/render_${angle}.png -trim +repage $tempdir/render_${angle}.png
     convert $tempdir/render_${angle}.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}.png
 done
