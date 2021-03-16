@@ -18,7 +18,7 @@ source $TOOLKIT/minc-toolkit-config.sh
 export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1
 export OMP_NUM_THREADS=1
 
-set -e
+set -ex
 
 #tempdir=$(mktemp -d -t FALCON.XXXXXX)
 #trap "rm -rf $tempdir" 0 1 2 15
@@ -50,7 +50,7 @@ fi
 
 # make initial sphere
 ${bindir}/falcon_cortex_shrinkwrap --radius $R_INIT $tempdir/init_sphere.ply --clob
-${bindir}/falcon_test_sphere $tempdir/init_sphere.ply $R_INIT --verbose --tolerance 0.5
+${bindir}/falcon_test_sphere $tempdir/init_sphere.ply $R_INIT --verbose --tolerance 0.5 
 
 # follow inverse distance gradient
 if true ;then
@@ -62,9 +62,9 @@ ${bindir}/falcon_surface_refine \
   -wsmooth 1.0 \
   -wssmooth 0.1 \
   -wgrad -1.0 \
-  -iter 100
+  -iter 300
 
-${bindir}/falcon_test_sphere $tempdir/dist_grad.ply $R --verbose
+${bindir}/falcon_test_sphere $tempdir/dist_grad.ply $R --verbose --output $tempdir/dist_grad_err.ply --tolerance 0.5 
 fi
 
 if true ;then
