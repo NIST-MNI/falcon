@@ -152,7 +152,7 @@ $FALCON_BIN/falcon_off2pov --colorize $in_txt_rt $column $in_off_rt $tempdir/bra
 h=$(identify -format %h $colourbar)
 
 
-if [ -z $hq ];then
+if [[ -z "$hq" ]];then
 Width=320
 Height=240
 pos1=$(($h+60))
