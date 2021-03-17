@@ -8,7 +8,7 @@
 
 #include "minc2-simple.h"
 
-bool load_volume(const char*minc_file,Eigen::MatrixXd &GV, Eigen::VectorXd &V,int &x,int &y,int &z )
+bool load_volume(const char*minc_file, Eigen::MatrixXd &GV, Eigen::VectorXd &V, int &x, int &y, int &z )
 {
     struct minc2_dimension * _dims;
     int ndim, nelement;
@@ -28,9 +28,9 @@ bool load_volume(const char*minc_file,Eigen::MatrixXd &GV, Eigen::VectorXd &V,in
 
     //std::cout<<"load_float_tensor:" << _dims[0].length << "," << _dims[1].length << "," << _dims[2].length << std::endl;
     //torch::Tensor output  = torch::empty( { _dims[2].length, _dims[1].length, _dims[0].length }, torch::kFloat32);
-    x=_dims[0].length;
-    y=_dims[1].length;
-    z=_dims[2].length;
+    x = _dims[0].length;
+    y = _dims[1].length;
+    z = _dims[2].length;
     //Eigen::Array<float, Eigen::Dynamic, 1> _V(_dims[2].length* _dims[1].length* _dims[0].length);
     V.resize(_dims[2].length* _dims[1].length* _dims[0].length);
 
@@ -48,7 +48,10 @@ bool load_volume(const char*minc_file,Eigen::MatrixXd &GV, Eigen::VectorXd &V,in
 
     Eigen::RowVector3d start(_dims[0].start, _dims[1].start, _dims[2].start);
     Eigen::RowVector3d step(_dims[0].step, _dims[1].step, _dims[2].step);
-
+    Eigen::Matrix3d dir ;
+    dir << _dims[0].dir_cos[0] , _dims[0].dir_cos[1] , _dims[0].dir_cos[2] ,
+           _dims[1].dir_cos[0] , _dims[1].dir_cos[1] , _dims[1].dir_cos[2] ,
+           _dims[2].dir_cos[0] , _dims[2].dir_cos[1] , _dims[2].dir_cos[2];
 
     // initialize coordinates
     // GV = Eigen::MatrixXd::NullaryExpr( _dims[2].length * _dims[1].length*_dims[0].length ,3,
@@ -64,7 +67,7 @@ bool load_volume(const char*minc_file,Eigen::MatrixXd &GV, Eigen::VectorXd &V,in
     for(int zi=0;zi<z;++zi)
         for(int yi=0;yi<y;++yi)
             for(int xi=0;xi<x;++xi)
-                GV.row(xi+yi*x+zi*x*y)=(Eigen::RowVector3d(xi,yi,zi).array()*step.array()).matrix()+start;
+                GV.row(xi+yi*x+zi*x*y) = ((Eigen::RowVector3d(xi,yi,zi).array()*step.array()).matrix()+start) * dir;
     // TODO: convert to world coordinates
     return true;
 }
@@ -101,6 +104,7 @@ int main(int argc, char *argv[])
     Eigen::MatrixXd GV;
     Eigen::VectorXd V;
     int x,y,z;
+
     if( !load_volume(par["input"].as<std::string>().c_str(),GV,V,x,y,z) )
         return 1;
 
@@ -109,7 +113,7 @@ int main(int argc, char *argv[])
 
     Eigen::MatrixXd SV;
     Eigen::MatrixXi SF;
-    igl::marching_cubes(V,GV, x,y,z, par["threshold"].as<double>(), SV,SF);
+    igl::marching_cubes(V, GV, x,y,z, par["threshold"].as<double>(), SV,SF);
     std::cout<<"Extracted surface V:"<<SV.rows()<<" F:"<<SF.rows()<<std::endl;
 
     igl::writePLY(par["output"].as<std::string>(), SV, SF );
