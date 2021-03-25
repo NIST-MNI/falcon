@@ -120,6 +120,12 @@ namespace igl
       //    f - orthographic or perspective projection
       void set_orthographic(bool f );
 
+
+      // Render both sides of triangles
+      // Inputs:
+      //    f - double sided
+      void set_double_sided(bool f);
+
       // render full buffer
       // Outputs:
       //   all outputs should have the same size (size of the output picture)
@@ -199,6 +205,7 @@ namespace igl
 
       bool face_based;
       bool uniform_color;
+      bool double_sided ;
 
       // Camera parameters
       float camera_base_zoom;
