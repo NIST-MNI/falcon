@@ -44,6 +44,8 @@ bool load_volume(const char*minc_file, Eigen::MatrixXd &GV, Eigen::VectorXd &V, 
     minc2_close(h);
     minc2_free(h);
 
+
+
     GV.resize( _dims[2].length * _dims[1].length*_dims[0].length ,3);
 
     Eigen::RowVector3d start(_dims[0].start, _dims[1].start, _dims[2].start);
@@ -87,6 +89,7 @@ int main(int argc, char *argv[])
     ("o,output", "Output mesh ",        cxxopts::value<std::string>())
     ("clobber", "Clobber output file ", cxxopts::value<bool>()->default_value("false"))
     ("t,threshold",    "Threshold ", cxxopts::value<double>()->default_value("0.5"))
+    ("l,label",    "Extract label ", cxxopts::value<int>())
 
     ("help", "Print help") ;
   
@@ -105,15 +108,25 @@ int main(int argc, char *argv[])
     Eigen::VectorXd V;
     int x,y,z;
 
-    if( !load_volume(par["input"].as<std::string>().c_str(),GV,V,x,y,z) )
+    if( !load_volume(par["input"].as<std::string>().c_str(),GV,V,x,y,z ) )
         return 1;
 
+    if(par.count("label")) // TODO: make it a separate function?
+    {
+      int label = par["label"].as<int>();
+      // HACK: use vectorized functions?
+      V = Eigen::VectorXd::NullaryExpr(V.rows(), [label, &V](int r) {return fabs(V.coeff(r)-label)<0.5?1.0:0.0;}).eval();
+    }
+
+
+    #ifdef DEBUG
     std::cout<<"Grid:"<<GV.rows()<<"x"<<GV.cols()<<std::endl;
     std::cout<<" Vol:"<< V.rows()<<"x"<< V.cols()<<std::endl;
+    #endif
 
     Eigen::MatrixXd SV;
     Eigen::MatrixXi SF;
-    igl::marching_cubes(V, GV, x,y,z, par["threshold"].as<double>(), SV,SF);
+    igl::marching_cubes(V, GV, x,y,z, par["threshold"].as<double>(), SV, SF);
     std::cout<<"Extracted surface V:"<<SV.rows()<<" F:"<<SF.rows()<<std::endl;
 
     igl::writePLY(par["output"].as<std::string>(), SV, SF );

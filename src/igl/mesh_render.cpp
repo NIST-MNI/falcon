@@ -16,7 +16,7 @@
 
 // embree
 #include <igl/embree/EmbreeRenderer.h>
-
+#include <igl/embree/reorient_facets_raycast.h>
 
 #include "igl/readPLY.h"
 #include "csv/readCSV.h"
@@ -47,7 +47,8 @@ int main(int argc, char *argv[])
     ("rz",        "Rotation around Z ", cxxopts::value<double>()->default_value("0.0"))
 
     ("view",      "preset view: front back top bottom left right",     cxxopts::value<std::string>())
-    ("six",       "Display all six views on one rendering, multiply output size X*2 x Y*3",     cxxopts::value<bool>()->default_value("false"))
+    ("six",       "Display all six views on one rendering, multiply output size X*col x Y*6/col",     cxxopts::value<bool>()->default_value("false"))
+    ("cols",      "Number of columns for six view",     cxxopts::value<int>()->default_value("2"))
 
     ("flat",    "Flat color per face (average of corners)",  cxxopts::value<bool>()->default_value("false"))
     ("ortho",   "Use orthographic projection",  cxxopts::value<bool>()->default_value("false"))
@@ -58,6 +59,13 @@ int main(int argc, char *argv[])
     ("max",  "Max value ", cxxopts::value<double>())
     ("relevel", "Relevel discrete labels befor coloring ", cxxopts::value<bool>()->default_value("false"))
 
+    ("r",  "flat color r ", cxxopts::value<double>())
+    ("g",  "flat color g ", cxxopts::value<double>())
+    ("b",  "flat color b ", cxxopts::value<double>())
+
+    ("fix", "Fix normals (long!) ", cxxopts::value<bool>()->default_value("false"))
+    ("double", "Double sided triangles ", cxxopts::value<bool>()->default_value("false"))
+
 
     ("help", "Print help")
   ;
@@ -65,7 +73,7 @@ int main(int argc, char *argv[])
   options.parse_positional({"mesh","output"});
   auto par = options.parse(argc, argv);
   bool verbose=par["verbose"].as<bool>();
-  if(par.count("mesh")&&par.count("output"))
+  if(par.count("mesh") && par.count("output"))
   {
     Eigen::MatrixXd V,N,UV,D,FD,ED;
     Eigen::MatrixXi F,E;
@@ -82,6 +90,13 @@ int main(int argc, char *argv[])
         std::cout << "Vertices: " << V.rows() << "x"<< F.cols() << std::endl;
         std::cout << "Faces:    " << F.rows() << "x"<< F.cols() << std::endl;
         std::cout << "Data:     " << D.rows() << "x"<< D.cols() << std::endl;
+      }
+
+      if(par.count("fix"))
+      {
+        //need to fix normals
+        Eigen::VectorXi I;
+        igl::embree::reorient_facets_raycast(V,F,F,I);
       }
 
       if(par.count("csv"))
@@ -133,6 +148,7 @@ int main(int argc, char *argv[])
       // embree object
       igl::embree::EmbreeRenderer er;
       er.set_mesh(V,F,true);
+      er.set_double_sided(par["double"].as<bool>());
 
       if(idx_field < D.cols() && idx_field>=0)
       {
@@ -204,9 +220,12 @@ int main(int argc, char *argv[])
         } else {
           er.set_colors(C);
         }
+      } else if(par.count("r") && par.count("g") && par.count("b")){
+        // using uniform colour
+        er.set_colors(Eigen::RowVector3d(par["r"].as<double>(),par["g"].as<double>(),par["b"].as<double>()));
       } else {
         // using uniform colour
-        er.set_colors(Eigen::RowVector3d(1.0,0.0,0.0));
+        er.set_colors(Eigen::RowVector3d(1,0.6,0.6));
       }
 
       // the  viewport
@@ -217,9 +236,9 @@ int main(int argc, char *argv[])
 
       auto  make_rot_matrix = [](auto rx,auto ry,auto rz)->Eigen::Matrix3d {
         Eigen::Matrix3d r;
-        r =  Eigen::AngleAxisd( rx*M_PI/180.0, Eigen::Vector3d::UnitX())
+        r =  Eigen::AngleAxisd( rz*M_PI/180.0, Eigen::Vector3d::UnitZ())
            * Eigen::AngleAxisd( ry*M_PI/180.0, Eigen::Vector3d::UnitY())
-           * Eigen::AngleAxisd( rz*M_PI/180.0, Eigen::Vector3d::UnitZ());
+           * Eigen::AngleAxisd( rx*M_PI/180.0, Eigen::Vector3d::UnitX());
         return r;
       };
       er.set_zoom(par["zoom"].as<double>());
@@ -227,10 +246,13 @@ int main(int argc, char *argv[])
       
       if(par["six"].as<bool>())
       {
-        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> R(width*2, height*3);
-        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> G(width*2, height*3);
-        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> B(width*2, height*3);
-        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> A(width*2, height*3);
+        int cols=par["cols"].as<int>();
+        int rows=6/cols;
+
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> R(width*cols, height*rows);
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> G(width*cols, height*rows);
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> B(width*cols, height*rows);
+        Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> A(width*cols, height*rows);
 
         std::vector< Eigen::Matrix3d> views {
           make_rot_matrix(0,0,0),   make_rot_matrix(0,180,0),
@@ -246,10 +268,10 @@ int main(int argc, char *argv[])
           Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> b(width, height);
           Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> a(width, height);
           er.render_buffer(r,g,b,a);
-          R.block( (i%2)*width,(i/2)*height,width,height )=r;
-          G.block( (i%2)*width,(i/2)*height,width,height )=g;
-          B.block( (i%2)*width,(i/2)*height,width,height )=b;
-          A.block( (i%2)*width,(i/2)*height,width,height )=a;
+          R.block( (i%cols)*width,(i/cols)*height,width,height )=r;
+          G.block( (i%cols)*width,(i/cols)*height,width,height )=g;
+          B.block( (i%cols)*width,(i/cols)*height,width,height )=b;
+          A.block( (i%cols)*width,(i/cols)*height,width,height )=a;
         }
 
         igl::png::writePNG(R,G,B,A,par["output"].as<std::string>());
