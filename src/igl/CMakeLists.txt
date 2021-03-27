@@ -81,4 +81,5 @@ INSTALL( TARGETS
         falcon_igl_multilabel_overlap
         falcon_igl_surface_demons
         falcon_igl_mesh_render
+        falcon_igl_marching_cubes
        )
