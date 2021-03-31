@@ -11,7 +11,7 @@
 #include "cxxopts.hpp"
 
 
-int uniform_laplacian(const Eigen::MatrixXi &F,Eigen::SparseMatrix<double> &U)
+int uniform_laplacian(const Eigen::MatrixXi &F, Eigen::SparseMatrix<double> &U)
 {
   Eigen::SparseMatrix<double> A;
   igl::adjacency_matrix(F, A);
@@ -34,11 +34,16 @@ int main(int argc, char *argv[])
   
   options.add_options()
     ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
-    ("i,input",   "Input mesh ",   cxxopts::value<std::string>())
+    ("i,input",   "Input mesh ",    cxxopts::value<std::string>())
     ("o,output",  "Output mesh ",   cxxopts::value<std::string>())
+
     ("iter",      "Number of iterations", cxxopts::value<int>()->default_value("100"))
+    ("f,fast",    "Fast mode, using adjacency matrix instead of cotmatrix, less stable", cxxopts::value<bool>()->default_value("false"))
+    ("implicit",  "Implicit filtering, using lambda only", cxxopts::value<bool>()->default_value("false"))
+
     ("l,lambda",  "Lambda (>0)", cxxopts::value<double>()->default_value("0.1"))
     ("m,mju",     "Mju (<0)", cxxopts::value<double>()->default_value("-0.11"))
+    
     ("help", "Print help") ;
   
   options.parse_positional({"input", "output"});
@@ -73,28 +78,44 @@ int main(int argc, char *argv[])
           std::cout<<h<<"\t";
         std::cout << std::endl;
       }
-
-      // Compute Laplace-Beltrami operator: #V by #V
-      Eigen::SparseMatrix<double> L;
-      igl::cotmatrix(V, F, L);
-      //uniform_laplacian(F, L);
-      // mass matrix
-      //Eigen::SparseMatrix<double> M;
-      //igl::massmatrix(V,F,igl::MASSMATRIX_TYPE_BARYCENTRIC,M);
-      Eigen::SparseMatrix<double> I = Eigen::SparseMatrix<double>(Eigen::VectorXd::Ones(V.rows()).asDiagonal());
-      //
       
-      // apply smoothing
-      auto S1 = I - lambda*L;
-      auto S2 = I - mju*L;
-      
-
-      for(int i=0;i<iter;++i)
+      if(par["fast"].as<bool>())
       {
-        auto V1 = S1*V;
-        auto V2 = S2*V1;
-        //V = V2.eval();
-        V = V2.eval();
+        Eigen::SparseMatrix<double> L;
+        uniform_laplacian(F,L);
+        // uniform laplacian does not depend on coordinates, no need to recompute
+        for(int i=0;i<iter;++i)
+        {
+          V -= lambda*L*V;
+          V -= mju*L*V;
+        }
+      } else if(par["implicit"].as<bool>()) {
+        Eigen::SparseMatrix<double> L;
+        igl::cotmatrix(V, F, L);
+
+        for(int i=0;i<iter;++i) {
+          Eigen::SparseMatrix<double> M;
+          igl::massmatrix(V, F, igl::MASSMATRIX_TYPE_BARYCENTRIC,M);        
+          
+          // Solve (M-delta*L) U = M*U
+          const auto & S = (M - lambda*L);
+
+          Eigen::SimplicialLLT<Eigen::SparseMatrix<double > > solver(S);
+          assert(solver.info() == Eigen::Success);
+          V = solver.solve(M*V).eval();
+        }
+        
+        //TODO: adjust for centroid?        
+      } else {
+        for(int i=0;i<iter;++i)
+        {
+          Eigen::SparseMatrix<double> L;
+          igl::cotmatrix(V, F, L);
+          V -= lambda*L*V;
+
+          igl::cotmatrix(V, F, L);
+          V -= mju*L*V;
+        }
       }
 
       if(!igl::writePLY(par["output"].as<std::string>(), V, F, E, N, UV, 
