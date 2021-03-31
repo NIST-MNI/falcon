@@ -62,6 +62,9 @@ target_link_libraries(falcon_igl_surface_demons igl::csv igl::core )
 add_executable(falcon_igl_mesh_decimate mesh_decimate.cpp )
 target_link_libraries(falcon_igl_mesh_decimate igl::core )
 
+add_executable(falcon_igl_mesh_smooth mesh_smooth.cpp )
+target_link_libraries(falcon_igl_mesh_smooth igl::core )
+
 add_executable(falcon_igl_mesh_debug mesh_debug.cpp )
 target_link_libraries(falcon_igl_mesh_debug igl::core )
 
@@ -82,4 +85,6 @@ INSTALL( TARGETS
         falcon_igl_surface_demons
         falcon_igl_mesh_render
         falcon_igl_marching_cubes
+        falcon_igl_mesh_smooth
+        falcon_igl_mesh_decimate
        )
