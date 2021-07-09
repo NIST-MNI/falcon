@@ -52,6 +52,14 @@ void usage() {
           "\t--column <name> - column name to use\n"
           "\t--column_id <name> - column id to use\n"
           "\t--levels <N> - number of unique color levels, default 50\n"
+          "\tColormaps:\n"
+          "\t--spectral      -  spectral color map \n"
+          "\t--atrophy       -  atrophy color map  blue-white-red\n"
+          "\t--summer        -  summer color map\n"
+          "\t--jacobian      -  jacobian color map \n"
+          "\t--gray          -  grayscale color map\n"
+          "\t--pos-atrophy or --reds - white-red color map \n"
+          "\t--neg-atrophy or --blues - blue-white color map\n"
            );
 }
 
@@ -108,6 +116,12 @@ int main(int argc,char *argv[],char *envp[]) {
     {"summer", no_argument,&cmap,NIIK_COLORMAP_SUMMER},
     {"jacobian", no_argument,&cmap,NIIK_COLORMAP_JACOBIAN},
     {"gray", no_argument,&cmap,NIIK_COLORMAP_GRAYSCALE},
+
+    {"pos-atrophy", no_argument,&cmap,NIIK_COLORMAP_POS_ATROPHY},
+    {"reds", no_argument,&cmap,NIIK_COLORMAP_POS_ATROPHY},
+    {"neg-atrophy", no_argument,&cmap,NIIK_COLORMAP_NEG_ATROPHY},
+    {"blues", no_argument,&cmap,NIIK_COLORMAP_NEG_ATROPHY},
+
 
     {"discrete", no_argument, &discrete_values, 1},
     {"labels", no_argument, &discrete_values, 1},

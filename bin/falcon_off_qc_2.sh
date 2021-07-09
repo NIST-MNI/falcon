@@ -1,10 +1,11 @@
 #! /bin/bash
 set -e -o pipefail
-
 # default
 cmap=-spectral
 title=""
 column=""
+font="DejaVu-Sans-Condensed"
+font2="DejaVu-Sans-Bold"
 
 if [[ -z "$FALCON_HOME" ]];then
   FALCON_HOME="${MINC_TOOLKIT}"
@@ -33,6 +34,8 @@ function Usage {
   -sphere    - output on the spherical map, using spherical coordinates instead of x,y,z
   -spectral  - use spectral colour map (default)
   -atrophy   - use atrophy colour map
+  -pos-atrophy   - use positive side of atrophy colour map
+  -neg-atrophy   - use negative side of atrophy colour map
   -summer    - use summer colour map
   -jacobian  - use jacobian colour map
   -gray      - use gray colour map
@@ -58,6 +61,8 @@ while [ $# -gt 0 ]; do
   elif [ $1 = -max  ]; then th_max=$2;  shift 2
   elif [ $1 = -spectral  ]; then cmap=$1;  shift 
   elif [ $1 = -atrophy  ]; then cmap=$1;  shift 
+  elif [ $1 = -neg-atrophy  ]; then cmap=$1;  shift 
+  elif [ $1 = -pos-atrophy  ]; then cmap=$1;  shift 
   elif [ $1 = -summer  ]; then cmap=$1;  shift 
   elif [ $1 = -jacobian  ]; then cmap=$1;  shift 
   elif [ $1 = -gray  ]; then cmap=$1;  shift
@@ -170,15 +175,16 @@ fi
 if [ -z $nobar ];then
 convert $hq \
   -border $b \
-  -fill ${foreground} -background ${background} -bordercolor ${background} \
-  -font Times-Bold -pointsize 20 \
+  -fill ${foreground} \
+  -background ${background} \
+  -bordercolor ${background} \
+  -font ${font} -pointsize 20 \
   -draw "text 2,$pos2 '${range[1]}'" \
   -draw "text 2,$pos1 '${range[0]}'"  \
-  -alpha remove -alpha off  \
   $colourbar $tempdir/bar.miff
 fi
 
-povray_common="-GA -V +UA +Q11 +A -D"
+povray_common="-GA -V +UA +Q11 +A"
 
 # modify template for different orientations
 for angle in Front Back Top Bottom Left Right; do
@@ -200,7 +206,7 @@ for angle in Front Back Top Bottom Left Right; do
 
             povray  $tempdir/render_${angle}.pov +o$tempdir/render_${angle}.png  +H${height} +W${width} $povray_common # >/dev/null  2>&1 
             convert $hq $tempdir/render_${angle}.png -trim +repage $tempdir/render_${angle}.png
-            convert $hq $tempdir/render_${angle}.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}.png
+            convert $hq $tempdir/render_${angle}.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  $tempdir/render_${angle}.png
             ;;
         Front|Back)
             height=$Height
@@ -214,7 +220,7 @@ for angle in Front Back Top Bottom Left Right; do
 
             povray $tempdir/render_${angle}.pov +o$tempdir/render_${angle}.png +H${height} +W${width} $povray_common  # >/dev/null  2>&1 
             convert $hq $tempdir/render_${angle}.png -trim +repage $tempdir/render_${angle}.png
-            convert $hq $tempdir/render_${angle}.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}.png
+            convert $hq $tempdir/render_${angle}.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  $tempdir/render_${angle}.png
             ;;
 
         Left|Right)
@@ -237,8 +243,8 @@ for angle in Front Back Top Bottom Left Right; do
             convert $hq $tempdir/render_${angle}_lt.png -trim +repage $tempdir/render_${angle}_lt.png
             convert $hq $tempdir/render_${angle}_rt.png -trim +repage $tempdir/render_${angle}_rt.png
             
-            convert $hq $tempdir/render_${angle}_lt.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}_lt.png
-            convert $hq $tempdir/render_${angle}_rt.png -background ${background} -bordercolor ${background} -fill ${background} -border 10  -alpha remove -alpha off  $tempdir/render_${angle}_rt.png
+            convert $hq $tempdir/render_${angle}_lt.png -background ${background} -bordercolor ${background} -fill ${background} -border 10 $tempdir/render_${angle}_lt.png
+            convert $hq $tempdir/render_${angle}_rt.png -background ${background} -bordercolor ${background} -fill ${background} -border 10 $tempdir/render_${angle}_rt.png
             
 #             montage -geometry +0+0 -tile 2x -background ${background} -bordercolor ${background} -fill ${background} \
 #                     $tempdir/render_${angle}_lt.png $tempdir/render_${angle}_rt.png $tempdir/render_${angle}.png
@@ -252,7 +258,7 @@ montage $hq \
  -background ${background} \
  -fill   ${foreground} \
  -pointsize 20 \
- -font Times-Bold \
+ -font "${font}" \
  -label Top     $tempdir/render_Top.png \
  -label Bottom  $tempdir/render_Bottom.png \
  -label "Left_LH"    $tempdir/render_Left_lt.png \
@@ -269,6 +275,7 @@ montage $hq \
 
 if [ -z $nobar ];then
 montage $hq \
+ -font ${font2} \
  -geometry +0+0 \
  -tile 2x1 \
  -background ${background} \
@@ -280,6 +287,7 @@ montage $hq \
  $output
 else
 montage $hq \
+ -font ${font2} \
  -geometry +0+0 \
  -tile 1x1 \
  -background ${background} \

@@ -103,6 +103,10 @@
 #define NIIK_COLORMAP_JACOBIAN     4  /* atrophy color map 2 */
 #define NIIK_COLORMAP_GRAYSCALE    5  /* grayscale map */
 
+#define NIIK_COLORMAP_NEG_ATROPHY  6  /* negative part of atrophy lut (blues)*/
+#define NIIK_COLORMAP_POS_ATROPHY  7  /* positive part of atrophy lut (reds)*/
+
+
 /* CURVE FITTING METHOD DEFINITIONS */
 #define NIIK_CURVE_FIT_UNKNOWN   0  /* unknown */
 #define NIIK_CURVE_FIT_ABSOLUTE  1  /* absolute */
@@ -226,6 +230,8 @@ int niik_check_fsldir_exists();
 /* colormap functions (nifti1_kunio.c) */
 niikmat *niik_colormap_get(int ctype,int num);
 niikmat *niik_colormap_get_atrophy(int num);
+niikmat *niik_colormap_get_pos_atrophy(int num);
+niikmat *niik_colormap_get_neg_atrophy(int num);
 niikmat *niik_colormap_get_summer(int num);
 niikmat *niik_colormap_get_spectral(int num);
 niikmat *niik_colormap_get_jacobian(int num);

@@ -482,6 +482,18 @@ niikmat *niik_colormap_get(int ctype, int num) {
       return NULL;
     }
     return mat;
+  case NIIK_COLORMAP_NEG_ATROPHY:
+    if((mat=niik_colormap_get_neg_atrophy(num))==NULL) {
+      fprintf(stderr,"[niik_colormap_get] ERROR: niik_colormap_get_neg_atrophy\n");
+      return NULL;
+    }
+    return mat;
+  case NIIK_COLORMAP_POS_ATROPHY:
+    if((mat=niik_colormap_get_pos_atrophy(num))==NULL) {
+      fprintf(stderr,"[niik_colormap_get] ERROR: niik_colormap_get_pos_atrophy\n");
+      return NULL;
+    }
+    return mat;
   case NIIK_COLORMAP_JACOBIAN:
     if((mat=niik_colormap_get_jacobian(num))==NULL) {
       fprintf(stderr,"[niik_colormap_get] ERROR: niik_colormap_get_jacobian\n");
@@ -530,6 +542,43 @@ niikmat *niik_colormap_get_atrophy(int num) {
   }
   return mat;
 }
+
+niikmat *niik_colormap_get_pos_atrophy(int num) {
+  niikmat *mat;
+  int i;
+  double d;
+  double r[3]= {0,1,1};
+  double g[3]= {0,1,0};
+  double b[3]= {1,1,0};
+  mat = niikmat_init(num,3);
+
+  for(i=0; i<num; i++) {
+    d=(double)i/(num-1.0)+1.0;
+    mat->m[i][0]=niik_interp1d_linear_in_double_vector(r,3,d);
+    mat->m[i][1]=niik_interp1d_linear_in_double_vector(g,3,d);
+    mat->m[i][2]=niik_interp1d_linear_in_double_vector(b,3,d);
+  }
+  return mat;
+}
+
+niikmat *niik_colormap_get_neg_atrophy(int num) {
+  niikmat *mat;
+  int i;
+  double d;
+  double r[3]= {0,1,1};
+  double g[3]= {0,1,0};
+  double b[3]= {1,1,0};
+  mat = niikmat_init(num,3);
+
+  for(i=0; i<num; i++) {
+    d=(double)i/(num-1.0);
+    mat->m[i][0]=niik_interp1d_linear_in_double_vector(r,3,d);
+    mat->m[i][1]=niik_interp1d_linear_in_double_vector(g,3,d);
+    mat->m[i][2]=niik_interp1d_linear_in_double_vector(b,3,d);
+  }
+  return mat;
+}
+
 
 niikmat *niik_colormap_get_jacobian(int num) {
   niikmat *mat;
