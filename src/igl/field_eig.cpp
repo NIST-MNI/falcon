@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
     ("sym", "Symmetric normalization", cxxopts::value<bool>()->default_value("false"))
     // 
     ("k", "Number of eigen vectors", cxxopts::value<int>()->default_value("5"))
+    ("eps", "Epsilon", cxxopts::value<float>()->default_value("1e-10"))
     // IO
     ("i,input", "Input file name (PLY)", cxxopts::value<std::string>())
     ("o,output", "Output file name (PLY|CSV)", cxxopts::value<std::string>())
@@ -62,30 +63,35 @@ int main(int argc, char *argv[])
     std::vector<std::string> headerF, headerE, comments;
 
     if(igl::readPLY(par["input"].as<std::string>(), V, F, E, N, UV, D, header,
-              FD,headerF, ED,headerE, comments))
+              FD, headerF, ED, headerE, comments))
     {
       size_t k = par["k"].as<int>();
 
       if(par.count("verbose"))
       {
         std::cout << "Vertices: " << V.rows() << "x"<< F.cols() << std::endl;
+        std::cout << "Vert Data: " << D.rows() << "x"<< D.cols() << std::endl;
+
         std::cout << "Faces:    " << F.rows() << "x"<< F.cols() << std::endl;
-        std::cout << "Data:     " << D.rows() << "x"<< D.cols() << std::endl;
+        std::cout << "Face Data:    " << FD.rows() << "x"<< FD.cols() << std::endl;
+
+        std::cout << "Edges:    " << E.rows() << "x"<< E.cols() << std::endl;
+        std::cout << "Edge Data:    " << ED.rows() << "x"<< ED.cols() << std::endl;
+
+        std::cout << "Normals:    " << N.rows() << "x"<< N.cols() << std::endl;
+
+        std::cout << "UV:    " << UV.rows() << "x"<< UV.cols() << std::endl;
       }
 
       Eigen::MatrixXd U;
       Eigen::VectorXd S;
 
-      Eigen::SparseMatrix<double> Cot,M;
+      Eigen::SparseMatrix<double> Cot;
       Eigen::VectorXd Cot_Sum;
 
       igl::cotmatrix(V,F,Cot);
-      //igl::massmatrix(V,F, igl::MASSMATRIX_TYPE_DEFAULT, M);
-      //Cot *= -0.5; // convert to notation from 
-      igl::sum(Cot, 1, Cot_Sum);
 
       Eigen::SparseMatrix<double> Laplacian;
-      
       
       // if norm == 'sym': # make symmetric normalized laplacian
       //     Disqrt = sparse.dia_matrix((np.power(s, -0.5), 0), shape=(N, N)) # TODO am i doing it right?
@@ -104,28 +110,36 @@ int main(int argc, char *argv[])
 
       if(par.count("sym"))  {
         // make symmetric normalized laplacian
+        // HACK : set diagonal to zero
+        Cot.diagonal().setZero();
+        igl::sum(Cot, 0, Cot_Sum);
+
         Eigen::SparseMatrix<double> norm = Eigen::SparseMatrix<double>( Cot_Sum.cwiseSqrt().cwiseInverse().asDiagonal() );
         Laplacian =  Eigen::SparseMatrix<double>(Eigen::VectorXd::Ones(norm.rows()).asDiagonal()) - norm.transpose() * Cot * norm;
       } else if(par.count("rw")) {
+        // HACK : set diagonal to zero
+        Cot.diagonal().setZero();
+        igl::sum(Cot, 0, Cot_Sum);
         // randow walker normalization
         Eigen::SparseMatrix<double> norm = Eigen::SparseMatrix<double>( Cot_Sum.cwiseInverse().asDiagonal() );
         Laplacian =  Eigen::SparseMatrix<double>(Eigen::VectorXd::Ones(norm.rows()).asDiagonal()) - norm.transpose() * Cot;
       }
       else {
-        // default laplacian, no normalization
-        Laplacian =  Eigen::SparseMatrix<double>(Cot_Sum.asDiagonal()) - Cot;
+        // default normalization : use original Cot matrix
+        Laplacian =  Cot;
       }
      
       try {
         Laplacian.makeCompressed();
         Spectra::SparseSymShiftSolve<double> Laplacian_op(Laplacian);
-        Spectra::SymEigsShiftSolver< double, Spectra::LARGEST_MAGN, Spectra::SparseSymShiftSolve<double> >
-            eigs(&Laplacian_op, k+1, (k+1)*4, 0.0);
+
+        Spectra::SymEigsShiftSolver< Spectra::SparseSymShiftSolve<double> >
+            eigs(Laplacian_op, k+1, (k+1)*4, par["eps"].as<float>());
         
         eigs.init();
-        eigs.compute(1000, 1e-10, Spectra::SMALLEST_MAGN);
+        eigs.compute(Spectra::SortRule::LargestMagn, 1000, 1e-10, Spectra::SortRule::SmallestMagn);
 
-        if(eigs.info() == Spectra::SUCCESSFUL)
+        if(eigs.info() == Spectra::CompInfo::Successful)
         {
             S = eigs.eigenvalues().bottomRows(k);
             std::cout << "Eigenvalues found:\n" << S << std::endl;
