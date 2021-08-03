@@ -113,19 +113,19 @@ void falcon_tracing_dump(cortex_tracing_info *info,int iter, const char *task, n
     if(! info->dump_slices)
         return;
     
-    sprintf(tracing_prefix,"%s_%s_%03d_%%s_%%03d.tiff",info->prefix,task,iter+1);
+    sprintf(tracing_prefix,"%s_%s_%03d_%%s_%%03d.png",info->prefix,task,iter+1);
     if(info->slices_z.slice_num) { /* z-slices */
         info->slices_z.fpattern=tracing_prefix;
-        niik_tiff_write_slices_obj(&info->slices_z,img,bb);
+        niik_image_write_slices_obj(&info->slices_z,img,bb);
     } 
 
     if(info->slices_y.slice_num) { /* y-slices */
         info->slices_y.fpattern=tracing_prefix;
-        niik_tiff_write_slices_obj(&info->slices_y,img,bb);
+        niik_image_write_slices_obj(&info->slices_y,img,bb);
     } 
     if(info->slices_x.slice_num) { /* x-slices */
         info->slices_x.fpattern=tracing_prefix;
-        niik_tiff_write_slices_obj(&info->slices_x,img,bb);
+        niik_image_write_slices_obj(&info->slices_x,img,bb);
     } 
 }
 

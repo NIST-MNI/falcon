@@ -13,6 +13,9 @@
 # libigl
 ADD_SUBDIRECTORY(3rd_party/libigl)
 
+# STB
+#ADD_SUBDIRECTORY(3rd_party/stb)
+
 INCLUDE( ${LIBMINC_USE_FILE} )
 
 IF(HAVE_BICPL)
@@ -22,14 +25,15 @@ ENDIF(HAVE_BICPL)
 
 LINK_LIBRARIES(${LIBMINC_LIBRARIES})
 
-IF(HAVE_LIBTIFF)
-  INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIRS})
-  LINK_LIBRARIES(${TIFF_LIBRARY})
-ENDIF(HAVE_LIBTIFF)
+# IF(HAVE_LIBTIFF)
+#   INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIRS})
+#   LINK_LIBRARIES(${TIFF_LIBRARY})
+# ENDIF(HAVE_LIBTIFF)
 
 IF(HAVE_ZLIB)
   INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
   LINK_LIBRARIES(${ZLIB_LIBRARIES})
+  add_definitions(-DHAVE_ZLIB=1)
 ENDIF(HAVE_ZLIB)
 
 # default verbosity level, change for debugging?
@@ -47,6 +51,7 @@ INCLUDE_DIRECTORIES(
    3rd_party/
    3rd_party/zstr/src
    3rd_party/spectra/include
+   3rd_party/stb
    ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/NrrdIO
 )
 
@@ -101,6 +106,7 @@ SET(FALCON_LIB_HDR
 )
 
 SET(FALCON_LIB_SRC
+    falcon_stb.c
     falcon_config.c
     znzlib.c 
     nifti1_io.c 

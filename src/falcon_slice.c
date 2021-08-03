@@ -7,21 +7,22 @@
 #include "falcon.h"
 #include <stdlib.h>
 #include <unistd.h>
+#include "stb_image_write.h"
 
 #include "falcon_cortex.h"
 
 
-int niik_tiff_write_slices_obj(extract_slice_info *info,
+int niik_image_write_slices_obj(extract_slice_info *info,
         nifti_image *img, bbox *off_bb)
 {
-    TIFF *tifimg;
+    //TIFF *tifimg;
     int   s;
     double d,dran;
     unsigned char *bout;
     int verbose=0;
     int stride_i,stride_j,stride_vol,stride_k;
     int ni,nj,nk;
-    const char *fcname="niik_tiff_write_slices_obj";
+    const char *fcname=__func__;
     int round_scale=ceil(info->scale);
     const char *dirs[] = { "x", "y", "z" };
     int slice_num;
@@ -86,6 +87,7 @@ int niik_tiff_write_slices_obj(extract_slice_info *info,
         sprintf(fname, info->fpattern, dirs[info->slice_dir], slice);
 
         /*create tiff file*/
+        #if 0
         if((tifimg = TIFFOpen(fname, "w")) == NULL) {
             fprintf(stderr,"%s: ERROR: could not open for writing: %s\n",fcname, fname);
             return 0;
@@ -109,6 +111,7 @@ int niik_tiff_write_slices_obj(extract_slice_info *info,
         TIFFSetField( tifimg, TIFFTAG_YRESOLUTION, 150.0);
         TIFFSetField( tifimg, TIFFTAG_RESOLUTIONUNIT, RESUNIT_INCH);
         TIFFSetField( tifimg, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);
+        #endif 
 
         if(img->nv==3) {
             for(j=0; j<nj*round_scale; j++) {
@@ -272,9 +275,14 @@ int niik_tiff_write_slices_obj(extract_slice_info *info,
             } /* ijk of the bounding boxes */
         } /* object for slice-dir */
 
+        #if 0
         TIFFSetField(tifimg, TIFFTAG_BITSPERSAMPLE,  8);
         TIFFWriteEncodedStrip(tifimg, 0, bout, nj * ni * round_scale * round_scale * 3);
         TIFFClose(tifimg);
+        #endif
+        // TODO: flip Y ?
+        stbi_write_png(fname, ni*round_scale, nj*round_scale,3, bout, ni*round_scale*3);
+
         fprintf(stdout,"    writing %s\n",fname);
     } /*next slice*/
 

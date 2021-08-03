@@ -241,13 +241,13 @@ int main(int argc,char *argv[],char *envp[]) {
 
     /*extract all slices*/
     if(slices_x.slice_num) {
-        NIIK_EXIT((!niik_tiff_write_slices_obj(&slices_x,img,off_bb)),fcname,"niik_tiff_write_slices_obj",9);
+        NIIK_EXIT((!niik_image_write_slices_obj(&slices_x,img,off_bb)),fcname,"niik_image_write_slices_obj",9);
     } /* x-slices */
     if(slices_y.slice_num) {
-        NIIK_EXIT((!niik_tiff_write_slices_obj(&slices_y,img,off_bb)),fcname,"niik_tiff_write_slices_obj",9);
+        NIIK_EXIT((!niik_image_write_slices_obj(&slices_y,img,off_bb)),fcname,"niik_image_write_slices_obj",9);
     } /* y-slices */
     if(slices_z.slice_num) {
-        NIIK_EXIT((!niik_tiff_write_slices_obj(&slices_z,img,off_bb)),fcname,"niik_tiff_write_slices_obj",9);
+        NIIK_EXIT((!niik_image_write_slices_obj(&slices_z,img,off_bb)),fcname,"niik_image_write_slices_obj",9);
     } /* z-slices */
     if(objlist) niik_free_list(objlist,n_obj);
     

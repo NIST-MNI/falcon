@@ -51,25 +51,25 @@ falcon_slice_extract $t1w -o $ics,$ocs $MIN $MAX $PCT \
  -y $(seq -s , 30 $(((${s[1]}-60+15)/18)) $((${s[1]}-29)) ) \
  -x $(seq -s , 20 $(((${s[0]}-40+15)/16)) $((${s[0]}-20)) ) \
  -z $(seq -s , 20 $(((${s[2]}-40+17)/18)) $((${s[2]}-20)) ) \
- $TMPDIR/pic_%s_%03d.tiff > /dev/null
+ $TMPDIR/pic_%s_%03d.png > /dev/null
 
  montage -geometry +0+0 -tile 8x2 \
-  $TMPDIR/pic_x_???.tiff \
-  $TMPDIR/pic_x.tiff
+  $TMPDIR/pic_x_???.png \
+  $TMPDIR/pic_x.miff
 
  montage -geometry +0+0 -tile 9x2 \
-  $TMPDIR/pic_y_???.tiff \
-  $TMPDIR/pic_y.tiff
+  $TMPDIR/pic_y_???.png \
+  $TMPDIR/pic_y.miff
 
   montage -geometry +0+0 -tile 9x2 \
-  $TMPDIR/pic_z_???.tiff \
-  $TMPDIR/pic_z.tiff
+  $TMPDIR/pic_z_???.png \
+  $TMPDIR/pic_z.miff
 
 montage \
 -background black -fill white \
 -geometry +0+0 -tile 1x3 \
- $TMPDIR/pic_y.tiff \
- $TMPDIR/pic_x.tiff \
- $TMPDIR/pic_z.tiff \
+ $TMPDIR/pic_y.miff \
+ $TMPDIR/pic_x.miff \
+ $TMPDIR/pic_z.miff \
   $out
 

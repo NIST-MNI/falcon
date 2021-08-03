@@ -3875,6 +3875,7 @@ int niik_tiff_write_xmontage(const char *fname,nifti_image *img,double dmin,doub
   return 1;
 }
 
+#if 0
 int niik_tiff_write_xslice(const char *fname,nifti_image *img,double dmin,double dmax,int xslice) {
   TIFF *tifimg;
   int
@@ -4150,7 +4151,7 @@ int niik_tiff_write_zslice(const char *fname,nifti_image *img,double dmin,double
   return 1;
 } /* doing axial pictures */
 
-
+#endif
 /**** end of tiff processing ****/
 
 

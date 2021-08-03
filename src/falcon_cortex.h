@@ -286,7 +286,7 @@ typedef struct
   char *prefix;
 } cortex_tracing_info;
 
-int niik_tiff_write_slices_obj(extract_slice_info *info,
+int niik_image_write_slices_obj(extract_slice_info *info,
         nifti_image *img, bbox *off_bb);
 
 

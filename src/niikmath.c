@@ -5264,10 +5264,16 @@ int main(int argc,char *argv[],char *envp[]) {
     } /* resampling */
     for(i=0; i<img->nz; i++) {
       sprintf(fname,"%s-%i.tif",outname,i);
+      #if 0
       if(!niik_tiff_write_zslice(fname,img,imin,imax,i)) {
         fprintf(stderr,"[niikmath] ERROR: niik_tiff_write_xslice\n");
         exit(1);
       }
+      #else
+      fprintf(stderr,"Not implemented!\n");
+      exit(1);
+      #endif
+
     }
     img=niik_image_free(img);
     exit(0);
@@ -6034,12 +6040,30 @@ int main(int argc,char *argv[],char *envp[]) {
     }
 
     if(tiff_xslice>=0) {
+      #if 0
       NIIK_EXIT((!niik_tiff_write_xslice(outname,img,imin,imax,tiff_xslice)),fcname,"niik_tiff_write_xslice",9);
+      #else
+      fprintf(stderr,"Not implemented!\n");
+      exit(1);
+      #endif
+
     } else if(tiff_yslice>=0) {
+      #if 0
       NIIK_EXIT((!niik_tiff_write_yslice(outname,img,imin,imax,tiff_yslice)),fcname,"niik_tiff_write_yslice",9);
+      #else
+      fprintf(stderr,"Not implemented!\n");
+      exit(1);
+      #endif
     } else if(tiff_zslice>=0) {
+      #if 0
       NIIK_EXIT((!niik_tiff_write_zslice(outname,img,imin,imax,tiff_zslice)),fcname,"niik_tiff_write_zslice",9);
+      #else
+      fprintf(stderr,"Not implemented!\n");
+      exit(1);
+      #endif
+      
     } else { /* multiple slices */
+      #if 0
       if(tiff_xslices!=NULL) {
         for(n=1; n<tiff_xslices[0]; n++) {
           sprintf(fname,"%s_x%i.tif",outname,tiff_xslices[n]);
@@ -6067,6 +6091,10 @@ int main(int argc,char *argv[],char *envp[]) {
           NIIK_EXIT((!niik_tiff_write_zslice(fname,img,imin,imax,tiff_zslices[n])),fcname,"niik_tiff_write_zslice",9);
         } /* each specified zslices */
       } /* z-slices */
+      #else
+      fprintf(stderr,"Not implemented!\n");
+      exit(1);
+      #endif
       /*else {
         fprintf(stderr,"[niikmath] ERROR: please enter the slice by one of these:\n");
         fprintf(stderr,"           -tiff-xslice=<x>     -tiff-yslice=<y>     | -tiff-zslice=<z>\n");
@@ -7891,25 +7919,40 @@ int main(int argc,char *argv[],char *envp[]) {
     tiff_zslices[0]=33;
     for(n=20,i=1; i<tiff_zslices[0]; i++,n+=5) tiff_zslices[i]=n;
     for(n=1; n<tiff_xslices[0]; n++) {
+      #if 0
       sprintf(fname,"%s_x%i.tif",outname,tiff_xslices[n]);
       fprintf(stdout,"[%s] %i  writing %s\n",fcname,n,fname);
       NIIK_EXIT((tiff_xslices[n]<0),fcname,"xslice too small",9);
       NIIK_EXIT((tiff_xslices[n]>=img->nx),fcname,"xslice too large",9);
       NIIK_EXIT((!niik_tiff_write_xslice(fname,img,imin,imax,tiff_xslices[n])),fcname,"niik_tiff_write_xslice",9);
+      #else
+      fprintf(stderr,"Not implemented\n");
+      exit(1);
+      #endif
     } /* each specified xslices */
     for(n=1; n<tiff_yslices[0]; n++) {
+      #if 0 
       sprintf(fname,"%s_y%i.tif",outname,tiff_yslices[n]);
       fprintf(stdout,"[%s] %i  writing %s\n",fcname,n,fname);
       NIIK_EXIT((tiff_yslices[n]<0),fcname,"yslice too small",9);
       NIIK_EXIT((tiff_yslices[n]>=img->ny),fcname,"yslice too large",9);
       NIIK_EXIT((!niik_tiff_write_yslice(fname,img,imin,imax,tiff_yslices[n])),fcname,"niik_tiff_write_yslice",9);
+      #else
+      fprintf(stderr,"Not implemented\n");
+      exit(1);
+      #endif
     } /* each specified yslices */
     for(n=1; n<tiff_zslices[0]; n++) {
+      #if 0
       sprintf(fname,"%s_z%i.tif",outname,tiff_zslices[n]);
       fprintf(stdout,"[%s] %i  writing %s\n",fcname,n,fname);
       NIIK_EXIT((tiff_zslices[n]<0),fcname,"zslice too small",9);
       NIIK_EXIT((tiff_zslices[n]>=img->nx),fcname,"zslice too large",9);
       NIIK_EXIT((!niik_tiff_write_zslice(fname,img,imin,imax,tiff_zslices[n])),fcname,"niik_tiff_write_zslice",9);
+      #else
+      fprintf(stderr,"Not implemented\n");
+      exit(1);
+      #endif
     } /* each specified zslices */
 
 

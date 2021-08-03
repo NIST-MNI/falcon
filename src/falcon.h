@@ -29,7 +29,7 @@
 #include "nifti1_io.h"
 
 /* TIFF  library */
-#include "tiffio.h"
+//#include "tiffio.h"
 
 /* ZLIB */
 #include <zlib.h>
@@ -362,9 +362,11 @@ int niik_image_add_2_images(nifti_image *changed,nifti_image *add);
 
 
 /* tiff (nifti1_kunio.c) */
+#if 0 /*TODO: reimplement with STB*/
 int niik_tiff_write_xslice(const char *fname,nifti_image *img,double dmin,double dmax,int xslice);
 int niik_tiff_write_yslice(const char *fname,nifti_image *img,double dmin,double dmax,int yslice);
 int niik_tiff_write_zslice(const char *fname,nifti_image *img,double dmin,double dmax,int zslice);
+#endif 
 
 int niik_image_rotate(nifti_image *img,char *rstr);
 int niik_image_restructure(nifti_image *img,char *rstr);
