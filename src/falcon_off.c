@@ -3402,18 +3402,15 @@ int off_surface_field_smooth_using_vert_thresholded(kobj *obj, niikpt *var, doub
  *
  ***************************************/
 
-kobj *off_make_sphere_from_icosahedron(double elen,double radius, niikpt ctr)
+kobj *off_make_sphere_from_icosahedron(double elen, double radius, niikpt ctr)
 /* makes a sphere from icosahedron
  * --added spherical coordinates (checking the code), knakamura 2014-06-16 */
 {
   kobj *obj;
   kvert *v;
-  double
-  dfrac,
-  meanlen;
-  int verbose=0;
-  char fcname[64]="off_make_sphere_from_icosahedron";
-  if(verbose>0)niik_fc_display(fcname,1);
+  double  dfrac, meanlen;
+  const int verbose=1;
+  if(verbose>0) niik_fc_display(__func__,1);
   if((obj=off_create_icosahedron())==NULL) {
     fprintf(stderr,"ERROR: off_create_icosahedron\n");
     return NULL;
@@ -3422,37 +3419,37 @@ kobj *off_make_sphere_from_icosahedron(double elen,double radius, niikpt ctr)
     v->v = niikpt_kmul(niikpt_unit(v->v),radius);
   }
   meanlen = off_get_kobj_mean_edge_length(obj);
-  if(verbose>0) fprintf(stdout,"[%s] mean elen = %9.5f \n",fcname,meanlen);
+  if(verbose>0) fprintf(stdout,"[%s] mean elen = %9.5f \n",__func__,meanlen);
   dfrac = (off_get_kobj_mean_edge_length(obj) - elen)/elen;
   while(dfrac>1.0) {
     if(!off_subdiv_kobj(obj)) {
       fprintf(stderr,"ERROR: off_subdiv_kobj\n");
       return NULL;
     }
-    if(verbose) fprintf(stdout,"[%s] subdiv vfe = %i %i %i\n",fcname,obj->nvert,obj->nface,obj->nedge);
+    if(verbose) fprintf(stdout,"[%s] subdiv vfe = %i %i %i\n",__func__,obj->nvert,obj->nface,obj->nedge);
     for(v=obj->vert; v!=NULL; v=v->next) {
       v->v = niikpt_kmul(niikpt_unit(v->v),radius);
     }
     meanlen = off_get_kobj_mean_edge_length(obj);
     dfrac = (meanlen - elen)/elen;
-    if(verbose) fprintf(stdout,"[%s] mean elen = %9.5f \n",fcname,meanlen);
+    if(verbose) fprintf(stdout,"[%s] mean elen = %9.5f \n",__func__,meanlen);
   }
   /* image center and radius */
   for(v=obj->vert; v!=NULL; v=v->next) {
     v->v = niikpt_move_normal(ctr,niikpt_unit(v->v),radius);
   }
   /* remesh */
-  if(verbose>0) fprintf(stdout,"[%s] remeshed %7.3f\n",fcname,elen);
+  if(verbose>0) fprintf(stdout,"[%s] remeshed %7.3f\n",__func__,elen);
   if(!off_remesh_kobj(obj,elen,10,0)) {
     fprintf(stderr,"ERROR: off_remesh_kobj \n");
     return NULL;
   }
   meanlen = off_get_kobj_mean_edge_length(obj);
   if(verbose>0) {
-    fprintf(stdout,"[%s] sphere from icosahedron: vfe = %i %i %i   elen_avg %9.4f\n",fcname,
+    fprintf(stdout,"[%s] sphere from icosahedron: vfe = %i %i %i   elen_avg %9.4f\n",__func__,
             obj->nvert,obj->nface,obj->nedge,meanlen);
   }
-  if(verbose>0)niik_fc_display(fcname,0);
+  if(verbose>0)niik_fc_display(__func__,0);
   return obj;
 }
 

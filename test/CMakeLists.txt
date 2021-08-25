@@ -152,6 +152,9 @@ ADD_FALCON_TEST(COMPLEX_PHANTOM ${TESTDIR}/simple_cortex_thickness.sh
 
 set_tests_properties(COMPLEX_PHANTOM PROPERTIES TIMEOUT 1500)
 
+ADD_FALCON_TEST(SURFACE_TOOLS ${TESTDIR}/run_surface_tools.sh 
+    ${MINC_TOOLKIT_DIR} ${FALCON_BIN} ${CMAKE_CURRENT_BINARY_DIR}/surface_tools )
+
 
 ADD_FALCON_TEST(SURFACE_REFINE ${TESTDIR}/run_surface_refine.sh 
     ${MINC_TOOLKIT_DIR} ${FALCON_BIN} ${CMAKE_CURRENT_BINARY_DIR}/fg_phantom.mnc ${CMAKE_CURRENT_BINARY_DIR}/bg_phantom.mnc ${CMAKE_CURRENT_BINARY_DIR}/bin_phantom.mnc ${CMAKE_CURRENT_BINARY_DIR}/dist_phantom.mnc ${CMAKE_CURRENT_BINARY_DIR}/surface_refine   )

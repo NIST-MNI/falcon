@@ -34,10 +34,14 @@ int main(int argc, char *argv[])
   options.add_options()
     ("v,verbose",     "Verbose output",  cxxopts::value<bool>()->default_value("false"))
     ("m,mesh",        "Input mesh ",      cxxopts::value<std::string>())
+
     ("o,output",      "Output png file ", cxxopts::value<std::string>())
     ("c,csv",         "Input csv ",     cxxopts::value<std::string>())
+
     ("f,field",       "Field name ",    cxxopts::value<std::string>())
     ("n",             "Field number ",  cxxopts::value<int>()->default_value("0"))
+    ("RGB",           "Use RGB values from mesh, of present",  cxxopts::value<bool>()->default_value("false"))
+
     ("w,width",       "Frame width ",  cxxopts::value<int>()->default_value("1280"))
     ("h,height",      "Frame height ", cxxopts::value<int>()->default_value("960"))
     ("z,zoom",        "Zoom ", cxxopts::value<double>()->default_value("1.0"))
@@ -75,21 +79,51 @@ int main(int argc, char *argv[])
   bool verbose=par["verbose"].as<bool>();
   if(par.count("mesh") && par.count("output"))
   {
-    Eigen::MatrixXd V,N,UV,D,FD,ED;
+    Eigen::MatrixXd V,N,UV,VD,FD,ED;
     Eigen::MatrixXi F,E;
-    std::vector<std::string> header;
+    std::vector<std::string> headerV;
     std::vector<std::string> headerF, headerE, comments;
  
-    if(igl::readPLY(par["mesh"].as<std::string>(), V, F, E, N, UV, D, header,
+    if(igl::readPLY(par["mesh"].as<std::string>(), V, F, E, N, UV, VD, headerV,
               FD,headerF, ED,headerE, comments))
     {
       const size_t k = 5;
-      int idx_field = par["n"].as<int>();
+      int idx_field = -1; ;
 
       if(verbose) {
         std::cout << "Vertices: " << V.rows() << "x"<< F.cols() << std::endl;
         std::cout << "Faces:    " << F.rows() << "x"<< F.cols() << std::endl;
-        std::cout << "Data:     " << D.rows() << "x"<< D.cols() << std::endl;
+        
+        std::cout << "Vertex Data: " << VD.rows() << "x"<< VD.cols() << std::endl;
+
+        if(!headerV.empty())
+        {
+          std::cout<<"\t";
+          for(auto h:headerV)
+            std::cout<<h<<"\t";
+
+          std::cout<<std::endl;
+        }
+
+        std::cout << "Face Data: " << FD.rows() << "x"<< FD.cols() << std::endl;
+        if(!headerF.empty())
+        {
+          std::cout<<"\t";
+          for(auto h:headerF)
+            std::cout<<h<<"\t";
+
+          std::cout<<std::endl;
+        }
+
+        std::cout << "Edge Data: " << ED.rows() << "x"<< ED.cols() << std::endl;
+        if(!headerE.empty())
+        {
+          std::cout<<"\t";
+          for(auto h:headerE)
+            std::cout<<h<<"\t";
+
+          std::cout<<std::endl;
+        }
       }
 
       if(par.count("fix"))
@@ -107,42 +141,32 @@ int main(int argc, char *argv[])
           std::cout<<"Reading from :"<<par["csv"].as<std::string>()<<std::endl;
         
         igl::readCSV(par["csv"].as<std::string>(), Dcsv, csv_header);
+
         if(Dcsv.cols()>0)
         {
-          Eigen::MatrixXd D_(V.rows(), D.cols()+Dcsv.cols());
-          D_ << D,Dcsv;
+          Eigen::MatrixXd D_(V.rows(), VD.cols()+Dcsv.cols());
+          D_ << VD,Dcsv;
           for(auto const &h:csv_header)
-            header.push_back(h);
-          D = D_;
+            headerV.push_back(h);
+          VD = D_;
         }
-      }
-
-      if(verbose && !header.empty())
-      {
-        std::cout<<"Data:";
-        for(auto h:header)
-          std::cout<<h<<"\t";
-
-        std::cout<<std::endl;
       }
 
       if(par.count("field"))
       {
-        int i;
-        for(i=0;i<header.size();++i)
-          if(par["field"].as<std::string>()==header[i])
-          {
-            idx_field=i;
-            break;
-          }
-        if(i==header.size())
+        auto idx_field_=std::find(headerV.begin(),headerV.end(),par["field"].as<std::string>() );
+        if(idx_field_==headerV.end())
         {
           std::cerr<<"Can't find field:\""<<par["field"].as<std::string>()<<"\""<<std::endl;
-          return 0;
+          return 1;
         }
-      }
+        idx_field=idx_field_-headerV.begin();
+      } else if(par.count("n") && par["n"].as<int>()>=0 && par["n"].as<int>()<headerV.size()) {
+        idx_field=par["n"].as<int>();
+      } 
 
       bool flat_color  =par["flat"].as<bool>();
+      bool rgb_color   =par["RGB"].as<bool>();
       bool orthographic=par["ortho"].as<bool>();
 
       // embree object
@@ -150,14 +174,14 @@ int main(int argc, char *argv[])
       er.set_mesh(V,F,true);
       er.set_double_sided(par["double"].as<bool>());
 
-      if(idx_field < D.cols() && idx_field>=0)
+      if(idx_field < VD.cols() && idx_field>=0)
       {
-        Eigen::VectorXd field=D.col(idx_field);
+        Eigen::VectorXd field=VD.col(idx_field);
 
         if(par["relevel"].as<bool>())
         {
           // TODO: use closest int?
-          Eigen::VectorXi labels=D.col(idx_field).cast<int>();
+          Eigen::VectorXi labels=VD.col(idx_field).cast<int>();
           std::set<int> levels;
           for(int i=0;i<labels.size();++i)
           {
@@ -213,13 +237,35 @@ int main(int argc, char *argv[])
         if(flat_color)
         {
           std::cout<<"Using flat coloring"<<std::endl;
-          CF=Eigen::MatrixXd::NullaryExpr(F.rows(),3, [&C,&F](auto r,auto c) {
+          CF = Eigen::MatrixXd::NullaryExpr(F.rows(),3, [&C,&F](auto r,auto c) {
             return (C(F(r,0),c)+C(F(r,1),c)+C(F(r,2),c))/3;
           });
           er.set_colors(CF);
-        } else {
+        } 
+        else {
           er.set_colors(C);
         }
+      } else if(rgb_color) {
+          std::cout<<"Using RGB per-face coloring from mesh"<<std::endl;
+          auto red_idx=std::find(headerF.begin(),headerF.end(),"red");
+          auto green_idx=std::find(headerF.begin(),headerF.end(),"green");
+          auto blue_idx=std::find(headerF.begin(),headerF.end(),"blue");
+          if(red_idx==headerF.end())
+            std::cerr<<"Can't find red channel"<<std::endl;
+          else if(green_idx==headerF.end())
+            std::cerr<<"Can't find green channel"<<std::endl;
+          else if(blue_idx==headerF.end())
+            std::cerr<<"Can't find blue channel"<<std::endl;
+          else
+          {
+            Eigen::MatrixXd CF(F.rows(),3);
+            CF <<  FD.col(red_idx-headerF.begin()),
+                   FD.col(green_idx-headerF.begin()),
+                   FD.col(blue_idx-headerF.begin());
+            CF/=255.0;
+            er.set_colors(CF);
+
+          }
       } else if(par.count("r") && par.count("g") && par.count("b")){
         // using uniform colour
         er.set_colors(Eigen::RowVector3d(par["r"].as<double>(),par["g"].as<double>(),par["b"].as<double>()));

@@ -238,9 +238,9 @@ int main(int argc,char *argv[],char *envp[]) {
     kvert *v;
     fprintf(stdout,"[%s] creating a new spherical object\n",fcname);
     if(maskimg)
-      ctr=niikpt_image_get_centroid(maskimg,NULL);
+      ctr = niikpt_image_get_centroid(maskimg,NULL);
     else
-      ctr=niikpt_zero(); /*place it at the origin*/
+      ctr = niikpt_zero(); /*place it at the origin*/
 
     if(niik_check_double_problem(radius))
     {

@@ -37,8 +37,8 @@ int main(int argc, char *argv[])
   
   options.add_options()
     ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
-    ("m,mesh", "Input mesh ", cxxopts::value<std::string>())
-    ("c,csv", "Input csv ", cxxopts::value<std::string>())
+    ("m,mesh",    "Input mesh ", cxxopts::value<std::string>())
+    ("c,csv",     "Input csv ", cxxopts::value<std::string>())
     ("help", "Print help")
   ;
   
@@ -47,25 +47,46 @@ int main(int argc, char *argv[])
 
   if(par.count("mesh"))
   {
-    Eigen::MatrixXd V,N,UV,D,FD,ED;
+    Eigen::MatrixXd V,N,UV,VD,FD,ED;
     Eigen::MatrixXi F,E;
-    std::vector<std::string> header;
+    std::vector<std::string> headerV;
     std::vector<std::string> headerF,headerE,comments;
 
-    if(igl::readPLY(par["mesh"].as<std::string>(), V, F, E, N, UV, D, header,
+    //face colors
+    Eigen::MatrixXd FC;
+
+    if(igl::readPLY(par["mesh"].as<std::string>(), V, F, E, N, UV, VD, headerV,
                   FD,headerF, ED,headerE, comments))
     {
       const size_t k = 5;
       static int idx_field = 0;
+      static bool show_mesh_rgb=false;
 
       if(argc>2)
         idx_field=atoi(argv[2]);
 
-      if(idx_field>=D.cols()||idx_field<0) idx_field=0;
+      if(idx_field>=VD.cols()||idx_field<0) idx_field=0;
 
-      std::cout << "Vertices: " << V.rows() << "x"<< F.cols() << std::endl;
-      std::cout << "Faces:    " << F.rows() << "x"<< F.cols() << std::endl;
-      std::cout << "Data:     " << D.rows() << "x"<< D.cols() << std::endl;
+      std::cout << "Vertices:   " << V.rows() << "x"<< F.cols() << std::endl;
+      std::cout << "Faces:      " << F.rows() << "x"<< F.cols() << std::endl;
+      std::cout << "Vertex Data:" << VD.rows() << "x"<< VD.cols() << std::endl;
+
+      // read RGB if present
+      {
+        auto idx_red=std::find(headerF.begin(),headerF.end(),"red");
+        auto idx_green=std::find(headerF.begin(),headerF.end(),"green");
+        auto idx_blue=std::find(headerF.begin(),headerF.end(),"blue");
+
+        if(idx_red!=headerF.end()&&idx_green!=headerF.end()&& idx_blue!=headerF.end())
+        {
+          FC.resize(F.rows(),3);
+          FC << FD.col(idx_red-headerF.begin()),
+                FD.col(idx_green-headerF.begin()),
+                FD.col(idx_blue-headerF.begin());
+          FC/=255.0;
+          show_mesh_rgb=true;
+        }
+      }
 
       if(par.count("csv"))
       {
@@ -77,23 +98,22 @@ int main(int argc, char *argv[])
         {
           std::cout << "CSV Data:     " << Dcsv.rows() << "x"<< Dcsv.cols() << std::endl;
 
-          Eigen::MatrixXd D_(V.rows(), D.cols()+Dcsv.cols());
-          D_ << D,Dcsv;
+          Eigen::MatrixXd D_(V.rows(), VD.cols()+Dcsv.cols());
+          D_ << VD,Dcsv;
           for(auto const &h:csv_header)
-            header.push_back(h);
-          D = D_;
+            headerV.push_back(h);
+          VD = D_;
         }
       }
 
-      if(!header.empty())
+      if(!headerV.empty())
       {
-        std::cout<<"Data:";
-        for(auto h:header)
+        std::cout<<"\t";
+        for(auto h:headerV)
           std::cout<<h<<"\t";
 
         std::cout<<std::endl;
       }
-
 
       Eigen::MatrixXd U;
       Eigen::VectorXd S;
@@ -103,17 +123,19 @@ int main(int argc, char *argv[])
       viewer.data().set_mesh(V, F);
       viewer.data().set_face_based(true);
 
-      if(idx_field<D.cols())
+      if(show_mesh_rgb)
       {
-          std::cout<<"Field:"<<idx_field<<" "<<D.col(idx_field).minCoeff()<<" "<<D.col(idx_field).maxCoeff()<<std::endl;
+          viewer.data().set_colors(FC);  
+      } else if(idx_field<VD.cols() && idx_field>=0)
+      {
+          std::cout<<"Field:"<<idx_field<<" "<<VD.col(idx_field).minCoeff()<<" "<<VD.col(idx_field).maxCoeff()<<std::endl;
 
           Eigen::MatrixXd C;
-          Eigen::MatrixXd _D=D.col(idx_field);
+          Eigen::MatrixXd _D=VD.col(idx_field);
           igl::colormap(igl::COLOR_MAP_TYPE_JET, _D , _D.minCoeff(), _D.maxCoeff(), C);
 
           viewer.data().set_colors(C);
       }
-
 
       // Attach a custom menu
       igl::opengl::glfw::imgui::ImGuiMenu menu;
@@ -123,12 +145,24 @@ int main(int argc, char *argv[])
       {
         menu.draw_viewer_menu(); // draw default menu, comment to overwrite
 
-        if(ImGui::Combo("Measure", &idx_field, header))
+        if(FC.cols()!=0) // add option to show RGB field
+        {
+          if(ImGui::Checkbox("Mesh RGB",&show_mesh_rgb))
+          {
+            if(show_mesh_rgb)
+            {
+              viewer.data().set_colors(FC);  
+            }
+          }
+        }
+
+        if(ImGui::Combo("Measure", &idx_field, headerV))
         {
           Eigen::MatrixXd C;
-          Eigen::MatrixXd _D=D.col(idx_field);
+          Eigen::MatrixXd _D=VD.col(idx_field);
           igl::colormap(igl::COLOR_MAP_TYPE_JET, _D , _D.minCoeff(), _D.maxCoeff(), C);
           viewer.data().set_colors(C);
+          show_mesh_rgb=false;
         }
       };
 

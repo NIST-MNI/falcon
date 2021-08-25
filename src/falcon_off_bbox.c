@@ -175,10 +175,8 @@ int off_create_bbox_from_kface_list(bbox *bb,
 
 /* for multiple objects (like the pial/WM surfaces of cortex) */
 int off_create_bbox_from_multiple_kobj(bbox *bb, kobj **obj, int num_obj) {
-  const int
-  verbose=0;
-  int
-  n,nface;
+  const int verbose=0;
+  int       n,nface;
   kface **facelist,*f;
 
   if(bb==NULL) {
@@ -294,7 +292,6 @@ int off_create_bbox_octree(bbox *bb, kface **facelist,
       xmid,ymid,zmid;
       niikpt fmid;
   const int verbose=0;
-  int k=0;
 
   if(verbose>1 && cdepth==0)
     fprintf(stdout,"  off_create_bbox_octree %i (%5.1f %5.1f %5.1f) (%5.1f %5.1f %5.1f)\n",cdepth,
@@ -526,24 +523,29 @@ int off_check_tri_tri_intersect(kface * f1,kface * f2)
   v0[0]=f1->vert[0]->v.x;
   v0[1]=f1->vert[0]->v.y;
   v0[2]=f1->vert[0]->v.z;
+  
   v1[0]=f1->vert[1]->v.x;
   v1[1]=f1->vert[1]->v.y;
   v1[2]=f1->vert[1]->v.z;
+
   v2[0]=f1->vert[2]->v.x;
   v2[1]=f1->vert[2]->v.y;
   v2[2]=f1->vert[2]->v.z;
+
   u0[0]=f2->vert[0]->v.x;
   u0[1]=f2->vert[0]->v.y;
   u0[2]=f2->vert[0]->v.z;
+
   u1[0]=f2->vert[1]->v.x;
   u1[1]=f2->vert[1]->v.y;
   u1[2]=f2->vert[1]->v.z;
+
   u2[0]=f2->vert[2]->v.x;
   u2[1]=f2->vert[2]->v.y;
   u2[2]=f2->vert[2]->v.z;
 
-  return niik_tri_tri_intersect(v0,v1,v2,u0,u1,u2) ||
-         niik_tri_tri_intersect(u0,u1,u2,v0,v1,v2);
+  return niik_tri_tri_intersect(v0,v1,v2, u0,u1,u2) ||
+         niik_tri_tri_intersect(u0,u1,u2, v0,v1,v2);
 
 } /* off_check_tri_tri_intersect */
 
@@ -562,22 +564,29 @@ int off_check_tri_tri_intersect_with_isectline(niikpt v1,niikpt v2,niikpt v3,
   V0[0] = v1.x;
   V0[1] = v1.y;
   V0[2] = v1.z;
+
   V1[0] = v2.x;
   V1[1] = v2.y;
   V1[2] = v2.z;
+
   V2[0] = v3.x;
   V2[1] = v3.y;
   V2[2] = v3.z;
+
   U0[0] = u1.x;
   U0[1] = u1.y;
   U0[2] = u1.z;
+
   U1[0] = u2.x;
   U1[1] = u2.y;
   U1[2] = u2.z;
+
   U2[0] = u3.x;
   U2[1] = u3.y;
   U2[2] = u3.z;
+
   outflag=niik_tri_tri_intersect_with_isectline(V0,V1,V2,U0,U1,U2,coplanar,I1,I2);
+  
   isect1->x = I1[0];
   isect1->y = I1[1];
   isect1->z = I1[2];
@@ -769,12 +778,10 @@ int off_count_self_intersection_add_color(bbox *bb, kobj *obj, int flag_add)
  * -returns the number of surface intersection triangles */
 {
   bbox *thisbb;
-  unsigned char
-  *sivec; /* self-intersection results here */
-  int
-  n,i,j,
-  cnt=0,
-  nobb=0;
+  unsigned char *sivec; /* self-intersection results here */
+  int  n;
+  int  cnt=0,
+       nobb=0;
 
   if(obj==NULL) {
     fprintf(stderr,"ERROR: obj is a null pointer\n");
@@ -803,18 +810,21 @@ int off_count_self_intersection_add_color(bbox *bb, kobj *obj, int flag_add)
 
   /*#pragma omp parallel for private(n,i,j)*/
   for(n=0; n<thisbb->nvox; n++) {
+    int i;
     for(i=0; i<thisbb->ndata[n]; i++) {
+      int j;
       kface *f1;
 
-      f1=thisbb->data[n][i];
+      f1 = thisbb->data[n][i];
       for(j=i+1; j<thisbb->ndata[n]; j++) {
         kface *f2;
-        f2=thisbb->data[n][j];
+        f2 = thisbb->data[n][j];
 
         if(sivec[f1->index]>0 && sivec[f2->index]>0) continue;
 
         if(off_check_faces_intersect(f1,f2)) {
-          sivec[f1->index] = sivec[f2->index]=1;
+          sivec[f1->index] = 1;
+          sivec[f2->index] = 1;
           if(flag_add) {
             f1->color[0]=f2->color[0]=1.0;
             f1->color[1]=f2->color[1]=f1->color[2]=f2->color[2]=f1->color[3]=f2->color[3]=0.0;
@@ -824,8 +834,11 @@ int off_count_self_intersection_add_color(bbox *bb, kobj *obj, int flag_add)
     }
   }
 
+#if _OPENMP>=201307
+  #pragma omp simd
+#endif
   for(n=1,cnt=0; n<=obj->nface; n++) {
-    cnt+=(sivec[n]>0);
+    cnt+=sivec[n];
   }
 
   free(sivec);

@@ -13,21 +13,23 @@
 #include <stdlib.h>
 
 void show_usage (const char *name) {
-  fprintf(stdout,"Usage: %s <input.off> <output.off> \n"
+  fprintf(stdout,"Usage: %s <input.off> [output.off] \n"
           "\t--clobber clobber output file\n"
-          "\t--fix  fix self intersections\n",
+          "\t--fix  fix self intersections\n"
+          "\t--code  return number of self-intersection as return code\n",
           name);
 }
 
 
 
 int main(int argc, char **argv) {
-  const char *fcname="niikcortex_check_off.c";
+  const char *fcname="niikcortex_check_surface";
   int clobber=0;
   int verbose=0;
   int c;
   int i;
   int fix_self_intersections=0;
+  int ret_code=0;
 
   const char *in_off=NULL;
   const char *out_off=NULL;
@@ -36,13 +38,15 @@ int main(int argc, char **argv) {
   bbox *bb=NULL;
   kobj *obj=NULL;
   off_curvature_t obj_curv;
+
   /*kobj **out_obj;*/
   char* timestamp=niik_create_minc_timestamp(argc,argv);
 
   struct option long_options[] = {
     {"clobber", no_argument, &clobber, 1},
     {"verbose", no_argument, &verbose, 1},
-    {"fix", no_argument, &fix_self_intersections, 1},
+    {"fix",     no_argument, &fix_self_intersections, 1},
+    {"code",     no_argument, &ret_code, 1},
     {0, 0, 0, 0}
   };
 
@@ -66,15 +70,18 @@ int main(int argc, char **argv) {
     }
   }
 
-  if((argc - optind)<2) {
+  if((argc - optind)<1) {
     show_usage(argv[0]);
     return 1;
   }
 
   in_off =argv[optind];
-  out_off=argv[optind+1];
+  if((argc - optind)>1)
+    out_off = argv[optind+1];
+  else
+    out_off = NULL;
 
-  if (!clobber && !access (out_off, F_OK)) {
+  if (out_off && !clobber && !access (out_off, F_OK)) {
     fprintf(stderr,"%s Exists!\n", out_off);
     return 1;
   }
@@ -88,10 +95,11 @@ int main(int argc, char **argv) {
   bb=off_bbox_init(7,320);
   off_create_bbox_from_kobj(bb,obj);
 
-  if((n=off_count_self_intersection_add_color(bb,obj,1))<0) {
+  if( (n=off_count_self_intersection_add_color(bb, obj, 1))<0) {
     fprintf(stderr,"[%s] ERROR: off_count_self_intersection_add_color(bb,obj,1)\n",fcname);
     exit(1);
   }
+
   fprintf(stdout,"[%s] surface %i intersection(s)\n",fcname,n);
 
   if(fix_self_intersections && n>0) {
@@ -105,17 +113,22 @@ int main(int argc, char **argv) {
     fprintf(stdout,"[%s] surface %i intersection(s)\n",fcname,n);
   }
 
-  /*append metadata*/
-  NIIK_EXIT((!off_kobj_add_comment(obj,timestamp)),fcname,"off_kobj_add_comment",1);
-
-  NIIK_EXIT((!off_kobj_write_offply(out_off,obj,0)), fcname,"off_kobj_write_off",1);
+  if(out_off) 
+  {
+    /*append metadata*/
+    NIIK_EXIT((!off_kobj_add_comment(obj,timestamp)),fcname,"off_kobj_add_comment",1);
+    NIIK_EXIT((!off_kobj_write_offply(out_off,obj,0)), fcname,"off_kobj_write_off",1);
+  }
 
   bb=off_bbox_free(bb);
   off_kobj_free(obj);
   niik_fc_display(fcname,0);
 
   free(timestamp);
-  return 0;
+  if(ret_code)
+    return n;
+  else
+    return n>0?1:0;
 }
 
 

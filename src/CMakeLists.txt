@@ -271,7 +271,7 @@ ADD_EXECUTABLE(falcon_slice_extract           falcon_slice_extract.c)
 ADD_EXECUTABLE(falcon_csv_stats               falcon_csv_stats.c)
 
 #test prog
-ADD_EXECUTABLE(falcon_test_sphere             test_sphere.c )
+ADD_EXECUTABLE(falcon_test_sphere             falcon_test_sphere.c )
 
 
 IF(BICPL_FOUND)

@@ -12,10 +12,10 @@
 #include <stdlib.h>
 
 void show_usage (const char *name) {
-  fprintf(stdout,"Usage: %s <input.ply> <radius> [--tolerance <f>, default 0.001 --output <output.ply> write error map]\n", name);
+  fprintf(stdout,"Usage: %s <input.ply> <radius> [--tolerance <f>, default 0.001 --output <output.ply> write error map --center <x,y,z> spehre center]\n", name);
 }
 
-int check_sphere(kobj *obj, double radius, double *rms_error, double *max_error, int *err_idx, double **err)
+int check_sphere(kobj *obj, double radius, niikpt ctr, double *rms_error, double *max_error, int *err_idx, double **err)
 {
   kvert *v;
   int i ;
@@ -28,12 +28,12 @@ int check_sphere(kobj *obj, double radius, double *rms_error, double *max_error,
     *err=calloc(obj->nvert,sizeof(double));
 
   for(v=obj->vert,i=0; v!=NULL; v=v->next,i++) {
-    double r = sqrt(v->v.x*v->v.x+v->v.y*v->v.y+v->v.z*v->v.z);
+    double r = niikpt_distance(v->v,ctr);
     double d = r-radius;
     if(err) (*err)[i] = d;
     *rms_error+=d*d;
-    d=fabs(d);
-    if(d>(*max_error) ) 
+    d = fabs(d);
+    if(d > (*max_error) ) 
     {
       *max_error=d;
       *err_idx=i+1;
@@ -44,7 +44,7 @@ int check_sphere(kobj *obj, double radius, double *rms_error, double *max_error,
 }
 
 int main(int argc, char **argv) {
-  const char *fcname="test_sphere";
+  const char *fcname="flacon_test_sphere";
   int clobber=0;
   int verbose=0;
   int c;
@@ -54,7 +54,9 @@ int main(int argc, char **argv) {
   double radius=0.0;
   double tolerance=1e-3;
   const char *out_err_off=NULL;
-
+  double *center=NULL;
+  int center_ctr=0;
+  niikpt  ctr=niikpt_zero();
   int n;
   kobj *obj=NULL;
 
@@ -62,6 +64,7 @@ int main(int argc, char **argv) {
     {"verbose",  no_argument, &verbose, 1},
     {"tolerance",required_argument, 0, 't'},
     {"output",required_argument, 0, 'o'},
+    {"center",required_argument, 0, 'C'},
     {0, 0, 0, 0}
   };
 
@@ -69,7 +72,7 @@ int main(int argc, char **argv) {
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "t:o:", long_options, &option_index);
+    c = getopt_long (argc, argv, "t:o:C:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -83,6 +86,25 @@ int main(int argc, char **argv) {
       break;
     case 'o':
       out_err_off=optarg;
+      break;
+    case 'C':
+      center=niik_csstring_to_double_list(optarg,&center_ctr);
+      if(!center)
+      {
+        fprintf(stderr,"Can't parse:%s\n",optarg);
+        return 1;
+      }
+      if(center_ctr!=3)
+      {
+        fprintf(stderr,"Need X,Y,Z , got %s\n",optarg);
+        free(center);
+        return 1;
+      }
+      ctr.x=center[0];
+      ctr.y=center[1];
+      ctr.z=center[2];
+
+      free(center);
       break;
     case '?':
     default:
@@ -106,7 +128,7 @@ int main(int argc, char **argv) {
   double max_err,rms_err;
   int err_idx;
   
-  check_sphere(obj, radius, &rms_err, &max_err,&err_idx,&err);
+  check_sphere(obj, radius, ctr,  &rms_err, &max_err,&err_idx,&err);
 
   fprintf(stderr,"RMS error:%f Max error:%f at %d\n",rms_err,max_err,err_idx);
 
