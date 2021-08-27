@@ -835,7 +835,7 @@ int off_count_self_intersection_add_color(bbox *bb, kobj *obj, int flag_add)
   }
 
 #if _OPENMP>=201307
-  #pragma omp simd
+//  #pragma omp simd
 #endif
   for(n=1,cnt=0; n<=obj->nface; n++) {
     cnt+=sivec[n];

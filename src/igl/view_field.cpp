@@ -123,19 +123,28 @@ int main(int argc, char *argv[])
       viewer.data().set_mesh(V, F);
       viewer.data().set_face_based(true);
 
-      if(show_mesh_rgb)
-      {
-          viewer.data().set_colors(FC);  
-      } else if(idx_field<VD.cols() && idx_field>=0)
-      {
-          std::cout<<"Field:"<<idx_field<<" "<<VD.col(idx_field).minCoeff()<<" "<<VD.col(idx_field).maxCoeff()<<std::endl;
+      Eigen::MatrixXd field_range(VD.cols(),2);
+      double field_range_current[2];
 
-          Eigen::MatrixXd C;
-          Eigen::MatrixXd _D=VD.col(idx_field);
-          igl::colormap(igl::COLOR_MAP_TYPE_JET, _D , _D.minCoeff(), _D.maxCoeff(), C);
+      field_range.col(0) = VD.colwise().minCoeff();
+      field_range.col(1) = VD.colwise().maxCoeff();
 
-          viewer.data().set_colors(C);
-      }
+
+      auto update_field=[&]() {
+        if(show_mesh_rgb)
+        {
+          viewer.data().set_colors(FC);
+        } else if(idx_field<VD.cols() && idx_field>=0) {
+            Eigen::MatrixXd C;
+            Eigen::MatrixXd _D=VD.col(idx_field);
+            igl::colormap(igl::COLOR_MAP_TYPE_JET, _D, field_range(idx_field,0), field_range(idx_field,1), C);
+            viewer.data().set_colors(C);
+            field_range_current[0] = field_range(idx_field,0);
+            field_range_current[1] = field_range(idx_field,1);
+        }
+      };
+
+      update_field();
 
       // Attach a custom menu
       igl::opengl::glfw::imgui::ImGuiMenu menu;
@@ -149,20 +158,28 @@ int main(int argc, char *argv[])
         {
           if(ImGui::Checkbox("Mesh RGB",&show_mesh_rgb))
           {
-            if(show_mesh_rgb)
-            {
-              viewer.data().set_colors(FC);  
-            }
+            update_field();
           }
         }
 
         if(ImGui::Combo("Measure", &idx_field, headerV))
         {
-          Eigen::MatrixXd C;
-          Eigen::MatrixXd _D=VD.col(idx_field);
-          igl::colormap(igl::COLOR_MAP_TYPE_JET, _D , _D.minCoeff(), _D.maxCoeff(), C);
-          viewer.data().set_colors(C);
-          show_mesh_rgb=false;
+          update_field();
+        }
+
+        if(idx_field<VD.cols() && idx_field>=0)
+        {
+          if(ImGui::InputDouble("min",&field_range_current[0]))
+          {
+            field_range(idx_field,0)=field_range_current[0];
+            update_field();
+          }
+
+          if(ImGui::InputDouble("max",&field_range_current[1]))
+          {
+            field_range(idx_field,1)=field_range_current[1];
+            update_field();
+          }
         }
       };
 
