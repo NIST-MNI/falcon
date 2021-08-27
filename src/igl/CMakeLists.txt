@@ -71,9 +71,12 @@ target_link_libraries(falcon_igl_mesh_debug igl::core )
 add_executable(falcon_igl_mesh_render mesh_render.cpp )
 target_link_libraries(falcon_igl_mesh_render igl::png igl::csv igl::core  igl::embree )
 
-
 add_executable(falcon_igl_marching_cubes marching_cubes.cpp)
 target_link_libraries(falcon_igl_marching_cubes igl::core minc2-simple )
+
+
+add_executable(falcon_igl_midsag midsag.cpp)
+target_link_libraries(falcon_igl_midsag igl::core minc2-simple )
 
 #
 INSTALL( TARGETS 
