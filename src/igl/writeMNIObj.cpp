@@ -1,25 +1,27 @@
 #pragma once
-
 #ifndef __WRITE_MNIOBJ_CPP__
 #define __WRITE_MNIOBJ_CPP__
+
+#include <iostream>
+#include <fstream>
 
 #include  <bicpl.h>
 
 namespace igl {
 
-}
 template <
   typename DerivedV,
   typename DerivedF,
   typename DerivedN,
   typename DerivedC
 >
-bool writePLY(
+bool writeMNIObj(
   const std::string & fname,
   const Eigen::MatrixBase<DerivedV> & V,
   const Eigen::MatrixBase<DerivedF> & F,
   const Eigen::MatrixBase<DerivedN> & N,
   const Eigen::MatrixBase<DerivedC> & C,
+  FileEncoding encoding
    )
 {
   object_struct   *object_list;

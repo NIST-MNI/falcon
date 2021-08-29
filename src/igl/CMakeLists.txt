@@ -1,3 +1,28 @@
+IF(HAVE_ZLIB)
+    add_definitions(-DHAVE_ZLIB)
+ENDIF()
+
+IF(HAVE_BICPL)
+    add_definitions(-DHAVE_BICPL)
+
+    #add_library(iglMNIobj STATIC readMNIObj.cpp readMNIObj.h writeMNIOjb.cpp writeMNIOjb.h )
+
+    if(LIBIGL_USE_STATIC_LIBRARY)
+        set(SOURCES_MNI_OBJ
+            readMNIObj.cpp readMNIObj.h writeMNIOjb.cpp writeMNIOjb.h
+        )
+        add_library(iglMNIobj STATIC ${SOURCES_MNI_OBJ})
+        target_link_libraries(iglMNIobj ${IGL_SCOPE} igl_common)
+        target_link_libraries(iglMNIobj ${IGL_SCOPE} igl)
+    else()
+        add_library(iglMNIobj INTERFACE)
+    endif()
+
+    target_include_directories(iglMNIobj INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+ENDIF()
+
+
+
 IF( LIBIGL_WITH_OPENGL_GLFW_IMGUI) # LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_GLFW AND
     message("Building interactive viewer")
     # Viewer APP
@@ -6,11 +31,6 @@ IF( LIBIGL_WITH_OPENGL_GLFW_IMGUI) # LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_G
 
     INSTALL( TARGETS  falcon_igl_view_field)
 ENDIF()
-
-IF(HAVE_ZLIB)
-    add_definitions(-DHAVE_ZLIB)
-ENDIF()
-
 
 if(NOT TARGET igl::png)
     add_definitions(-DSTB_PNG)
@@ -40,6 +60,10 @@ if(NOT TARGET igl::png)
     add_library(igl::png ALIAS igl_png)
     set_property(TARGET igl_png PROPERTY EXPORT_NAME igl::png)
 endif()
+
+add_executable(falcon_igl_obj igl_obj.cpp )
+target_link_libraries(falcon_igl_obj igl::csv igl::core iglMNIobj)
+
 
 add_executable(falcon_igl_field_eig field_eig.cpp )
 target_link_libraries(falcon_igl_field_eig igl::csv igl::core )
@@ -73,7 +97,6 @@ target_link_libraries(falcon_igl_mesh_render igl::png igl::csv igl::core  igl::e
 
 add_executable(falcon_igl_marching_cubes marching_cubes.cpp)
 target_link_libraries(falcon_igl_marching_cubes igl::core minc2-simple )
-
 
 add_executable(falcon_igl_midsag midsag.cpp)
 target_link_libraries(falcon_igl_midsag igl::core minc2-simple )
