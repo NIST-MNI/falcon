@@ -15,7 +15,7 @@
 
 MAJOR_VERSION=0
 MINOR_VERSION=9
-MICRO_VERSION=3
+MICRO_VERSION=4
 ver=${MAJOR_VERSION}.${MINOR_VERSION}.${MICRO_VERSION}
 
 progname=$(basename $0)
@@ -536,12 +536,20 @@ if [[  -n "${leftmask}"  ]] || [[ -n "${rightmask}" ]]; then
     minccalc -express 'A[0]>A[1]?1:0' ${gwimask} ${leftmask} ${fn}_GWI_mask_rt.mnc -labels -byte
   else
     echo "missing masks?"
-    eixt 1
+    exit 1
   fi
 elif [[ ! -e ${fn}_GWI_mask_lt.mnc ]] || [[ ! -e ${fn}_GWI_mask_rt.mnc ]]; then
-    ${FALCON_BIN}/falcon_midsag $gwimask --left ${tempdir}/${nm}_GWI_mask_lt.mnc --right ${tempdir}/${nm}_GWI_mask_rt.mnc
-    minccalc -labels -byte -express 'A[0]>=0.5?1:0' ${tempdir}/${nm}_GWI_mask_lt.mnc ${fn}_GWI_mask_lt.mnc
-    minccalc -labels -byte -express 'A[0]>=0.5?1:0' ${tempdir}/${nm}_GWI_mask_rt.mnc ${fn}_GWI_mask_rt.mnc
+    # need to generate distance function gradient
+    itk_distance --signed  $gwimask ${tempdir}/${nm}_GWI_dist.mnc
+    fast_blur --fwhm 1.0 --grad  ${tempdir}/${nm}_GWI_dist.mnc ${tempdir}/${nm}_GWI_dist_grad.mnc
+    #${FALCON_BIN}/falcon_midsag $gwimask --left ${tempdir}/${nm}_GWI_mask_lt.mnc --right ${tempdir}/${nm}_GWI_mask_rt.mnc
+    #minccalc -labels -byte -express 'A[0]>=0.5?1:0' ${tempdir}/${nm}_GWI_mask_lt.mnc ${fn}_GWI_mask_lt.mnc
+    #minccalc -labels -byte -express 'A[0]>=0.5?1:0' ${tempdir}/${nm}_GWI_mask_rt.mnc ${fn}_GWI_mask_rt.mnc
+    ${FALCON_BIN}/falcon_igl_midsag $gwimask --grad  ${tempdir}/${nm}_GWI_dist_grad.mnc  \
+      --clobber --ftol 1e-7 --iter 1000 --step 0.5 \
+      --left ${tempdir}/${nm}_GWI_mask_lt.mnc --right ${tempdir}/${nm}_GWI_mask_rt.mnc \
+      --central ${tempdir}/${nm}_GWI_mask_cut.mnc 
+    rm -f ${tempdir}/${nm}_GWI_dist.mnc ${tempdir}/${nm}_GWI_dist_grad.mnc
 fi
 
 leftmask=${fn}_GWI_mask_lt.mnc
@@ -866,14 +874,14 @@ for s in 0 1;do
     exit 1
   fi
 
-
   #thickness in native space + atlas
   if [[ ! -e ${OUTPUT}_thickness-${ver}_${hemi}.csv.gz ]];then
     # measure thickness
     ${FALCON_BIN}/falcon_cortex_calc_thickness \
       ${tempdir}/${nm}_ics-${ver}_${s}.ply \
       ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
-      ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv
+      ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
+      --mask ${fn}_nonctx_mask-${ver}.mnc
 
     # resample atlas back into subject's space
     ${FALCON_BIN}/falcon_igl_field_resample \
@@ -913,7 +921,8 @@ for s in 0 1;do
         ${tempdir}/${nm}_ics-${ver}_${s}.ply \
         ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
         ${OUTPUT}_thickness-${ver}_${hemi}_sm_${smooth}.csv.gz \
-          --smooth ${smooth}
+          --smooth ${smooth} \
+          --mask ${fn}_nonctx_mask-${ver}.mnc
     fi
 
     #thickness in ICBM space

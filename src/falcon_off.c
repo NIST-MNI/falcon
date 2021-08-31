@@ -3275,6 +3275,78 @@ int off_surface_gauss_smooth_using_vert(kobj *obj,  double *  var, double sigma,
 
 /****************************************************************
  *
+ * surface 3D variable smoothing, itaratively apply gaussian kernel using only nearest neighbours
+ *
+ * -simple gaussian filtering
+ *
+ * int off_surface_smooth_using_vert(kobj *obj,niikpt *var,double sigma,int iter);
+ *
+ ****************************************************************/
+int off_surface_gauss_smooth_using_vert_with_mask(kobj *obj,  double *  var, double sigma,int iter,unsigned char *mask)
+/* -surface smoothing for var
+ * -var is a obj->nvert-length vector
+ * -sigma - smoothing kernel 
+ * -iter - number of iterations
+ */
+{
+  kvert *v;
+  double *  tmpvar;
+  int 
+    verbose=0,
+    vindex,m,n,it;
+
+  if(verbose) fprintf(stdout,"[off_surface_gauss_smooth_using_vert_with_mask] start\n");
+  if(obj==NULL) {
+    fprintf(stderr,"ERROR: obj is null\n");
+    return 0;
+  }
+  tmpvar = (double *)calloc(obj->nvert,sizeof(double));
+  if(verbose) fprintf(stdout,"[off_surface_gauss_smooth_using_vert_with_mask] vertex loop\n");
+
+  for(it=0;it<iter;it++) {
+
+    for(v=obj->vert,vindex=0; v!=NULL; v=v->next,vindex++) {
+      double total_w = 1.0;
+      /*DEBUG*/
+      if( (v->index-1) != vindex)
+        abort();
+      /**/
+      tmpvar[vindex] = var[vindex];
+
+#if _OPENMP>=201307
+    #pragma omp simd
+#endif
+      for(n=0; n<v->nei; n++) {
+        double dist2 = niikpt_distance2(v->v, v->neivert[n]->v);
+        double w = exp( -dist2/(2*sigma*sigma) );
+
+        if(mask[v->neivert[n]->index-1]>0)
+        {
+          total_w += w;
+
+          tmpvar[vindex] += w * var[ v->neivert[n]->index-1 ];
+        }
+      }
+      tmpvar[vindex] /= total_w;
+    }
+
+#if _OPENMP>=201307
+    #pragma omp simd
+#endif
+    for(n=0; n<obj->nvert; n++) {
+      var[n] = tmpvar[n];
+    }
+  }
+
+  free(tmpvar);
+  if(verbose) fprintf(stdout,"[off_surface_gauss_smooth_using_vert_with_mask] complete\n");
+  return 1;
+}
+
+
+
+/****************************************************************
+ *
  * surface 3D field smoothing
  *
  * -simple gaussian filtering

@@ -228,7 +228,7 @@ int off_surface_trimmed_average_smooth_using_vert(kobj *obj,double *var,int vnei
 int off_surface_field_smooth_using_vert(kobj *obj, niikpt *var, double sigma);
 int off_surface_field_smooth_using_vert_thresholded(kobj *obj, niikpt *var, double sigma,double threshold);
 int off_surface_gauss_smooth_using_vert(kobj *obj, double *var, double sigma,int iter);
-
+int off_surface_gauss_smooth_using_vert_with_mask(kobj *obj,  double *  var, double sigma,int iter,unsigned char *mask);
 
 
 kobj *off_make_sphere_from_icosahedron(double elen,double radius, niikpt ctr);
