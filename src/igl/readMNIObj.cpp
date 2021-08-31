@@ -31,7 +31,7 @@ inline bool readMNIObj(
 
   polygons_struct      *polygons;
 
-  if( input_graphics_file( fname.c_str(), &format, &n_objects,
+  if( input_graphics_file( (char*)fname.c_str(), &format, &n_objects,
                            &object_list ) != VIO_OK ) {
     std::cerr<<"Can't open file"<<std::endl;
     return false;
@@ -80,6 +80,15 @@ inline bool readMNIObj(
       C(i,1)=get_Colour_g_0_1(polygons->colours[i]);
       C(i,2)=get_Colour_b_0_1(polygons->colours[i]);
     }
+  } else {
+    VIO_Colour col;
+    C.resize(1,3);
+    
+    get_object_colour(object_list[0],&col);
+    C(0,0)=get_Colour_r_0_1(col);
+    C(0,1)=get_Colour_g_0_1(col);
+    C(0,2)=get_Colour_b_0_1(col);
+
   }
 
   F.resize(n_triangles,3);

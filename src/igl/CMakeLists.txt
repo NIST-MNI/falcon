@@ -14,8 +14,10 @@ IF(HAVE_BICPL)
         add_library(iglMNIobj STATIC ${SOURCES_MNI_OBJ})
         target_link_libraries(iglMNIobj ${IGL_SCOPE} igl_common)
         target_link_libraries(iglMNIobj ${IGL_SCOPE} igl)
+        target_link_libraries(iglMNIobj ${IGL_SCOPE} bicpl)
     else()
         add_library(iglMNIobj INTERFACE)
+        target_link_libraries(iglMNIobj INTERFACE bicpl)
     endif()
 
     target_include_directories(iglMNIobj INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -61,8 +63,13 @@ if(NOT TARGET igl::png)
     set_property(TARGET igl_png PROPERTY EXPORT_NAME igl::png)
 endif()
 
-add_executable(falcon_igl_obj igl_obj.cpp )
-target_link_libraries(falcon_igl_obj igl::csv igl::core iglMNIobj)
+IF(HAVE_BICPL)
+    add_executable(falcon_igl_obj2any igl_obj2any.cpp )
+    target_link_libraries(falcon_igl_obj2any igl::csv igl::core iglMNIobj)
+
+    add_executable(falcon_igl_any2obj igl_any2obj.cpp )
+    target_link_libraries(falcon_igl_any2obj igl::csv igl::core iglMNIobj)
+ENDIF(HAVE_BICPL)
 
 
 add_executable(falcon_igl_field_eig field_eig.cpp )

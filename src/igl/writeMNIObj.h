@@ -25,4 +25,8 @@ bool writeMNIObj(
 
 };
 
+#ifndef IGL_STATIC_LIBRARY
+#  include "writeMNIObj.cpp"
+#endif
+
 #endif //

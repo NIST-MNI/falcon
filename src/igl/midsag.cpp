@@ -311,7 +311,7 @@ Eigen::Matrix<typename Derived::Scalar,-1,-1> sample_values_vec(const minc_volum
 
 int main(int argc, char *argv[])
 {
-  cxxopts::Options options(argv[0], "Resample field");
+  cxxopts::Options options(argv[0], "Make mid-sagittal separation");
 
   options
       .positional_help("<source> <target>")
@@ -321,7 +321,7 @@ int main(int argc, char *argv[])
     ("v,verbose", "Verbose output",         cxxopts::value<bool>()->default_value("false"))
     ("i,input", "Source volume ",           cxxopts::value<std::string>())
 
-    ("g,grad", "gradient 4D volume ",         cxxopts::value<std::string>())
+    ("g,grad", "distance gradient, 4D volume ",         cxxopts::value<std::string>())
 
     ("o,output", "Output mesh ",             cxxopts::value<std::string>())
     ("l,left", "Left side of the mask ",     cxxopts::value<std::string>())
