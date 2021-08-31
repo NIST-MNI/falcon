@@ -547,8 +547,8 @@ elif [[ ! -e ${fn}_GWI_mask_lt.mnc ]] || [[ ! -e ${fn}_GWI_mask_rt.mnc ]]; then
     #minccalc -labels -byte -express 'A[0]>=0.5?1:0' ${tempdir}/${nm}_GWI_mask_rt.mnc ${fn}_GWI_mask_rt.mnc
     ${FALCON_BIN}/falcon_igl_midsag $gwimask --grad  ${tempdir}/${nm}_GWI_dist_grad.mnc  \
       --clobber --ftol 1e-7 --iter 1000 --step 0.5 \
-      --left ${tempdir}/${nm}_GWI_mask_lt.mnc --right ${tempdir}/${nm}_GWI_mask_rt.mnc \
-      --central ${tempdir}/${nm}_GWI_mask_cut.mnc 
+      --left ${fn}_GWI_mask_lt.mnc --right ${fn}_GWI_mask_rt.mnc \
+      --central ${fn}_GWI_mask_cut.mnc 
     rm -f ${tempdir}/${nm}_GWI_dist.mnc ${tempdir}/${nm}_GWI_dist_grad.mnc
 fi
 
