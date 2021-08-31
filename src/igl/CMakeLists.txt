@@ -69,6 +69,10 @@ IF(HAVE_BICPL)
 
     add_executable(falcon_igl_any2obj igl_any2obj.cpp )
     target_link_libraries(falcon_igl_any2obj igl::csv igl::core iglMNIobj)
+
+
+    INSTALL( TARGETS falcon_igl_obj2any falcon_igl_any2obj )
+
 ENDIF(HAVE_BICPL)
 
 
@@ -120,4 +124,5 @@ INSTALL( TARGETS
         falcon_igl_marching_cubes
         falcon_igl_mesh_smooth
         falcon_igl_mesh_decimate
+        falcon_igl_midsag
        )
