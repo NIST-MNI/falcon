@@ -523,14 +523,21 @@ int main(int argc, char *argv[])
             }
 
             // HACK : due to triangle orintation the Normals are pointing left
-            if(proj<0.0) 
+            if(sqrD(0)>=(center_dist*center_dist)) 
             {
-              right_vol.volume(idx)=vol.volume(idx);
-              left_vol.volume(idx)=0;
+              if(proj<0.0) 
+              {
+                right_vol.volume(idx)=vol.volume(idx);
+                left_vol.volume(idx)=0;
+              } else {
+                left_vol.volume(idx)=vol.volume(idx);
+                right_vol.volume(idx)=0;
+              }
             } else {
-              left_vol.volume(idx)=vol.volume(idx);
+              left_vol.volume(idx)=0;
               right_vol.volume(idx)=0;
             }
+
             if(sqrD(0)<(center_dist*center_dist))
             {
               center_vol.volume(idx)=vol.volume(idx);
