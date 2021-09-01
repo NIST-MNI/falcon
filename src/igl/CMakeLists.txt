@@ -112,6 +112,9 @@ target_link_libraries(falcon_igl_marching_cubes igl::core minc2-simple )
 add_executable(falcon_igl_midsag midsag.cpp)
 target_link_libraries(falcon_igl_midsag igl::core minc2-simple )
 
+add_executable(falcon_igl_mesh_intersect mesh_intersect.cpp )
+target_link_libraries(falcon_igl_mesh_intersect igl::core )
+
 #
 INSTALL( TARGETS 
         falcon_igl_mesh_split
