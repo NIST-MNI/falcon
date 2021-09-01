@@ -66,8 +66,6 @@ int tri_tri_overlap_test_2d(double p1[2], double q1[2], double r1[2],
 
 
 
-
-
 /* some 3D macros */
 
 #define CROSS(dest,v1,v2)                       \
@@ -139,9 +137,7 @@ int tri_tri_overlap_test_2d(double p1[2], double q1[2], double r1[2],
 *
 */
 
-
-int tri_tri_overlap_test_3d(double p1[3], double q1[3], double r1[3], 
-
+IGL_INLINE int tri_tri_overlap_test_3d(double p1[3], double q1[3], double r1[3], 
           double p2[3], double q2[3], double r2[3])
 {
   double dp1, dq1, dr1, dp2, dq2, dr2;
@@ -168,7 +164,6 @@ int tri_tri_overlap_test_3d(double p1[3], double q1[3], double r1[3],
   /* Compute distance signs  of p2, q2 and r2 to the plane of
      triangle(p1,q1,r1) */
 
-  
   SUB(v1,q1,p1)
   SUB(v2,r1,p1)
   CROSS(N1,v1,v2)
@@ -395,7 +390,7 @@ int coplanar_tri_tri3d(double p1[3], double q1[3], double r1[3],
    source and target are the endpoints of the line segment of intersection 
 */
 
-int tri_tri_intersection_test_3d(double p1[3], double q1[3], double r1[3], 
+IGL_INLINE int tri_tri_intersection_test_3d(double p1[3], double q1[3], double r1[3], 
          double p2[3], double q2[3], double r2[3],
          int * coplanar, 
          double source[3], double target[3] )
@@ -560,7 +555,7 @@ int ccw_tri_tri_intersection_2d(double p1[2], double q1[2], double r1[2],
 };
 
 
-int tri_tri_overlap_test_2d(double p1[2], double q1[2], double r1[2], 
+IGL_INLINE int tri_tri_overlap_test_2d(double p1[2], double q1[2], double r1[2], 
           double p2[2], double q2[2], double r2[2]) {
   if ( ORIENT_2D(p1,q1,r1) < 0.0f )
     if ( ORIENT_2D(p2,q2,r2) < 0.0f )
