@@ -6,7 +6,7 @@
 
 #include <igl/readPLY.h>
 #include <igl/writePLY.h>
-#include <igl/AABB.>
+#include <igl/AABB.h>
 
 #include "cxxopts.hpp"
 
@@ -54,8 +54,8 @@ int main(int argc, char *argv[])
         std::cout << std::endl;
       }
 
-      igl::AABB<MatrixXd,3> tree;
-      tree.init(V,T);
+      // igl::AABB<MatrixXd,3> tree;
+      // tree.init(V,T);
       
       // intersect with a triangle along X-Y plane at Z=mean
       Eigen::RowVectorXd lo=V.colwise().minCoeff();
