@@ -346,8 +346,8 @@ else
 fi
 
 if [[ ! -z "${use_anlm}" ]];then
-  echo "Denoising..."
   if [[ ! -e ${fn}_anlm.mnc ]];then 
+    echo "Denoising..."
     itk_minc_nonlocal_filter --anlm --regularize 0.5 $img ${fn}_anlm.mnc
   fi
   scan=${fn}_anlm.mnc
@@ -359,7 +359,7 @@ if [[ -z "$cls" ]];then
   # use atropos to do tissue classification
   cls=${fn}_atropos_seg.mnc
   if [[ ! -e $cls ]];then
-    atropos  $scan $brainmask $nlxfm ${fn}_atropos
+    atropos $scan $brainmask $nlxfm ${fn}_atropos
   fi
 
   prior_SUPRA_CSF=${fn}_atropos_supra_1.mnc
@@ -542,13 +542,21 @@ elif [[ ! -e ${fn}_GWI_mask_lt.mnc ]] || [[ ! -e ${fn}_GWI_mask_rt.mnc ]]; then
     # need to generate distance function gradient
     itk_distance --signed  $gwimask ${tempdir}/${nm}_GWI_dist.mnc
     fast_blur --fwhm 1.0 --grad  ${tempdir}/${nm}_GWI_dist.mnc ${tempdir}/${nm}_GWI_dist_grad.mnc
-    #${FALCON_BIN}/falcon_midsag $gwimask --left ${tempdir}/${nm}_GWI_mask_lt.mnc --right ${tempdir}/${nm}_GWI_mask_rt.mnc
-    #minccalc -labels -byte -express 'A[0]>=0.5?1:0' ${tempdir}/${nm}_GWI_mask_lt.mnc ${fn}_GWI_mask_lt.mnc
-    #minccalc -labels -byte -express 'A[0]>=0.5?1:0' ${tempdir}/${nm}_GWI_mask_rt.mnc ${fn}_GWI_mask_rt.mnc
+
+    # prepare midsagittal slice
+    ${FALCON_BIN}/falcon_igl_midsag $gwimask --output ${tempdir}/${nm}_central.ply
+
+    ${FALCON_BIN}/falcon_igl_mesh_transform --transform ${nlxfm} --invert_transform \
+        ${tempdir}/${nm}_central.ply ${tempdir}/${nm}_fit.ply
+
+
     ${FALCON_BIN}/falcon_igl_midsag $gwimask --grad  ${tempdir}/${nm}_GWI_dist_grad.mnc  \
+      --mesh ${tempdir}/${nm}_fit.ply \
+      --mask ${fn}_nonctx_mask-${ver}.mnc \
       --clobber --ftol 1e-7 --iter 1000 --step 0.5 \
       --left ${fn}_GWI_mask_lt.mnc --right ${fn}_GWI_mask_rt.mnc \
       --central ${fn}_GWI_mask_cut.mnc 
+    
     rm -f ${tempdir}/${nm}_GWI_dist.mnc ${tempdir}/${nm}_GWI_dist_grad.mnc
 fi
 

@@ -1,6 +1,7 @@
 #! /bin/bash
 
 progname=$(basename $0)
+font="Source-Code-Pro"
 
 function Usage {
   cat <<EOF
@@ -53,19 +54,19 @@ falcon_slice_extract $t1w -o $ics,$ocs $MIN $MAX $PCT \
  -z $(seq -s , 20 $(((${s[2]}-40+17)/18)) $((${s[2]}-20)) ) \
  $TMPDIR/pic_%s_%03d.png > /dev/null
 
- montage -geometry +0+0 -tile 8x2 \
+ montage -font ${font} -geometry +0+0 -tile 8x2 \
   $TMPDIR/pic_x_???.png \
   $TMPDIR/pic_x.miff
 
- montage -geometry +0+0 -tile 9x2 \
+ montage -font ${font} -geometry +0+0 -tile 9x2 \
   $TMPDIR/pic_y_???.png \
   $TMPDIR/pic_y.miff
 
-  montage -geometry +0+0 -tile 9x2 \
+  montage -font ${font} -geometry +0+0 -tile 9x2 \
   $TMPDIR/pic_z_???.png \
   $TMPDIR/pic_z.miff
 
-montage \
+montage -font ${font} \
 -background black -fill white \
 -geometry +0+0 -tile 1x3 \
  $TMPDIR/pic_y.miff \

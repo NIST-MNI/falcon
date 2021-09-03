@@ -4,8 +4,8 @@ set -e -o pipefail
 cmap=-spectral
 title=""
 column=""
-font="DejaVu-Sans-Condensed"
-font2="DejaVu-Sans-Bold"
+font="Source-Code-Pro"
+font2="Source-Code-Pro-Bold"
 
 if [[ -z "$FALCON_HOME" ]];then
   FALCON_HOME="${MINC_TOOLKIT}"

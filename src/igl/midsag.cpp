@@ -9,6 +9,7 @@
 #include <igl/AABB.h>
 #include <igl/signed_distance.h>
 
+#include <igl/read_triangle_mesh.h>
 #include <igl/writePLY.h>
 #include <unistd.h>
 
@@ -320,159 +321,203 @@ int main(int argc, char *argv[])
   options.add_options()
     ("v,verbose", "Verbose output",         cxxopts::value<bool>()->default_value("false"))
     ("i,input", "Source volume ",           cxxopts::value<std::string>())
-
+    ("mesh", "Initial mesh, if absent generate plane ",cxxopts::value<std::string>())
     ("g,grad", "distance gradient, 4D volume ",         cxxopts::value<std::string>())
+    ("mask", "Non moving mask ",   cxxopts::value<std::string>())
 
     ("o,output", "Output mesh ",             cxxopts::value<std::string>())
     ("l,left", "Left side of the mask ",     cxxopts::value<std::string>())
     ("r,right", "Right side of the mask ",   cxxopts::value<std::string>())
     ("c,central", "Central strip,(experimental) ",   cxxopts::value<std::string>())
 
+
     ("clobber", "Clobber output file ",      cxxopts::value<bool>()->default_value("false"))
 
     ("step", "Step size",                    cxxopts::value<double>()->default_value("0.5"))
-    ("ftol", "Stopping criteria",            cxxopts::value<double>()->default_value("1e-5"))
+    ("ftol", "Stopping criteria",            cxxopts::value<double>()->default_value("1e-7"))
     ("iter", "Maximum number of iterations", cxxopts::value<int>()->default_value("1000"))
+    ("dist", "Cut distance",                 cxxopts::value<double>()->default_value("0.5"))
 
     ("help", "Print help") ;
   
-  options.parse_positional({"input","grad"});
+  options.parse_positional({"input"});
   auto par = options.parse(argc, argv);
   bool verbose=par["verbose"].as<bool>();
 
-  if( par.count("input") && 
-      par.count("grad")  )
+  if( par.count("input") )
   {
     if ( !par["clobber"].as<bool>() && 
          !access( par["output"].as<std::string>().c_str(), F_OK)) {
       std::cerr << par["output"].as<std::string>()<<" Exists!"<<std::endl;
       return 1;
     }
-    minc_volume vol,grad_vol;
+    minc_volume vol, grad_vol,mask_vol;
     if( !load_volume(par["input"].as<std::string>().c_str(),vol ) )
     {
         std::cerr<<"Error loading:"<<par["input"].as<std::string>().c_str()<<std::endl;
         return 1;
     }
-    if( !load_volume(par["grad"].as<std::string>().c_str(),grad_vol ) )
+    
+    if(par.count("grad") && !load_volume(par["grad"].as<std::string>().c_str(),grad_vol ) )
     {
         std::cerr<<"Error loading:"<<par["grad"].as<std::string>().c_str()<<std::endl;
         return 1;
     }
 
-    Eigen::Matrix3d edges(3,3);
+    if(par.count("mask") && !load_volume(par["mask"].as<std::string>().c_str(),mask_vol ) )
+    {
+        std::cerr<<"Error loading:"<<par["mask"].as<std::string>().c_str()<<std::endl;
+        return 1;
+    }
 
-    edges << Eigen::RowVector3d(vol.dims[0]/2.0,0.0,0.0),
-             Eigen::RowVector3d(vol.dims[0]/2.0,vol.dims[1],0.0),
-             Eigen::RowVector3d(vol.dims[0]/2.0,0.0,vol.dims[2]-0.0);
 
     Eigen::MatrixXd V;
     Eigen::MatrixXi F;
 
-    // TODO: find the plane with minimal intersect first ?
-    gen_plane(edges, 2.0, V, F);
+    if( par.count("mesh") )
+    {
+      Eigen::MatrixXd W;
+      if(!igl::read_triangle_mesh(par["mesh"].as<std::string>(),W,F))
+      { 
+        std::cerr<<"Error loading:"<<par["mesh"].as<std::string>().c_str()<<std::endl;
+        return 1;
+      }
+      V.resize(W.rows(),3);
+      // convert to voxel coordinates
+      for(int i=0;i<V.rows();++i)
+        V.row(i)=vol.world_to_voxel(W.row(i));
 
-    // optimize cut surface
-    // fake normals
-    Eigen::MatrixXd N(V.rows(),3);
-    
+    } else {
+      // TODO: find the plane with minimal intersect first ?
+      Eigen::Matrix3d edges(3,3);
+
+      // determine voxel coodinates of 0,0,0
+      Eigen::RowVector3d center_ijk=vol.world_to_voxel(Eigen::RowVector3d::Zero());
+
+      edges << Eigen::RowVector3d(center_ijk[0],0.0,0.0),
+              Eigen::RowVector3d(center_ijk[0],vol.dims[1],0.0),
+              Eigen::RowVector3d(center_ijk[0],0.0,vol.dims[2]); 
+      gen_plane(edges, 2.0, V, F);
+    }
+
     int    iter = par["iter"].as<int>();
     double step = par["step"].as<double>();
     double ftol = par["ftol"].as<double>();
+    double center_dist=par["dist"].as<double>();
 
-    Eigen::MatrixXd grad(V.rows(),3);
-    Eigen::VectorXd mask(V.rows());
-
-    // smooth using neighborhood averaging 
-    // create smoothing matrix
-    Eigen::SparseMatrix<double> nei;
+    // A hack, without the gradients just dump surface into output
+    if(par.count("grad"))
     {
-      Eigen::VectorXd Asum;
-      igl::adjacency_matrix(F,nei);
 
-      // remove edge vertices (that has less then 5 neighbors)
-      // to avoid shrinking towards the center
-      igl::sum(nei,1,Asum);
-
-      Eigen::VectorXd amask( ((Asum.array()>4).cast<double>()).matrix());
-      nei = nei*amask.asDiagonal();
+      // optimize cut surface
+      // fake normals
+      Eigen::MatrixXd N(V.rows(),3);
       
+
+      Eigen::MatrixXd grad(V.rows(),3);
+      Eigen::VectorXd mask_intersect(V.rows());
+      Eigen::VectorXd vmask;
+
+      // smooth using neighborhood averaging 
       // create smoothing matrix
-      Eigen::SparseMatrix<double> ones(Eigen::VectorXd::Ones(V.rows()).asDiagonal());
-      nei += ones;
-
-      igl::sum(nei,1,Asum);
-
-      Asum = Asum.cwiseInverse();
-      nei = nei*Asum.asDiagonal();
-
-      nei.makeCompressed();
-    }
-
-    Eigen::VectorXd cost=Eigen::VectorXd::Zero(iter);
-    int    sum_iter=20;
-    double iter_change=1e7;    
-    double prev_cost_moving_sum=0.0;
-    double center_dist=1.0;
-
-    for(int i=0;i<iter;++i) {
-      double cost_moving_sum=0.0;
-
-      igl::per_vertex_normals(V,F,N);
-
-      grad = sample_values_vec<Eigen::VectorXd>(grad_vol, V, Eigen::RowVector3d::Zero());
-
-      mask=sample_values<Eigen::VectorXd>(vol, V);
-      cost(i)=mask.mean();
-
-      if(i>sum_iter)
+      Eigen::SparseMatrix<double> nei;
       {
-        cost_moving_sum=cost.block(i-sum_iter,0,i,1).mean();
-        if(i>(sum_iter+1))
-          iter_change = prev_cost_moving_sum - cost_moving_sum;
+        Eigen::VectorXd Asum;
+        igl::adjacency_matrix(F,nei);
 
-        prev_cost_moving_sum = cost_moving_sum;
+        // remove edge vertices (that has less then 5 neighbors)
+        // to avoid shrinking towards the center
+        igl::sum(nei,1,Asum);
+
+        Eigen::VectorXd amask( ((Asum.array()>4).cast<double>()).matrix());
+        nei = nei*amask.asDiagonal();
+        
+        // do not smooth over masked area
+        if(par.count("mask")) {
+          vmask = ((sample_values<Eigen::VectorXd>(mask_vol, V).array()<1.0).cast<double>()).matrix();
+          nei = nei*vmask.asDiagonal();
+        }
+
+        // create smoothing matrix
+        Eigen::SparseMatrix<double> ones(Eigen::VectorXd::Ones(V.rows()).asDiagonal());
+        nei += ones;
+
+        igl::sum(nei,1,Asum);
+
+        Asum = Asum.cwiseInverse();
+        nei = nei*Asum.asDiagonal();
+
+        nei.makeCompressed();
       }
-      if(verbose)
-        std::cout<<"Iter:"<<i<<" cost fun change:"<<iter_change;
 
-      if(iter_change < ftol)
-      {
+      Eigen::VectorXd cost=Eigen::VectorXd::Zero(iter);
+      int    sum_iter=20;
+      double iter_change=1e7;    
+      double prev_cost_moving_sum=0.0;
+
+      for(int i=0;i<iter;++i) {
+        double cost_moving_sum=0.0;
+
+        igl::per_vertex_normals(V,F,N);
+
+        grad = sample_values_vec<Eigen::VectorXd>(grad_vol, V, Eigen::RowVector3d::Zero());
+
+        mask_intersect = sample_values<Eigen::VectorXd>(vol, V);
+        cost(i)=mask_intersect.mean();
+
+        if(i>sum_iter)
+        {
+          cost_moving_sum=cost.block(i-sum_iter,0,i,1).mean();
+          if(i>(sum_iter+1))
+            iter_change = prev_cost_moving_sum - cost_moving_sum;
+
+          prev_cost_moving_sum = cost_moving_sum;
+        }
         if(verbose)
-          std::cout<< " converged due to ftol"<<std::endl;
-        break;
+          std::cout<<"Iter:"<<i<<" cost fun change:"<<iter_change;
+
+        if(iter_change < ftol)
+        {
+          if(verbose)
+            std::cout<< " converged due to ftol"<<std::endl;
+          break;
+        }
+
+        // project on Normal
+        // HACK
+        for(int j=0;j<grad.rows();++j)
+          grad.row(j).stableNormalize();
+
+        Eigen::VectorXd update_step=(N.array()*grad.array()).matrix().rowwise().sum(); //calculate projection
+
+        // apply mask (?)
+        // mask.array() *= -1.0;
+        // mask.array() += 1.0;
+        //update_step.array()*=mask.array();
+        if(par.count("mask"))
+          update_step.array()*=vmask.array();
+
+        // TODO: smooth
+        update_step *= step;
+        Eigen::MatrixXd U=N;
+
+        // Eigen doens't do broadcast?
+        U.col(0).array() *= update_step.array();
+        U.col(1).array() *= update_step.array();
+        U.col(2).array() *= update_step.array();
+
+        if(verbose)
+          std::cout<<" Update:"<<U.rowwise().norm().mean()<<std::endl;
+
+        V += U;
+
+        // smooth solution
+        V.col(0) = V.col(0).transpose()*nei;
+        V.col(1) = V.col(1).transpose()*nei;
+        V.col(2) = V.col(2).transpose()*nei;
       }
-
-      // project on Normal
-      // HACK
-      for(int j=0;j<grad.rows();++j)
-        grad.row(j).stableNormalize();
-
-      Eigen::VectorXd update_step=(N.array()*grad.array()).matrix().rowwise().sum(); //calculate projection
-
-      // apply mask (?)
-      // mask.array() *= -1.0;
-      // mask.array() += 1.0;
-      //update_step.array()*=mask.array();
-
-      // TODO: smooth
-      update_step *= step;
-      Eigen::MatrixXd U=N;
-
-      // Eigen doens't do broadcast?
-      U.col(0).array() *= update_step.array();
-      U.col(1).array() *= update_step.array();
-      U.col(2).array() *= update_step.array();
-
-      if(verbose)
-        std::cout<<" Update:"<<U.rowwise().norm().mean()<<std::endl;
-
-      V += U;
-
-      // smooth solution
-      V.col(0) = V.col(0).transpose()*nei;
-      V.col(1) = V.col(1).transpose()*nei;
-      V.col(2) = V.col(2).transpose()*nei;
+    } else {
+      std::cout<<"Warning: Can't deform surface without gradients"<<std::endl;
     }
 
     if(par.count("left")||par.count("right")||par.count("central"))
@@ -569,10 +614,6 @@ int main(int argc, char *argv[])
         W.row(i)=vol.voxel_to_world(V.row(i));
 
       igl::writePLY(par["output"].as<std::string>(), W, F );
-    // igl::writePLY(par["output"].as<std::string>(),V,F, 
-    //                       Eigen::MatrixXi(0,0), Eigen::MatrixXd(0,0), Eigen::MatrixXd(0,0), 
-    //                       mask , {"mask"},
-    //                      {"midsag"});
     }
 
   } else {
