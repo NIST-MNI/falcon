@@ -7,6 +7,7 @@
 #include <igl/readPLY.h>
 #include <igl/writePLY.h>
 #include <igl/AABB.h>
+#include <igl/tinyply.h>
 
 #include "cxxopts.hpp"
 
@@ -71,21 +72,22 @@ int main(int argc, char *argv[])
 
       std::cout<<"Lo:"<<lo<<" Hi:"<<hi<<std::endl;
 
-      Eigen::Matrix<double,3,3,Eigen::ColMajor> sect_tri;
+      Eigen::Matrix<double,3,3,Eigen::RowMajor> sect_tri;
 
       sect_tri<< lo(0),lo(1),cnt(2),
                  lo(0),2*hi(1)-lo(1),cnt(2),
                  2*hi(0)-lo(0),lo(1),cnt(2);
 
-      std::vector<Eigen::Matrix<double,2,3,Eigen::ColMajor> > edges;
+      std::vector<Eigen::Matrix<double,2,3,Eigen::RowMajor> > edges;
       int coplanar_ctr=0;
       // go over all triangles and check intersections
       auto tick = std::chrono::steady_clock::now();
       for(int i=0; i<F.rows(); ++i)
       {
         int coplanar=0;
-        Eigen::Matrix<double,2,3,Eigen::ColMajor> edge;
-        Eigen::Matrix<double,3,3,Eigen::ColMajor> tri;
+
+        Eigen::Matrix<double,2,3,Eigen::RowMajor> edge;
+        Eigen::Matrix<double,3,3,Eigen::RowMajor> tri;
         tri << V.row(F(i,0)),
                V.row(F(i,1)),
                V.row(F(i,2));
@@ -103,6 +105,42 @@ int main(int argc, char *argv[])
       double duration=std::chrono::duration <double, std::milli> (std::chrono::steady_clock::now() - tick).count();
       std::cout<<"Found "<<edges.size()<<" intersections"<<" and "<< coplanar_ctr << " coplanar"<<std::endl;
       std::cout<<"Took:"<<duration<<" ms"<<std::endl;
+      // save to a file
+      // using .ply file
+      {
+        tinyply::PlyFile file;
+        std::vector<double> _v;
+        std::vector<int>    _e;
+        int ec=0;
+        //TODO: remove duplicated vertex
+
+        for(auto e:edges)
+        { 
+          for(int i=0;i<2;++i) {
+            _e.push_back(ec++);
+            _e.push_back(ec++);
+
+            for(int j=0;j<3;++j)
+              _v.push_back(e(i,j));
+          }
+        }
+
+        file.add_properties_to_element("vertex",{"x","y","z"},
+          tinyply::Type::FLOAT64, edges.size()*2,
+          reinterpret_cast<uint8_t*>(&_v[0]), tinyply::Type::INVALID,0);
+
+        file.add_properties_to_element("edge",{"vertex1","vertex2"},
+          tinyply::Type::INT32, edges.size()*2,
+          reinterpret_cast<uint8_t*>(&_e[0]), tinyply::Type::INVALID,0);
+
+        std::filebuf fb;
+        fb.open("section.ply",std::ios::out|std::ios::binary);
+
+        std::ostream stream(&fb);
+         
+        file.write(stream,true);
+      }
+
 
       using AABBTree = igl::AABB<Eigen::MatrixXd,3>;
       // using AABB for self intersection check
@@ -133,7 +171,7 @@ int main(int argc, char *argv[])
                     << tri_box.corner(BBOX::CornerType::BottomRightFloor).transpose() 
                     << ") ";
 
-        Eigen::Matrix<double, 3,3, Eigen::ColMajor> tri1;
+        Eigen::Matrix<double, 3,3, Eigen::RowMajor> tri1;
         tri1 << V.row(F(i,0)),
                 V.row(F(i,1)),
                 V.row(F(i,2));
@@ -161,8 +199,8 @@ int main(int argc, char *argv[])
                return false;
 
             int coplanar=0;
-            Eigen::Matrix<double,2,3,Eigen::ColMajor> edge;
-            Eigen::Matrix<double,3,3,Eigen::ColMajor> tri2;
+            Eigen::Matrix<double,2,3,Eigen::RowMajor> edge;
+            Eigen::Matrix<double,3,3,Eigen::RowMajor> tri2;
 
             tri2 << V.row(F(t.m_primitive,0)),
                     V.row(F(t.m_primitive,1)),
@@ -174,14 +212,14 @@ int main(int argc, char *argv[])
               &coplanar,
               edge.data(),edge.data()+3))
             {
-              //if(!coplanar)
-              //{
+              if(!coplanar)
+              {
                 _inter=t.m_primitive;
                 intersect(i)=1;
                 intersect(t.m_primitive)=1;
                 depth=d;
                 return true;
-              //}
+              }
             }
           } else {
             if(t.m_box.intersects(tri_box)) 
