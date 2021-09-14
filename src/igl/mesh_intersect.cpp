@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
         std::cout << std::endl;
       }
 
+      #if 0
       // intersect with a triangle along X-Y plane at Z=mean
       Eigen::RowVectorXd lo=V.colwise().minCoeff();
       Eigen::RowVectorXd hi=V.colwise().maxCoeff();
@@ -78,33 +79,40 @@ int main(int argc, char *argv[])
                  lo(0),2*hi(1)-lo(1),cnt(2),
                  2*hi(0)-lo(0),lo(1),cnt(2);
 
-      std::vector<Eigen::Matrix<double,2,3,Eigen::RowMajor> > edges;
+
+      std::vector<Eigen::Matrix<double,1,3,Eigen::RowMajor> > edges;
+
       int coplanar_ctr=0;
       // go over all triangles and check intersections
       auto tick = std::chrono::steady_clock::now();
       for(int i=0; i<F.rows(); ++i)
       {
-        int coplanar=0;
+        bool coplanar=false;
 
-        Eigen::Matrix<double,2,3,Eigen::RowMajor> edge;
-        Eigen::Matrix<double,3,3,Eigen::RowMajor> tri;
-        tri << V.row(F(i,0)),
-               V.row(F(i,1)),
-               V.row(F(i,2));
+        Eigen::Matrix<double,1,3,Eigen::RowMajor> edge1,edge2;
         
-        if(tri_tri_intersection_test_3d(
-           tri.data(),tri.data()+3,tri.data()+6,
-           sect_tri.data(),sect_tri.data()+3,sect_tri.data()+6,&coplanar,edge.data(),edge.data()+3))
+        if(igl::tri_tri_intersection_test_3d(
+           V.row(F(i,0)),  V.row(F(i,1)),  V.row(F(i,2)),
+           sect_tri.row(0),sect_tri.row(1),sect_tri.row(2),
+           coplanar,
+           edge1, edge2))
         {
           if(!coplanar)
-            edges.push_back(edge);
+          {
+
+            edges.push_back(edge1);
+            edges.push_back(edge2);
+          }
           else
             coplanar_ctr++; // HACK: add all three edges?
         }
       }
       double duration=std::chrono::duration <double, std::milli> (std::chrono::steady_clock::now() - tick).count();
-      std::cout<<"Found "<<edges.size()<<" intersections"<<" and "<< coplanar_ctr << " coplanar"<<std::endl;
+      std::cout<<"Found "<<edges.size()/2<<" intersections"<<" and "<< coplanar_ctr << " coplanar"<<std::endl;
       std::cout<<"Took:"<<duration<<" ms"<<std::endl;
+      #endif //
+
+      #if 0
       // save to a file
       // using .ply file
       {
@@ -116,21 +124,17 @@ int main(int argc, char *argv[])
 
         for(auto e:edges)
         { 
-          for(int i=0;i<2;++i) {
-            _e.push_back(ec++);
-            _e.push_back(ec++);
-
-            for(int j=0;j<3;++j)
-              _v.push_back(e(i,j));
-          }
+          for(int j=0;j<3;++j)
+            _v.push_back(e(j));
+          _e.push_back(ec++);
         }
 
         file.add_properties_to_element("vertex",{"x","y","z"},
-          tinyply::Type::FLOAT64, edges.size()*2,
+          tinyply::Type::FLOAT64, edges.size(),
           reinterpret_cast<uint8_t*>(&_v[0]), tinyply::Type::INVALID,0);
 
         file.add_properties_to_element("edge",{"vertex1","vertex2"},
-          tinyply::Type::INT32, edges.size()*2,
+          tinyply::Type::INT32, edges.size()/2,
           reinterpret_cast<uint8_t*>(&_e[0]), tinyply::Type::INVALID,0);
 
         std::filebuf fb;
@@ -140,7 +144,10 @@ int main(int argc, char *argv[])
          
         file.write(stream,true);
       }
+      #endif
 
+
+      auto tick = std::chrono::steady_clock::now();
 
       using AABBTree = igl::AABB<Eigen::MatrixXd,3>;
       // using AABB for self intersection check
@@ -151,7 +158,7 @@ int main(int argc, char *argv[])
       std::cout<<"Checking for self-intersections"<<std::endl;
       Eigen::VectorXi intersect=Eigen::VectorXi::Zero(F.rows());
 
-      tick = std::chrono::steady_clock::now();
+
       for(int i=0; i<F.rows(); ++i)
       {
         int _inter=-1;
@@ -163,19 +170,6 @@ int main(int argc, char *argv[])
 
         for(int j=0;j<3;++j)
           tri_box.extend( V.row( F(i,j) ).transpose() );
-
-        if(i<10)
-          std::cout << i<<"("
-                    << tri_box.corner(BBOX::CornerType::TopLeftCeil).transpose()
-                    << "):(" 
-                    << tri_box.corner(BBOX::CornerType::BottomRightFloor).transpose() 
-                    << ") ";
-
-        Eigen::Matrix<double, 3,3, Eigen::RowMajor> tri1;
-        tri1 << V.row(F(i,0)),
-                V.row(F(i,1)),
-                V.row(F(i,2));
-
 
         auto adjacent_faces = [](auto A,auto B)->bool {
           for(int i=0;i<3;++i)
@@ -198,19 +192,14 @@ int main(int argc, char *argv[])
             if(adjacent_faces(F.row(i), F.row(t.m_primitive)) )
                return false;
 
-            int coplanar=0;
-            Eigen::Matrix<double,2,3,Eigen::RowMajor> edge;
-            Eigen::Matrix<double,3,3,Eigen::RowMajor> tri2;
+            bool coplanar=false;
+            Eigen::Matrix<double,1,3,Eigen::RowMajor> edge1,edge2;
 
-            tri2 << V.row(F(t.m_primitive,0)),
-                    V.row(F(t.m_primitive,1)),
-                    V.row(F(t.m_primitive,2));
-
-            if(tri_tri_intersection_test_3d(
-              tri1.data(),tri1.data()+3,tri1.data()+6,
-              tri2.data(),tri2.data()+3,tri2.data()+6,
-              &coplanar,
-              edge.data(),edge.data()+3))
+            if(igl::tri_tri_intersection_test_3d(
+              V.row(F(i,0)),V.row(F(i,1)),V.row(F(i,2)),
+              V.row(F(t.m_primitive,0)),V.row(F(t.m_primitive,1)),V.row(F(t.m_primitive,2)),
+              coplanar,
+              edge1,edge2))
             {
               if(!coplanar)
               {
@@ -231,10 +220,9 @@ int main(int argc, char *argv[])
 
         // actual check
         bool rr=check_intersect(tree,0);
-        if(i<10)
-          std::cout<<_inter<<" "<<depth<<std::endl;
       }
-      duration=std::chrono::duration <double, std::milli> (std::chrono::steady_clock::now() - tick).count();
+
+      double duration=std::chrono::duration <double, std::milli> (std::chrono::steady_clock::now() - tick).count();
       std::cout<<"Found "<<intersect.sum()<<" intersections"<<std::endl;
       std::cout<<"Took:"<<duration<<" ms"<<std::endl;
       // saving as FACE data

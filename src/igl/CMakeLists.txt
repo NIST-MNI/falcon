@@ -4,9 +4,7 @@ ENDIF()
 
 IF(HAVE_BICPL)
     add_definitions(-DHAVE_BICPL)
-
-    #add_library(iglMNIobj STATIC readMNIObj.cpp readMNIObj.h writeMNIOjb.cpp writeMNIOjb.h )
-
+    
     if(LIBIGL_USE_STATIC_LIBRARY)
         set(SOURCES_MNI_OBJ
             readMNIObj.cpp readMNIObj.h writeMNIOjb.cpp writeMNIOjb.h

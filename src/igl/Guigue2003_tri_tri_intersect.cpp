@@ -35,35 +35,9 @@
 *  http://www.acm.org/jgt/papers/GuigueDevillers03/                         
 *                                                                           
 */
-
-
-/* function prototype */
-
-// Three-dimensional Triangle-Triangle Overlap Test
-int tri_tri_overlap_test_3d(double p1[3], double q1[3], double r1[3], 
-          double p2[3], double q2[3], double r2[3]);
-
-
-// Three-dimensional Triangle-Triangle Overlap Test
-// additionaly computes the segment of intersection of the two triangles if it exists. 
-// coplanar returns whether the triangles are coplanar, 
-// source and target are the endpoints of the line segment of intersection 
-int tri_tri_intersection_test_3d(double p1[3], double q1[3], double r1[3], 
-								 double p2[3], double q2[3], double r2[3],
-								 int * coplanar, 
-								 double source[3],double target[3]);
-
-
-int coplanar_tri_tri3d(double  p1[3], double  q1[3], double  r1[3],
-           double  p2[3], double  q2[3], double  r2[3],
-           double  N1[3]);
-
-
-// Two dimensional Triangle-Triangle Overlap Test
-int tri_tri_overlap_test_2d(double p1[2], double q1[2], double r1[2], 
-          double p2[2], double q2[2], double r2[2]);
-
-
+#ifndef _TRI_TRI_INTERSECT_CPP_
+#define _TRI_TRI_INTERSECT_CPP_
+namespace igl {
 
 
 /* some 3D macros */
@@ -93,13 +67,13 @@ int tri_tri_overlap_test_2d(double p1[2], double q1[2], double r1[2],
   SUB(v2,p1,q1)\
   CROSS(N1,v1,v2)\
   SUB(v1,q2,q1)\
-  if (DOT(v1,N1) > 0.0f) return 0;\
+  if (DOT(v1,N1) > 0.0f) return false;\
   SUB(v1,p2,p1)\
   SUB(v2,r1,p1)\
   CROSS(N1,v1,v2)\
   SUB(v1,r2,p1) \
-  if (DOT(v1,N1) > 0.0f) return 0;\
-  else return 1; }
+  if (DOT(v1,N1) > 0.0f) return false;\
+  else return true; }
 
 
 
@@ -137,12 +111,22 @@ int tri_tri_overlap_test_2d(double p1[2], double q1[2], double r1[2],
 *
 */
 
-IGL_INLINE int tri_tri_overlap_test_3d(double p1[3], double q1[3], double r1[3], 
-          double p2[3], double q2[3], double r2[3])
+template <typename DerivedP1,typename DerivedQ1,typename DerivedR1,
+typename DerivedP2,typename DerivedQ2,typename DerivedR2> 
+IGL_INLINE bool tri_tri_overlap_test_3d(
+  const Eigen::MatrixBase<DerivedP1> &  p1, 
+  const Eigen::MatrixBase<DerivedQ1> &  q1, 
+  const Eigen::MatrixBase<DerivedR1> &  r1, 
+  const Eigen::MatrixBase<DerivedP2> &  p2, 
+  const Eigen::MatrixBase<DerivedQ2> &  q2, 
+  const Eigen::MatrixBase<DerivedR2> &  r2)
 {
-  double dp1, dq1, dr1, dp2, dq2, dr2;
-  double v1[3], v2[3];
-  double N1[3], N2[3]; 
+  using Scalar    = typename DerivedP1::Scalar;
+  using RowVector = typename Eigen::Matrix<Scalar,1,3>;
+
+  Scalar dp1, dq1, dr1, dp2, dq2, dr2;
+  RowVector v1, v2;
+  RowVector N1, N2; 
   
   /* Compute distance signs  of p1, q1 and r1 to the plane of
      triangle(p2,q2,r2) */
@@ -159,7 +143,7 @@ IGL_INLINE int tri_tri_overlap_test_3d(double p1[3], double q1[3], double r1[3],
   SUB(v1,r1,r2)
   dr1 = DOT(v1,N2);
   
-  if (((dp1 * dq1) > 0.0f) && ((dp1 * dr1) > 0.0f))  return 0; 
+  if (((dp1 * dq1) > 0.0f) && ((dp1 * dr1) > 0.0f))  return false; 
 
   /* Compute distance signs  of p2, q2 and r2 to the plane of
      triangle(p1,q1,r1) */
@@ -175,7 +159,7 @@ IGL_INLINE int tri_tri_overlap_test_3d(double p1[3], double q1[3], double r1[3],
   SUB(v1,r2,r1)
   dr2 = DOT(v1,N1);
   
-  if (((dp2 * dq2) > 0.0f) && ((dp2 * dr2) > 0.0f)) return 0;
+  if (((dp2 * dq2) > 0.0f) && ((dp2 * dr2) > 0.0f)) return false;
 
   /* Permutation in a canonical form of T1's vertices */
 
@@ -207,14 +191,22 @@ IGL_INLINE int tri_tri_overlap_test_3d(double p1[3], double q1[3], double r1[3],
 
 
 
-int coplanar_tri_tri3d(double p1[3], double q1[3], double r1[3],
-           double p2[3], double q2[3], double r2[3],
-           double normal_1[3]){
-  
-  double P1[2],Q1[2],R1[2];
-  double P2[2],Q2[2],R2[2];
+template <typename DerivedP1,typename DerivedQ1,typename DerivedR1,
+typename DerivedP2,typename DerivedQ2,typename DerivedR2,
+typename DerivedN1>
+IGL_INLINE bool coplanar_tri_tri3d(
+  const Eigen::MatrixBase<DerivedP1> &p1, const Eigen::MatrixBase<DerivedQ1> &q1, const Eigen::MatrixBase<DerivedR1> &r1,
+  const Eigen::MatrixBase<DerivedP2> &p2, const Eigen::MatrixBase<DerivedQ2> &q2, const Eigen::MatrixBase<DerivedR2> &r2,
+  const Eigen::MatrixBase<DerivedN1> &normal_1)
+{
 
-  double n_x, n_y, n_z;
+  using Scalar= typename DerivedP1::Scalar;
+  using RowVector2D = typename Eigen::Matrix<Scalar,1,2>;
+
+  RowVector2D P1,Q1,R1;
+  RowVector2D P2,Q2,R2;
+
+  Scalar n_x, n_y, n_z;
 
   n_x = ((normal_1[0]<0)?-normal_1[0]:normal_1[0]);
   n_y = ((normal_1[1]<0)?-normal_1[1]:normal_1[1]);
@@ -302,7 +294,7 @@ int coplanar_tri_tri3d(double p1[3], double q1[3], double r1[3],
   alpha = DOT(v1,N1) / DOT(v2,N1); \
   SCALAR(v1,alpha,v2) \
   SUB(target,p2,v1) \
-  return 1; \
+  return true; \
       } else { \
   SUB(v1,p2,p1) \
   SUB(v2,p2,q2) \
@@ -314,16 +306,16 @@ int coplanar_tri_tri3d(double p1[3], double q1[3], double r1[3],
   alpha = DOT(v1,N1) / DOT(v2,N1); \
   SCALAR(v1,alpha,v2) \
   SUB(target,p2,v1) \
-  return 1; \
+  return true; \
       } \
     } else { \
-      return 0; \
+      return false; \
     } \
   } else { \
     SUB(v2,q2,p1) \
     CROSS(N,v1,v2) \
     if (DOT(v,N) < 0.0f) { \
-      return 0; \
+      return false; \
     } else { \
       SUB(v1,r1,p1) \
       CROSS(N,v1,v2) \
@@ -338,7 +330,7 @@ int coplanar_tri_tri3d(double p1[3], double q1[3], double r1[3],
   alpha = DOT(v1,N2) / DOT(v2,N2); \
   SCALAR(v1,alpha,v2) \
   SUB(target,p1,v1) \
-  return 1; \
+  return true; \
       } else { \
   SUB(v1,p2,p1) \
   SUB(v2,p2,q2) \
@@ -350,7 +342,7 @@ int coplanar_tri_tri3d(double p1[3], double q1[3], double r1[3],
   alpha = DOT(v1,N2) / DOT(v2,N2); \
   SCALAR(v1,alpha,v2) \
   SUB(target,p1,v1) \
-  return 1; \
+  return true; \
       }}}} 
 
                 
@@ -377,7 +369,7 @@ int coplanar_tri_tri3d(double p1[3], double q1[3], double r1[3],
       if (dr2 > 0.0f) CONSTRUCT_INTERSECTION(p1,q1,r1,r2,p2,q2)\
       else if (dr2 < 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2)\
       else { \
-        *coplanar = 1; \
+        coplanar = true; \
   return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);\
      } \
   }} }
@@ -390,17 +382,23 @@ int coplanar_tri_tri3d(double p1[3], double q1[3], double r1[3],
    source and target are the endpoints of the line segment of intersection 
 */
 
-IGL_INLINE int tri_tri_intersection_test_3d(double p1[3], double q1[3], double r1[3], 
-         double p2[3], double q2[3], double r2[3],
-         int * coplanar, 
-         double source[3], double target[3] )
-         
+template <typename DerivedP1,typename DerivedQ1,typename DerivedR1,
+typename DerivedP2,typename DerivedQ2,typename DerivedR2,
+typename DerivedS,typename DerivedT>
+IGL_INLINE bool tri_tri_intersection_test_3d(
+    const Eigen::MatrixBase<DerivedP1> & p1, const Eigen::MatrixBase<DerivedQ1> & q1, const Eigen::MatrixBase<DerivedR1> & r1, 
+    const Eigen::MatrixBase<DerivedP2> & p2, const Eigen::MatrixBase<DerivedQ2> & q2, const Eigen::MatrixBase<DerivedR2> & r2,
+    bool & coplanar, 
+    Eigen::MatrixBase<DerivedS> & source, 
+    Eigen::MatrixBase<DerivedT> & target )        
 {
-  double dp1, dq1, dr1, dp2, dq2, dr2;
-  double v1[3], v2[3], v[3];
-  double N1[3], N2[3], N[3];
-  double alpha;
+  using Scalar= typename DerivedP1::Scalar;
+  using RowVector3D = typename Eigen::Matrix<Scalar,1,3>;
 
+  Scalar dp1, dq1, dr1, dp2, dq2, dr2;
+  RowVector3D v1, v2, v;
+  RowVector3D N1, N2, N;
+  Scalar alpha;
   // Compute distance signs  of p1, q1 and r1 
   // to the plane of triangle(p2,q2,r2)
 
@@ -416,7 +414,9 @@ IGL_INLINE int tri_tri_intersection_test_3d(double p1[3], double q1[3], double r
   SUB(v1,r1,r2)
   dr1 = DOT(v1,N2);
   
-  if (((dp1 * dq1) > 0.0f) && ((dp1 * dr1) > 0.0f))  return 0; 
+  coplanar = false;
+
+  if (((dp1 * dq1) > 0.0f) && ((dp1 * dr1) > 0.0f))  return false; 
 
   // Compute distance signs  of p2, q2 and r2 
   // to the plane of triangle(p1,q1,r1)
@@ -433,7 +433,7 @@ IGL_INLINE int tri_tri_intersection_test_3d(double p1[3], double q1[3], double r
   SUB(v1,r2,r1)
   dr2 = DOT(v1,N1);
   
-  if (((dp2 * dq2) > 0.0f) && ((dp2 * dr2) > 0.0f)) return 0;
+  if (((dp2 * dq2) > 0.0f) && ((dp2 * dr2) > 0.0f)) return false;
 
   // Permutation in a canonical form of T1's vertices
 
@@ -462,7 +462,7 @@ IGL_INLINE int tri_tri_intersection_test_3d(double p1[3], double q1[3], double r
       else {
   // triangles are co-planar
 
-  *coplanar = 1;
+  coplanar = true;
   return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);
       }
     }
@@ -489,30 +489,30 @@ IGL_INLINE int tri_tri_intersection_test_3d(double p1[3], double q1[3], double r
   if (ORIENT_2D(R2,P2,Q1) >= 0.0f)\
     if (ORIENT_2D(R2,Q2,Q1) <= 0.0f)\
       if (ORIENT_2D(P1,P2,Q1) > 0.0f) {\
-  if (ORIENT_2D(P1,Q2,Q1) <= 0.0f) return 1; \
-  else return 0;} else {\
+  if (ORIENT_2D(P1,Q2,Q1) <= 0.0f) return true; \
+  else return false;} else {\
   if (ORIENT_2D(P1,P2,R1) >= 0.0f)\
-    if (ORIENT_2D(Q1,R1,P2) >= 0.0f) return 1; \
-    else return 0;\
-  else return 0;}\
+    if (ORIENT_2D(Q1,R1,P2) >= 0.0f) return true; \
+    else return false;\
+  else return false;}\
     else \
       if (ORIENT_2D(P1,Q2,Q1) <= 0.0f)\
   if (ORIENT_2D(R2,Q2,R1) <= 0.0f)\
-    if (ORIENT_2D(Q1,R1,Q2) >= 0.0f) return 1; \
-    else return 0;\
-  else return 0;\
-      else return 0;\
+    if (ORIENT_2D(Q1,R1,Q2) >= 0.0f) return true; \
+    else return false;\
+  else return false;\
+      else return false;\
   else\
     if (ORIENT_2D(R2,P2,R1) >= 0.0f) \
       if (ORIENT_2D(Q1,R1,R2) >= 0.0f)\
-  if (ORIENT_2D(P1,P2,R1) >= 0.0f) return 1;\
-  else return 0;\
+  if (ORIENT_2D(P1,P2,R1) >= 0.0f) return true;\
+  else return false;\
       else \
   if (ORIENT_2D(Q1,R1,Q2) >= 0.0f) {\
-    if (ORIENT_2D(R2,R1,Q2) >= 0.0f) return 1; \
-    else return 0; }\
-  else return 0; \
-    else  return 0; \
+    if (ORIENT_2D(R2,R1,Q2) >= 0.0f) return true; \
+    else return false; }\
+  else return false; \
+    else  return false; \
  };
 
 
@@ -520,27 +520,32 @@ IGL_INLINE int tri_tri_intersection_test_3d(double p1[3], double q1[3], double r
 #define INTERSECTION_TEST_EDGE(P1, Q1, R1, P2, Q2, R2) { \
   if (ORIENT_2D(R2,P2,Q1) >= 0.0f) {\
     if (ORIENT_2D(P1,P2,Q1) >= 0.0f) { \
-        if (ORIENT_2D(P1,Q1,R2) >= 0.0f) return 1; \
-        else return 0;} else { \
+        if (ORIENT_2D(P1,Q1,R2) >= 0.0f) return true; \
+        else return false;} else { \
       if (ORIENT_2D(Q1,R1,P2) >= 0.0f){ \
-  if (ORIENT_2D(R1,P1,P2) >= 0.0f) return 1; else return 0;} \
-      else return 0; } \
+  if (ORIENT_2D(R1,P1,P2) >= 0.0f) return true; else return false;} \
+      else return false; } \
   } else {\
     if (ORIENT_2D(R2,P2,R1) >= 0.0f) {\
       if (ORIENT_2D(P1,P2,R1) >= 0.0f) {\
-  if (ORIENT_2D(P1,R1,R2) >= 0.0f) return 1;  \
+  if (ORIENT_2D(P1,R1,R2) >= 0.0f) return true;  \
   else {\
-    if (ORIENT_2D(Q1,R1,R2) >= 0.0f) return 1; else return 0;}}\
-      else  return 0; }\
-    else return 0; }}
+    if (ORIENT_2D(Q1,R1,R2) >= 0.0f) return true; else return false;}}\
+      else  return false; }\
+    else return false; }}
 
 
 
-int ccw_tri_tri_intersection_2d(double p1[2], double q1[2], double r1[2], 
-        double p2[2], double q2[2], double r2[2]) {
+
+template <typename DerivedP1,typename DerivedQ1,typename DerivedR1,
+typename DerivedP2,typename DerivedQ2,typename DerivedR2>
+IGL_INLINE bool ccw_tri_tri_intersection_2d(
+  const Eigen::MatrixBase<DerivedP1> &p1, const Eigen::MatrixBase<DerivedQ1> &q1, const Eigen::MatrixBase<DerivedR1> &r1,
+  const Eigen::MatrixBase<DerivedP2> &p2, const Eigen::MatrixBase<DerivedQ2> &q2, const Eigen::MatrixBase<DerivedR2> &r2) 
+{
   if ( ORIENT_2D(p2,q2,p1) >= 0.0f ) {
     if ( ORIENT_2D(q2,r2,p1) >= 0.0f ) {
-      if ( ORIENT_2D(r2,p2,p1) >= 0.0f ) return 1;
+      if ( ORIENT_2D(r2,p2,p1) >= 0.0f ) return true;
       else INTERSECTION_TEST_EDGE(p1,q1,r1,p2,q2,r2)
     } else {  
       if ( ORIENT_2D(r2,p2,p1) >= 0.0f ) 
@@ -554,9 +559,12 @@ int ccw_tri_tri_intersection_2d(double p1[2], double q1[2], double r1[2],
     else INTERSECTION_TEST_VERTEX(p1,q1,r1,r2,p2,q2)}
 };
 
-
-IGL_INLINE int tri_tri_overlap_test_2d(double p1[2], double q1[2], double r1[2], 
-          double p2[2], double q2[2], double r2[2]) {
+template <typename DerivedP1,typename DerivedQ1,typename DerivedR1,
+typename DerivedP2,typename DerivedQ2,typename DerivedR2>
+IGL_INLINE bool tri_tri_overlap_test_2d(
+  const Eigen::MatrixBase<DerivedP1> &p1, const Eigen::MatrixBase<DerivedQ1> &q1, const Eigen::MatrixBase<DerivedR1> &r1,
+  const Eigen::MatrixBase<DerivedP2> &p2, const Eigen::MatrixBase<DerivedQ2> &q2, const Eigen::MatrixBase<DerivedR2> &r2) 
+{
   if ( ORIENT_2D(p1,q1,r1) < 0.0f )
     if ( ORIENT_2D(p2,q2,r2) < 0.0f )
       return ccw_tri_tri_intersection_2d(p1,r1,q1,p2,r2,q2);
@@ -570,3 +578,17 @@ IGL_INLINE int tri_tri_overlap_test_2d(double p1[2], double q1[2], double r1[2],
 
 };
 
+//cleanup
+#undef ORIENT_2D
+#undef INTERSECTION_TEST_VERTEX
+#undef TRI_TRI_INTER_3D
+#undef SUB
+#undef DOT
+#undef CROSS
+#undef SCALAR
+#undef CHECK_MIN_MAX
+
+
+
+}; //igl
+#endif //_TRI_TRI_INTERSECT_CPP_
