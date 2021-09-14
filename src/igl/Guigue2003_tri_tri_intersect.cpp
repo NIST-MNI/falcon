@@ -1,5 +1,22 @@
+// This file is part of libigl, a simple c++ geometry processing library.
+// 
+// Copyright (C) 2021 Vladimir S. FONOV <vladimir.fonov@gmail.com>
+// 
+// This Source Code Form is subject to the terms of the Mozilla Public License 
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can 
+// obtain one at http://mozilla.org/MPL/2.0/.
+
 /*
-*         
+*  
+*  C++ version based on the routines published in    
+*  "Fast and Robust Triangle-Triangle Overlap Test      
+*   Using Orientation Predicates"  P. Guigue - O. Devillers
+*  
+*  Works with Eigen data structures instead of plain C arrays
+*  returns bool values
+*  
+*  Original notice: 
+*
 *  Triangle-Triangle Overlap Test Routines        
 *  July, 2002                                                          
 *  Updated December 2003                                                
@@ -35,71 +52,80 @@
 *  http://www.acm.org/jgt/papers/GuigueDevillers03/                         
 *                                                                           
 */
-#ifndef _TRI_TRI_INTERSECT_CPP_
-#define _TRI_TRI_INTERSECT_CPP_
+#ifndef IGL_TRI_TRI_INTERSECT_CPP
+#define IGL_TRI_TRI_INTERSECT_CPP
 namespace igl {
+
+// helper function
+template <typename DerivedP1,typename DerivedQ1,typename DerivedR1,
+typename DerivedP2,typename DerivedQ2,typename DerivedR2,
+typename DerivedN1>
+IGL_INLINE bool coplanar_tri_tri3d(
+  const Eigen::MatrixBase<DerivedP1> &p1, const Eigen::MatrixBase<DerivedQ1> &q1, const Eigen::MatrixBase<DerivedR1> &r1,
+  const Eigen::MatrixBase<DerivedP2> &p2, const Eigen::MatrixBase<DerivedQ2> &q2, const Eigen::MatrixBase<DerivedR2> &r2,
+  const Eigen::MatrixBase<DerivedN1> &normal_1);
 
 
 /* some 3D macros */
 
-#define CROSS(dest,v1,v2)                       \
+#define _IGL_CROSS(dest,v1,v2)                       \
                dest[0]=v1[1]*v2[2]-v1[2]*v2[1]; \
                dest[1]=v1[2]*v2[0]-v1[0]*v2[2]; \
                dest[2]=v1[0]*v2[1]-v1[1]*v2[0];
 
-#define DOT(v1,v2) (v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2])
+#define _IGL_DOT(v1,v2) (v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2])
  
 
 
-#define SUB(dest,v1,v2) dest[0]=v1[0]-v2[0]; \
+#define _IGL_SUB(dest,v1,v2) dest[0]=v1[0]-v2[0]; \
                         dest[1]=v1[1]-v2[1]; \
                         dest[2]=v1[2]-v2[2]; 
 
 
-#define SCALAR(dest,alpha,v) dest[0] = alpha * v[0]; \
+#define _IGL_SCALAR(dest,alpha,v) dest[0] = alpha * v[0]; \
                              dest[1] = alpha * v[1]; \
                              dest[2] = alpha * v[2];
 
 
 
-#define CHECK_MIN_MAX(p1,q1,r1,p2,q2,r2) {\
-  SUB(v1,p2,q1)\
-  SUB(v2,p1,q1)\
-  CROSS(N1,v1,v2)\
-  SUB(v1,q2,q1)\
-  if (DOT(v1,N1) > 0.0f) return false;\
-  SUB(v1,p2,p1)\
-  SUB(v2,r1,p1)\
-  CROSS(N1,v1,v2)\
-  SUB(v1,r2,p1) \
-  if (DOT(v1,N1) > 0.0f) return false;\
+#define _IGL_CHECK_MIN_MAX(p1,q1,r1,p2,q2,r2) {\
+  _IGL_SUB(v1,p2,q1)\
+  _IGL_SUB(v2,p1,q1)\
+  _IGL_CROSS(N1,v1,v2)\
+  _IGL_SUB(v1,q2,q1)\
+  if (_IGL_DOT(v1,N1) > 0.0f) return false;\
+  _IGL_SUB(v1,p2,p1)\
+  _IGL_SUB(v2,r1,p1)\
+  _IGL_CROSS(N1,v1,v2)\
+  _IGL_SUB(v1,r2,p1) \
+  if (_IGL_DOT(v1,N1) > 0.0f) return false;\
   else return true; }
 
 
 
 /* Permutation in a canonical form of T2's vertices */
 
-#define TRI_TRI_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2) { \
+#define _IGL_TRI_TRI_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2) { \
   if (dp2 > 0.0f) { \
-     if (dq2 > 0.0f) CHECK_MIN_MAX(p1,r1,q1,r2,p2,q2) \
-     else if (dr2 > 0.0f) CHECK_MIN_MAX(p1,r1,q1,q2,r2,p2)\
-     else CHECK_MIN_MAX(p1,q1,r1,p2,q2,r2) }\
+     if (dq2 > 0.0f) _IGL_CHECK_MIN_MAX(p1,r1,q1,r2,p2,q2) \
+     else if (dr2 > 0.0f) _IGL_CHECK_MIN_MAX(p1,r1,q1,q2,r2,p2)\
+     else _IGL_CHECK_MIN_MAX(p1,q1,r1,p2,q2,r2) }\
   else if (dp2 < 0.0f) { \
-    if (dq2 < 0.0f) CHECK_MIN_MAX(p1,q1,r1,r2,p2,q2)\
-    else if (dr2 < 0.0f) CHECK_MIN_MAX(p1,q1,r1,q2,r2,p2)\
-    else CHECK_MIN_MAX(p1,r1,q1,p2,q2,r2)\
+    if (dq2 < 0.0f) _IGL_CHECK_MIN_MAX(p1,q1,r1,r2,p2,q2)\
+    else if (dr2 < 0.0f) _IGL_CHECK_MIN_MAX(p1,q1,r1,q2,r2,p2)\
+    else _IGL_CHECK_MIN_MAX(p1,r1,q1,p2,q2,r2)\
   } else { \
     if (dq2 < 0.0f) { \
-      if (dr2 >= 0.0f)  CHECK_MIN_MAX(p1,r1,q1,q2,r2,p2)\
-      else CHECK_MIN_MAX(p1,q1,r1,p2,q2,r2)\
+      if (dr2 >= 0.0f)  _IGL_CHECK_MIN_MAX(p1,r1,q1,q2,r2,p2)\
+      else _IGL_CHECK_MIN_MAX(p1,q1,r1,p2,q2,r2)\
     } \
     else if (dq2 > 0.0f) { \
-      if (dr2 > 0.0f) CHECK_MIN_MAX(p1,r1,q1,p2,q2,r2)\
-      else  CHECK_MIN_MAX(p1,q1,r1,q2,r2,p2)\
+      if (dr2 > 0.0f) _IGL_CHECK_MIN_MAX(p1,r1,q1,p2,q2,r2)\
+      else  _IGL_CHECK_MIN_MAX(p1,q1,r1,q2,r2,p2)\
     } \
     else  { \
-      if (dr2 > 0.0f) CHECK_MIN_MAX(p1,q1,r1,r2,p2,q2)\
-      else if (dr2 < 0.0f) CHECK_MIN_MAX(p1,r1,q1,r2,p2,q2)\
+      if (dr2 > 0.0f) _IGL_CHECK_MIN_MAX(p1,q1,r1,r2,p2,q2)\
+      else if (dr2 < 0.0f) _IGL_CHECK_MIN_MAX(p1,r1,q1,r2,p2,q2)\
       else return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);\
      }}}
   
@@ -132,32 +158,32 @@ IGL_INLINE bool tri_tri_overlap_test_3d(
      triangle(p2,q2,r2) */
 
 
-  SUB(v1,p2,r2)
-  SUB(v2,q2,r2)
-  CROSS(N2,v1,v2)
+  _IGL_SUB(v1,p2,r2)
+  _IGL_SUB(v2,q2,r2)
+  _IGL_CROSS(N2,v1,v2)
 
-  SUB(v1,p1,r2)
-  dp1 = DOT(v1,N2);
-  SUB(v1,q1,r2)
-  dq1 = DOT(v1,N2);
-  SUB(v1,r1,r2)
-  dr1 = DOT(v1,N2);
+  _IGL_SUB(v1,p1,r2)
+  dp1 = _IGL_DOT(v1,N2);
+  _IGL_SUB(v1,q1,r2)
+  dq1 = _IGL_DOT(v1,N2);
+  _IGL_SUB(v1,r1,r2)
+  dr1 = _IGL_DOT(v1,N2);
   
   if (((dp1 * dq1) > 0.0f) && ((dp1 * dr1) > 0.0f))  return false; 
 
   /* Compute distance signs  of p2, q2 and r2 to the plane of
      triangle(p1,q1,r1) */
 
-  SUB(v1,q1,p1)
-  SUB(v2,r1,p1)
-  CROSS(N1,v1,v2)
+  _IGL_SUB(v1,q1,p1)
+  _IGL_SUB(v2,r1,p1)
+  _IGL_CROSS(N1,v1,v2)
 
-  SUB(v1,p2,r1)
-  dp2 = DOT(v1,N1);
-  SUB(v1,q2,r1)
-  dq2 = DOT(v1,N1);
-  SUB(v1,r2,r1)
-  dr2 = DOT(v1,N1);
+  _IGL_SUB(v1,p2,r1)
+  dp2 = _IGL_DOT(v1,N1);
+  _IGL_SUB(v1,q2,r1)
+  dq2 = _IGL_DOT(v1,N1);
+  _IGL_SUB(v1,r2,r1)
+  dr2 = _IGL_DOT(v1,N1);
   
   if (((dp2 * dq2) > 0.0f) && ((dp2 * dr2) > 0.0f)) return false;
 
@@ -165,25 +191,25 @@ IGL_INLINE bool tri_tri_overlap_test_3d(
 
 
   if (dp1 > 0.0f) {
-    if (dq1 > 0.0f) TRI_TRI_3D(r1,p1,q1,p2,r2,q2,dp2,dr2,dq2)
-    else if (dr1 > 0.0f) TRI_TRI_3D(q1,r1,p1,p2,r2,q2,dp2,dr2,dq2)  
-    else TRI_TRI_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2)
+    if (dq1 > 0.0f) _IGL_TRI_TRI_3D(r1,p1,q1,p2,r2,q2,dp2,dr2,dq2)
+    else if (dr1 > 0.0f) _IGL_TRI_TRI_3D(q1,r1,p1,p2,r2,q2,dp2,dr2,dq2)  
+    else _IGL_TRI_TRI_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2)
   } else if (dp1 < 0.0f) {
-    if (dq1 < 0.0f) TRI_TRI_3D(r1,p1,q1,p2,q2,r2,dp2,dq2,dr2)
-    else if (dr1 < 0.0f) TRI_TRI_3D(q1,r1,p1,p2,q2,r2,dp2,dq2,dr2)
-    else TRI_TRI_3D(p1,q1,r1,p2,r2,q2,dp2,dr2,dq2)
+    if (dq1 < 0.0f) _IGL_TRI_TRI_3D(r1,p1,q1,p2,q2,r2,dp2,dq2,dr2)
+    else if (dr1 < 0.0f) _IGL_TRI_TRI_3D(q1,r1,p1,p2,q2,r2,dp2,dq2,dr2)
+    else _IGL_TRI_TRI_3D(p1,q1,r1,p2,r2,q2,dp2,dr2,dq2)
   } else {
     if (dq1 < 0.0f) {
-      if (dr1 >= 0.0f) TRI_TRI_3D(q1,r1,p1,p2,r2,q2,dp2,dr2,dq2)
-      else TRI_TRI_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2)
+      if (dr1 >= 0.0f) _IGL_TRI_TRI_3D(q1,r1,p1,p2,r2,q2,dp2,dr2,dq2)
+      else _IGL_TRI_TRI_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2)
     }
     else if (dq1 > 0.0f) {
-      if (dr1 > 0.0f) TRI_TRI_3D(p1,q1,r1,p2,r2,q2,dp2,dr2,dq2)
-      else TRI_TRI_3D(q1,r1,p1,p2,q2,r2,dp2,dq2,dr2)
+      if (dr1 > 0.0f) _IGL_TRI_TRI_3D(p1,q1,r1,p2,r2,q2,dp2,dr2,dq2)
+      else _IGL_TRI_TRI_3D(q1,r1,p1,p2,q2,r2,dp2,dq2,dr2)
     }
     else  {
-      if (dr1 > 0.0f) TRI_TRI_3D(r1,p1,q1,p2,q2,r2,dp2,dq2,dr2)
-      else if (dr1 < 0.0f) TRI_TRI_3D(r1,p1,q1,p2,r2,q2,dp2,dr2,dq2)
+      if (dr1 > 0.0f) _IGL_TRI_TRI_3D(r1,p1,q1,p2,q2,r2,dp2,dq2,dr2)
+      else if (dr1 < 0.0f) _IGL_TRI_TRI_3D(r1,p1,q1,p2,r2,q2,dp2,dr2,dq2)
       else return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);
     }
   }
@@ -208,9 +234,9 @@ IGL_INLINE bool coplanar_tri_tri3d(
 
   Scalar n_x, n_y, n_z;
 
-  n_x = ((normal_1[0]<0)?-normal_1[0]:normal_1[0]);
-  n_y = ((normal_1[1]<0)?-normal_1[1]:normal_1[1]);
-  n_z = ((normal_1[2]<0)?-normal_1[2]:normal_1[2]);
+  n_x = ((normal_1[0]<0.0)?-normal_1[0]:normal_1[0]);
+  n_y = ((normal_1[1]<0.0)?-normal_1[1]:normal_1[1]);
+  n_z = ((normal_1[2]<0.0)?-normal_1[2]:normal_1[2]);
 
 
   /* Projection of the triangles in 3D onto 2D such that the area of
@@ -272,102 +298,102 @@ IGL_INLINE bool coplanar_tri_tri3d(
 // NOTE: a faster, but possibly less precise, method of computing
 // point B is described here: https://github.com/erich666/jgt-code/issues/5
 
-#define CONSTRUCT_INTERSECTION(p1,q1,r1,p2,q2,r2) { \
-  SUB(v1,q1,p1) \
-  SUB(v2,r2,p1) \
-  CROSS(N,v1,v2) \
-  SUB(v,p2,p1) \
-  if (DOT(v,N) > 0.0f) {\
-    SUB(v1,r1,p1) \
-    CROSS(N,v1,v2) \
-    if (DOT(v,N) <= 0.0f) { \
-      SUB(v2,q2,p1) \
-      CROSS(N,v1,v2) \
-      if (DOT(v,N) > 0.0f) { \
-  SUB(v1,p1,p2) \
-  SUB(v2,p1,r1) \
-  alpha = DOT(v1,N2) / DOT(v2,N2); \
-  SCALAR(v1,alpha,v2) \
-  SUB(source,p1,v1) \
-  SUB(v1,p2,p1) \
-  SUB(v2,p2,r2) \
-  alpha = DOT(v1,N1) / DOT(v2,N1); \
-  SCALAR(v1,alpha,v2) \
-  SUB(target,p2,v1) \
+#define _IGL_CONSTRUCT_INTERSECTION(p1,q1,r1,p2,q2,r2) { \
+  _IGL_SUB(v1,q1,p1) \
+  _IGL_SUB(v2,r2,p1) \
+  _IGL_CROSS(N,v1,v2) \
+  _IGL_SUB(v,p2,p1) \
+  if (_IGL_DOT(v,N) > 0.0f) {\
+    _IGL_SUB(v1,r1,p1) \
+    _IGL_CROSS(N,v1,v2) \
+    if (_IGL_DOT(v,N) <= 0.0f) { \
+      _IGL_SUB(v2,q2,p1) \
+      _IGL_CROSS(N,v1,v2) \
+      if (_IGL_DOT(v,N) > 0.0f) { \
+  _IGL_SUB(v1,p1,p2) \
+  _IGL_SUB(v2,p1,r1) \
+  alpha = _IGL_DOT(v1,N2) / _IGL_DOT(v2,N2); \
+  _IGL_SCALAR(v1,alpha,v2) \
+  _IGL_SUB(source,p1,v1) \
+  _IGL_SUB(v1,p2,p1) \
+  _IGL_SUB(v2,p2,r2) \
+  alpha = _IGL_DOT(v1,N1) / _IGL_DOT(v2,N1); \
+  _IGL_SCALAR(v1,alpha,v2) \
+  _IGL_SUB(target,p2,v1) \
   return true; \
       } else { \
-  SUB(v1,p2,p1) \
-  SUB(v2,p2,q2) \
-  alpha = DOT(v1,N1) / DOT(v2,N1); \
-  SCALAR(v1,alpha,v2) \
-  SUB(source,p2,v1) \
-  SUB(v1,p2,p1) \
-  SUB(v2,p2,r2) \
-  alpha = DOT(v1,N1) / DOT(v2,N1); \
-  SCALAR(v1,alpha,v2) \
-  SUB(target,p2,v1) \
+  _IGL_SUB(v1,p2,p1) \
+  _IGL_SUB(v2,p2,q2) \
+  alpha = _IGL_DOT(v1,N1) / _IGL_DOT(v2,N1); \
+  _IGL_SCALAR(v1,alpha,v2) \
+  _IGL_SUB(source,p2,v1) \
+  _IGL_SUB(v1,p2,p1) \
+  _IGL_SUB(v2,p2,r2) \
+  alpha = _IGL_DOT(v1,N1) / _IGL_DOT(v2,N1); \
+  _IGL_SCALAR(v1,alpha,v2) \
+  _IGL_SUB(target,p2,v1) \
   return true; \
       } \
     } else { \
       return false; \
     } \
   } else { \
-    SUB(v2,q2,p1) \
-    CROSS(N,v1,v2) \
-    if (DOT(v,N) < 0.0f) { \
+    _IGL_SUB(v2,q2,p1) \
+    _IGL_CROSS(N,v1,v2) \
+    if (_IGL_DOT(v,N) < 0.0f) { \
       return false; \
     } else { \
-      SUB(v1,r1,p1) \
-      CROSS(N,v1,v2) \
-      if (DOT(v,N) >= 0.0f) { \
-  SUB(v1,p1,p2) \
-  SUB(v2,p1,r1) \
-  alpha = DOT(v1,N2) / DOT(v2,N2); \
-  SCALAR(v1,alpha,v2) \
-  SUB(source,p1,v1) \
-  SUB(v1,p1,p2) \
-  SUB(v2,p1,q1) \
-  alpha = DOT(v1,N2) / DOT(v2,N2); \
-  SCALAR(v1,alpha,v2) \
-  SUB(target,p1,v1) \
+      _IGL_SUB(v1,r1,p1) \
+      _IGL_CROSS(N,v1,v2) \
+      if (_IGL_DOT(v,N) >= 0.0f) { \
+  _IGL_SUB(v1,p1,p2) \
+  _IGL_SUB(v2,p1,r1) \
+  alpha = _IGL_DOT(v1,N2) / _IGL_DOT(v2,N2); \
+  _IGL_SCALAR(v1,alpha,v2) \
+  _IGL_SUB(source,p1,v1) \
+  _IGL_SUB(v1,p1,p2) \
+  _IGL_SUB(v2,p1,q1) \
+  alpha = _IGL_DOT(v1,N2) / _IGL_DOT(v2,N2); \
+  _IGL_SCALAR(v1,alpha,v2) \
+  _IGL_SUB(target,p1,v1) \
   return true; \
       } else { \
-  SUB(v1,p2,p1) \
-  SUB(v2,p2,q2) \
-  alpha = DOT(v1,N1) / DOT(v2,N1); \
-  SCALAR(v1,alpha,v2) \
-  SUB(source,p2,v1) \
-  SUB(v1,p1,p2) \
-  SUB(v2,p1,q1) \
-  alpha = DOT(v1,N2) / DOT(v2,N2); \
-  SCALAR(v1,alpha,v2) \
-  SUB(target,p1,v1) \
+  _IGL_SUB(v1,p2,p1) \
+  _IGL_SUB(v2,p2,q2) \
+  alpha = _IGL_DOT(v1,N1) / _IGL_DOT(v2,N1); \
+  _IGL_SCALAR(v1,alpha,v2) \
+  _IGL_SUB(source,p2,v1) \
+  _IGL_SUB(v1,p1,p2) \
+  _IGL_SUB(v2,p1,q1) \
+  alpha = _IGL_DOT(v1,N2) / _IGL_DOT(v2,N2); \
+  _IGL_SCALAR(v1,alpha,v2) \
+  _IGL_SUB(target,p1,v1) \
   return true; \
       }}}} 
 
                 
 
-#define TRI_TRI_INTER_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2) { \
+#define _IGL_TRI_TRI_INTER_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2) { \
   if (dp2 > 0.0f) { \
-     if (dq2 > 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2) \
-     else if (dr2 > 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,q2,r2,p2)\
-     else CONSTRUCT_INTERSECTION(p1,q1,r1,p2,q2,r2) }\
+     if (dq2 > 0.0f) _IGL_CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2) \
+     else if (dr2 > 0.0f) _IGL_CONSTRUCT_INTERSECTION(p1,r1,q1,q2,r2,p2)\
+     else _IGL_CONSTRUCT_INTERSECTION(p1,q1,r1,p2,q2,r2) }\
   else if (dp2 < 0.0f) { \
-    if (dq2 < 0.0f) CONSTRUCT_INTERSECTION(p1,q1,r1,r2,p2,q2)\
-    else if (dr2 < 0.0f) CONSTRUCT_INTERSECTION(p1,q1,r1,q2,r2,p2)\
-    else CONSTRUCT_INTERSECTION(p1,r1,q1,p2,q2,r2)\
+    if (dq2 < 0.0f) _IGL_CONSTRUCT_INTERSECTION(p1,q1,r1,r2,p2,q2)\
+    else if (dr2 < 0.0f) _IGL_CONSTRUCT_INTERSECTION(p1,q1,r1,q2,r2,p2)\
+    else _IGL_CONSTRUCT_INTERSECTION(p1,r1,q1,p2,q2,r2)\
   } else { \
     if (dq2 < 0.0f) { \
-      if (dr2 >= 0.0f)  CONSTRUCT_INTERSECTION(p1,r1,q1,q2,r2,p2)\
-      else CONSTRUCT_INTERSECTION(p1,q1,r1,p2,q2,r2)\
+      if (dr2 >= 0.0f)  _IGL_CONSTRUCT_INTERSECTION(p1,r1,q1,q2,r2,p2)\
+      else _IGL_CONSTRUCT_INTERSECTION(p1,q1,r1,p2,q2,r2)\
     } \
     else if (dq2 > 0.0f) { \
-      if (dr2 > 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,p2,q2,r2)\
-      else  CONSTRUCT_INTERSECTION(p1,q1,r1,q2,r2,p2)\
+      if (dr2 > 0.0f) _IGL_CONSTRUCT_INTERSECTION(p1,r1,q1,p2,q2,r2)\
+      else  _IGL_CONSTRUCT_INTERSECTION(p1,q1,r1,q2,r2,p2)\
     } \
     else  { \
-      if (dr2 > 0.0f) CONSTRUCT_INTERSECTION(p1,q1,r1,r2,p2,q2)\
-      else if (dr2 < 0.0f) CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2)\
+      if (dr2 > 0.0f) _IGL_CONSTRUCT_INTERSECTION(p1,q1,r1,r2,p2,q2)\
+      else if (dr2 < 0.0f) _IGL_CONSTRUCT_INTERSECTION(p1,r1,q1,r2,p2,q2)\
       else { \
         coplanar = true; \
   return coplanar_tri_tri3d(p1,q1,r1,p2,q2,r2,N1);\
@@ -403,16 +429,16 @@ IGL_INLINE bool tri_tri_intersection_test_3d(
   // to the plane of triangle(p2,q2,r2)
 
 
-  SUB(v1,p2,r2)
-  SUB(v2,q2,r2)
-  CROSS(N2,v1,v2)
+  _IGL_SUB(v1,p2,r2)
+  _IGL_SUB(v2,q2,r2)
+  _IGL_CROSS(N2,v1,v2)
 
-  SUB(v1,p1,r2)
-  dp1 = DOT(v1,N2);
-  SUB(v1,q1,r2)
-  dq1 = DOT(v1,N2);
-  SUB(v1,r1,r2)
-  dr1 = DOT(v1,N2);
+  _IGL_SUB(v1,p1,r2)
+  dp1 = _IGL_DOT(v1,N2);
+  _IGL_SUB(v1,q1,r2)
+  dq1 = _IGL_DOT(v1,N2);
+  _IGL_SUB(v1,r1,r2)
+  dr1 = _IGL_DOT(v1,N2);
   
   coplanar = false;
 
@@ -422,16 +448,16 @@ IGL_INLINE bool tri_tri_intersection_test_3d(
   // to the plane of triangle(p1,q1,r1)
 
   
-  SUB(v1,q1,p1)
-  SUB(v2,r1,p1)
-  CROSS(N1,v1,v2)
+  _IGL_SUB(v1,q1,p1)
+  _IGL_SUB(v2,r1,p1)
+  _IGL_CROSS(N1,v1,v2)
 
-  SUB(v1,p2,r1)
-  dp2 = DOT(v1,N1);
-  SUB(v1,q2,r1)
-  dq2 = DOT(v1,N1);
-  SUB(v1,r2,r1)
-  dr2 = DOT(v1,N1);
+  _IGL_SUB(v1,p2,r1)
+  dp2 = _IGL_DOT(v1,N1);
+  _IGL_SUB(v1,q2,r1)
+  dq2 = _IGL_DOT(v1,N1);
+  _IGL_SUB(v1,r2,r1)
+  dr2 = _IGL_DOT(v1,N1);
   
   if (((dp2 * dq2) > 0.0f) && ((dp2 * dr2) > 0.0f)) return false;
 
@@ -439,26 +465,26 @@ IGL_INLINE bool tri_tri_intersection_test_3d(
 
 
   if (dp1 > 0.0f) {
-    if (dq1 > 0.0f) TRI_TRI_INTER_3D(r1,p1,q1,p2,r2,q2,dp2,dr2,dq2)
-    else if (dr1 > 0.0f) TRI_TRI_INTER_3D(q1,r1,p1,p2,r2,q2,dp2,dr2,dq2)
+    if (dq1 > 0.0f) _IGL_TRI_TRI_INTER_3D(r1,p1,q1,p2,r2,q2,dp2,dr2,dq2)
+    else if (dr1 > 0.0f) _IGL_TRI_TRI_INTER_3D(q1,r1,p1,p2,r2,q2,dp2,dr2,dq2)
   
-    else TRI_TRI_INTER_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2)
+    else _IGL_TRI_TRI_INTER_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2)
   } else if (dp1 < 0.0f) {
-    if (dq1 < 0.0f) TRI_TRI_INTER_3D(r1,p1,q1,p2,q2,r2,dp2,dq2,dr2)
-    else if (dr1 < 0.0f) TRI_TRI_INTER_3D(q1,r1,p1,p2,q2,r2,dp2,dq2,dr2)
-    else TRI_TRI_INTER_3D(p1,q1,r1,p2,r2,q2,dp2,dr2,dq2)
+    if (dq1 < 0.0f) _IGL_TRI_TRI_INTER_3D(r1,p1,q1,p2,q2,r2,dp2,dq2,dr2)
+    else if (dr1 < 0.0f) _IGL_TRI_TRI_INTER_3D(q1,r1,p1,p2,q2,r2,dp2,dq2,dr2)
+    else _IGL_TRI_TRI_INTER_3D(p1,q1,r1,p2,r2,q2,dp2,dr2,dq2)
   } else {
     if (dq1 < 0.0f) {
-      if (dr1 >= 0.0f) TRI_TRI_INTER_3D(q1,r1,p1,p2,r2,q2,dp2,dr2,dq2)
-      else TRI_TRI_INTER_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2)
+      if (dr1 >= 0.0f) _IGL_TRI_TRI_INTER_3D(q1,r1,p1,p2,r2,q2,dp2,dr2,dq2)
+      else _IGL_TRI_TRI_INTER_3D(p1,q1,r1,p2,q2,r2,dp2,dq2,dr2)
     }
     else if (dq1 > 0.0f) {
-      if (dr1 > 0.0f) TRI_TRI_INTER_3D(p1,q1,r1,p2,r2,q2,dp2,dr2,dq2)
-      else TRI_TRI_INTER_3D(q1,r1,p1,p2,q2,r2,dp2,dq2,dr2)
+      if (dr1 > 0.0f) _IGL_TRI_TRI_INTER_3D(p1,q1,r1,p2,r2,q2,dp2,dr2,dq2)
+      else _IGL_TRI_TRI_INTER_3D(q1,r1,p1,p2,q2,r2,dp2,dq2,dr2)
     }
     else  {
-      if (dr1 > 0.0f) TRI_TRI_INTER_3D(r1,p1,q1,p2,q2,r2,dp2,dq2,dr2)
-      else if (dr1 < 0.0f) TRI_TRI_INTER_3D(r1,p1,q1,p2,r2,q2,dp2,dr2,dq2)
+      if (dr1 > 0.0f) _IGL_TRI_TRI_INTER_3D(r1,p1,q1,p2,q2,r2,dp2,dq2,dr2)
+      else if (dr1 < 0.0f) _IGL_TRI_TRI_INTER_3D(r1,p1,q1,p2,r2,q2,dp2,dr2,dq2)
       else {
   // triangles are co-planar
 
@@ -482,34 +508,34 @@ IGL_INLINE bool tri_tri_intersection_test_3d(
 
 /* some 2D macros */
 
-#define ORIENT_2D(a, b, c)  ((a[0]-c[0])*(b[1]-c[1])-(a[1]-c[1])*(b[0]-c[0]))
+#define _IGL_ORIENT_2D(a, b, c)  ((a[0]-c[0])*(b[1]-c[1])-(a[1]-c[1])*(b[0]-c[0]))
 
 
 #define INTERSECTION_TEST_VERTEX(P1, Q1, R1, P2, Q2, R2) {\
-  if (ORIENT_2D(R2,P2,Q1) >= 0.0f)\
-    if (ORIENT_2D(R2,Q2,Q1) <= 0.0f)\
-      if (ORIENT_2D(P1,P2,Q1) > 0.0f) {\
-  if (ORIENT_2D(P1,Q2,Q1) <= 0.0f) return true; \
+  if (_IGL_ORIENT_2D(R2,P2,Q1) >= 0.0f)\
+    if (_IGL_ORIENT_2D(R2,Q2,Q1) <= 0.0f)\
+      if (_IGL_ORIENT_2D(P1,P2,Q1) > 0.0f) {\
+  if (_IGL_ORIENT_2D(P1,Q2,Q1) <= 0.0f) return true; \
   else return false;} else {\
-  if (ORIENT_2D(P1,P2,R1) >= 0.0f)\
-    if (ORIENT_2D(Q1,R1,P2) >= 0.0f) return true; \
+  if (_IGL_ORIENT_2D(P1,P2,R1) >= 0.0f)\
+    if (_IGL_ORIENT_2D(Q1,R1,P2) >= 0.0f) return true; \
     else return false;\
   else return false;}\
     else \
-      if (ORIENT_2D(P1,Q2,Q1) <= 0.0f)\
-  if (ORIENT_2D(R2,Q2,R1) <= 0.0f)\
-    if (ORIENT_2D(Q1,R1,Q2) >= 0.0f) return true; \
+      if (_IGL_ORIENT_2D(P1,Q2,Q1) <= 0.0f)\
+  if (_IGL_ORIENT_2D(R2,Q2,R1) <= 0.0f)\
+    if (_IGL_ORIENT_2D(Q1,R1,Q2) >= 0.0f) return true; \
     else return false;\
   else return false;\
       else return false;\
   else\
-    if (ORIENT_2D(R2,P2,R1) >= 0.0f) \
-      if (ORIENT_2D(Q1,R1,R2) >= 0.0f)\
-  if (ORIENT_2D(P1,P2,R1) >= 0.0f) return true;\
+    if (_IGL_ORIENT_2D(R2,P2,R1) >= 0.0f) \
+      if (_IGL_ORIENT_2D(Q1,R1,R2) >= 0.0f)\
+  if (_IGL_ORIENT_2D(P1,P2,R1) >= 0.0f) return true;\
   else return false;\
       else \
-  if (ORIENT_2D(Q1,R1,Q2) >= 0.0f) {\
-    if (ORIENT_2D(R2,R1,Q2) >= 0.0f) return true; \
+  if (_IGL_ORIENT_2D(Q1,R1,Q2) >= 0.0f) {\
+    if (_IGL_ORIENT_2D(R2,R1,Q2) >= 0.0f) return true; \
     else return false; }\
   else return false; \
     else  return false; \
@@ -517,20 +543,20 @@ IGL_INLINE bool tri_tri_intersection_test_3d(
 
 
 
-#define INTERSECTION_TEST_EDGE(P1, Q1, R1, P2, Q2, R2) { \
-  if (ORIENT_2D(R2,P2,Q1) >= 0.0f) {\
-    if (ORIENT_2D(P1,P2,Q1) >= 0.0f) { \
-        if (ORIENT_2D(P1,Q1,R2) >= 0.0f) return true; \
+#define _IGL_INTERSECTION_TEST_EDGE(P1, Q1, R1, P2, Q2, R2) { \
+  if (_IGL_ORIENT_2D(R2,P2,Q1) >= 0.0f) {\
+    if (_IGL_ORIENT_2D(P1,P2,Q1) >= 0.0f) { \
+        if (_IGL_ORIENT_2D(P1,Q1,R2) >= 0.0f) return true; \
         else return false;} else { \
-      if (ORIENT_2D(Q1,R1,P2) >= 0.0f){ \
-  if (ORIENT_2D(R1,P1,P2) >= 0.0f) return true; else return false;} \
+      if (_IGL_ORIENT_2D(Q1,R1,P2) >= 0.0f){ \
+  if (_IGL_ORIENT_2D(R1,P1,P2) >= 0.0f) return true; else return false;} \
       else return false; } \
   } else {\
-    if (ORIENT_2D(R2,P2,R1) >= 0.0f) {\
-      if (ORIENT_2D(P1,P2,R1) >= 0.0f) {\
-  if (ORIENT_2D(P1,R1,R2) >= 0.0f) return true;  \
+    if (_IGL_ORIENT_2D(R2,P2,R1) >= 0.0f) {\
+      if (_IGL_ORIENT_2D(P1,P2,R1) >= 0.0f) {\
+  if (_IGL_ORIENT_2D(P1,R1,R2) >= 0.0f) return true;  \
   else {\
-    if (ORIENT_2D(Q1,R1,R2) >= 0.0f) return true; else return false;}}\
+    if (_IGL_ORIENT_2D(Q1,R1,R2) >= 0.0f) return true; else return false;}}\
       else  return false; }\
     else return false; }}
 
@@ -543,18 +569,18 @@ IGL_INLINE bool ccw_tri_tri_intersection_2d(
   const Eigen::MatrixBase<DerivedP1> &p1, const Eigen::MatrixBase<DerivedQ1> &q1, const Eigen::MatrixBase<DerivedR1> &r1,
   const Eigen::MatrixBase<DerivedP2> &p2, const Eigen::MatrixBase<DerivedQ2> &q2, const Eigen::MatrixBase<DerivedR2> &r2) 
 {
-  if ( ORIENT_2D(p2,q2,p1) >= 0.0f ) {
-    if ( ORIENT_2D(q2,r2,p1) >= 0.0f ) {
-      if ( ORIENT_2D(r2,p2,p1) >= 0.0f ) return true;
-      else INTERSECTION_TEST_EDGE(p1,q1,r1,p2,q2,r2)
+  if ( _IGL_ORIENT_2D(p2,q2,p1) >= 0.0f ) {
+    if ( _IGL_ORIENT_2D(q2,r2,p1) >= 0.0f ) {
+      if ( _IGL_ORIENT_2D(r2,p2,p1) >= 0.0f ) return true;
+      else _IGL_INTERSECTION_TEST_EDGE(p1,q1,r1,p2,q2,r2)
     } else {  
-      if ( ORIENT_2D(r2,p2,p1) >= 0.0f ) 
-  INTERSECTION_TEST_EDGE(p1,q1,r1,r2,p2,q2)
+      if ( _IGL_ORIENT_2D(r2,p2,p1) >= 0.0f ) 
+  _IGL_INTERSECTION_TEST_EDGE(p1,q1,r1,r2,p2,q2)
       else INTERSECTION_TEST_VERTEX(p1,q1,r1,p2,q2,r2)}}
   else {
-    if ( ORIENT_2D(q2,r2,p1) >= 0.0f ) {
-      if ( ORIENT_2D(r2,p2,p1) >= 0.0f ) 
-  INTERSECTION_TEST_EDGE(p1,q1,r1,q2,r2,p2)
+    if ( _IGL_ORIENT_2D(q2,r2,p1) >= 0.0f ) {
+      if ( _IGL_ORIENT_2D(r2,p2,p1) >= 0.0f ) 
+  _IGL_INTERSECTION_TEST_EDGE(p1,q1,r1,q2,r2,p2)
       else  INTERSECTION_TEST_VERTEX(p1,q1,r1,q2,r2,p2)}
     else INTERSECTION_TEST_VERTEX(p1,q1,r1,r2,p2,q2)}
 };
@@ -565,13 +591,13 @@ IGL_INLINE bool tri_tri_overlap_test_2d(
   const Eigen::MatrixBase<DerivedP1> &p1, const Eigen::MatrixBase<DerivedQ1> &q1, const Eigen::MatrixBase<DerivedR1> &r1,
   const Eigen::MatrixBase<DerivedP2> &p2, const Eigen::MatrixBase<DerivedQ2> &q2, const Eigen::MatrixBase<DerivedR2> &r2) 
 {
-  if ( ORIENT_2D(p1,q1,r1) < 0.0f )
-    if ( ORIENT_2D(p2,q2,r2) < 0.0f )
+  if ( _IGL_ORIENT_2D(p1,q1,r1) < 0.0f )
+    if ( _IGL_ORIENT_2D(p2,q2,r2) < 0.0f )
       return ccw_tri_tri_intersection_2d(p1,r1,q1,p2,r2,q2);
     else
       return ccw_tri_tri_intersection_2d(p1,r1,q1,p2,q2,r2);
   else
-    if ( ORIENT_2D(p2,q2,r2) < 0.0f )
+    if ( _IGL_ORIENT_2D(p2,q2,r2) < 0.0f )
       return ccw_tri_tri_intersection_2d(p1,q1,r1,p2,r2,q2);
     else
       return ccw_tri_tri_intersection_2d(p1,q1,r1,p2,q2,r2);
@@ -579,16 +605,16 @@ IGL_INLINE bool tri_tri_overlap_test_2d(
 };
 
 //cleanup
-#undef ORIENT_2D
-#undef INTERSECTION_TEST_VERTEX
-#undef TRI_TRI_INTER_3D
-#undef SUB
-#undef DOT
-#undef CROSS
-#undef SCALAR
-#undef CHECK_MIN_MAX
-
+#undef _IGL_ORIENT_2D
+#undef _IGL_INTERSECTION_TEST_VERTEX
+#undef _IGL_TRI_TRI_INTER_3D
+#undef _IGL_SUB
+#undef _IGL_DOT
+#undef _IGL_CROSS
+#undef _IGL_SCALAR
+#undef _IGL_CHECK_MIN_MAX
+#undef _IGL_INTERSECTION_TEST_EDGE
 
 
 }; //igl
-#endif //_TRI_TRI_INTERSECT_CPP_
+#endif //IGL_TRI_TRI_INTERSECT_CPP
