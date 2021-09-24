@@ -384,7 +384,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
     if(alt_mode && border)
     { //using only border
        for(n=n0; n<nx; n++) {
-         if(yb[n]>0) break;
+         if(yb[n]<1) break;
        }
        mcth_list[vindex] = NIIK_DMIN(x[n], max_cth);
     } else {
