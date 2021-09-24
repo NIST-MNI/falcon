@@ -183,7 +183,7 @@ int niikcortex_initocs_expand(nifti_image *img,nifti_image *brain_mask,double *s
                               int stepiter,double intGM,double intWM,double intCSF,double intICS,double intOCS,
                               double gthresh, double max_cth,double init_cth,
                               int smooth_iter_maxcth,int smooth_iter,int maxiter2,
-                              float smooth_percent,kobj *ics, kobj *ocs,nifti_image *border);
+                              float smooth_percent,kobj *ics, kobj *ocs,nifti_image *border,int alt_mode);
 
 
 

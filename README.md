@@ -1,15 +1,21 @@
 # FALCON cortical surface extraction tool
+
 [![DOI](https://zenodo.org/badge/157914556.svg)](https://zenodo.org/badge/latestdoi/157914556)
 ![Example Thickness map](https://github.com/vfonov/falcon/blob/gh-pages/examples/OASIS-TRT-20-18_thickness-s66_lt.png?raw=true)
 
 ## Preliminary results
+
 * [Google drive slides from the meeting on 2019-01-28](https://docs.google.com/presentation/d/1z2YPbEM3VdAtisJ61f-7iaqEFusUhtN4l2r1_5jiWT0/edit?usp=sharing)
 * 
 
-## Installation 
-### Using conda:
+## Installation
+
+### Using conda
+
 ```conda install -c vfonov falcon``` - will work on linux
-### Compiling from the source:
+
+### Compiling from the source
+
 Prerequisites: minc-toolkit-v2 (http://bic-mni.github.io/), libtiff, povray, imagemagick
 ```
 cmake <source_dir> \
@@ -23,6 +29,7 @@ make && make install
 ```
 
 ## Included higlevel scripts
+
 * falcon_run.sh - execute FALCON surface extraction pipeline 
 ```
 falcon_run.sh <input.mnc> <output_base> -brain <brain_mask.mnc>
@@ -64,7 +71,9 @@ falcon_run.sh <input.mnc> <output_base> -brain <brain_mask.mnc>
   -debug                         :  run in debug mode (keep temp, echo commands)
   -verbose                       :  echo commands
 ```
+
 * falcon_off_qc_2.sh - generate surface QC image for two hemispheres
+
 ```  
 falcon_off_qc_2.sh <input_lt.ply> <input_measurement_lt.csv> <input_rt.ply> <input_measurement_rt.csv> <output.png>   [foreground] [background] 
   --- Optional parameters  ---
@@ -79,7 +88,9 @@ falcon_off_qc_2.sh <input_lt.ply> <input_measurement_lt.csv> <input_rt.ply> <inp
   -sphere   - output on the spherical map, using spherical coordinates instead of x,y,z
   -column  <n> - specify column name from csv file to use (default will use the first column)
 ```
+
 * falcon_off_qc.sh   - generrate surface QC image for one hemisphere 
+
 ```
 falcon_off_qc.sh <input.off> <input_measurement.txt> <output.png> [foreground] [background]
   --- Optional parameters  ---
@@ -93,7 +104,9 @@ falcon_off_qc.sh <input.off> <input_measurement.txt> <output.png> [foreground] [
   -gray     - use gray colour map
   -sphere   - output on the spherical map, using spherical coordinates instead of x,y,z
 ```
+
 * falcon_slice_qc.sh - generate QC image showing intersection of surface and volume
+
 ```
   falcon_slice_qc.sh <input.mnc> <ics.ply> <ocs.ply> <output.jpg/png/tiff>
   --- Optional parameters  ---
@@ -103,6 +116,7 @@ falcon_off_qc.sh <input.off> <input_measurement.txt> <output.png> [foreground] [
 ```
 
 ## Included low level tools
+
 * falcon_math - mathematical operations
     * primitive operations
         * typeconvert  -converts the image data type
@@ -357,13 +371,13 @@ falcon_off_qc.sh <input.off> <input_measurement.txt> <output.png> [foreground] [
 * falcon_slice_extract - extract slices from a 3D volume with intersection lines from surfaces
 * falcon_midsag - split white matter mask into hemishpheres
 
-## Build
- * Using cmake , need to specify location of minc-toolkit
-
-## Running
-  * To extract cortical surfaces from T1w scan in stereotaxic space:
-
 ## Environment variables
-* Verbosity (and generation of debug files) is controlled by environment variable NIIKVERBOSE, set to integer to specify verbosity level, default is 0
-* Location of data directory is specified by NIIKDIR , set to location of <PREFIX>/data 
-* If OpenMP is used, OMP_NUM_THREADS specifies maximum number of concurrent threads, default is number of CPU cores
+
+* Verbosity (and generation of debug files) is controlled by environment variable `FALCON_VERBOSE`, set to integer to specify verbosity level, default is 0
+* Prefix fox post-mortem files: `FALCON_POSTMORTEM_PREFIX`
+* Location of debugging files (prefix): `FALCON_DEBUG_PREFIX`
+* Base of FALCON installation: `FALCON_HOME` , default use `MINC_TOOLKIT`
+* FALCON binaries: `FALCON_BIN`, default : `${FALCON_HOME}/bin`
+* FALCON data:     `FALCON_DATA`, default : `${FALCON_HOME}/share/falcon`
+* FALCON scripts:  `FALCON_SCRIPTS`, default: `${FALCON_HOME}/bin`
+* If OpenMP is used, `OMP_NUM_THREADS` specifies maximum number of concurrent threads, default is number of CPU cores

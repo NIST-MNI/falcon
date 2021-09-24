@@ -33,15 +33,10 @@ int niikcortex_initocs_expand_remove_intersection(bbox *bb,kobj *ics,kobj *ocs,k
 /* returns nonzero if successfully removed the intersection */
 {
   const char *fcname="niikcortex_initocs_expand_remove_intersection";
-  int
-  iter,
-  n0,nv,sn;
-  niikpt
-  normal,
-  origpt;
-  double
-  maxdist,
-  dist;
+  int iter,
+    n0,nv,sn;
+  niikpt normal, origpt;
+  double maxdist, dist;
   int verbose=0;
 
   if(verbose>0) niik_fc_display(fcname,1);
@@ -142,11 +137,12 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
                               float smooth_percent,      /* smooth percent for smooth_iter */
                               kobj *ics,                 /* white matter surface */
                               kobj *ocs,                 /* pial surface is updated */
-                              nifti_image *border)       /* limit for GM expansion*/
+                              nifti_image *border,       /* limit for GM expansion*/
+                              int  alt_mode )            /* alt mode for thickness calculation*/
 {
 
   const char *fcname=__func__;
-  char fname[512];
+  char fname[2048];
   kobj **ctx;
   bbox *bb=NULL;
   niikpt origpt;
@@ -179,7 +175,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
   indicator_t *indicator; /*indicator helper function, using in paralell apply deformation only*/
   char tmstr[256];
   cortex_tracing_info trace;
-  int debug_tracing=falcon_tracing_init(img,&trace);
+  int debug_tracing = falcon_tracing_init(img, &trace);
 
   if(verbose>=1) niik_fc_display(fcname,1);
   NIIK_RET0((img==NULL),fcname,"img is null");
@@ -385,74 +381,82 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
       if(border)
         yb[n] = niik_image_interpolate_3d_nn(border,_pos);
     }
-    niik_runavg_double_vector(dy,nx,nx/20);
-    niik_central_difference_double_vector(dy,nx);
-    for(n=0; n<nx; n++) {
-      dy[n] /= dx;
-    }
-
-    if(verbose>5) {
+    if(alt_mode && border)
+    { //using only border
+       for(n=n0; n<nx; n++) {
+         if(yb[n]>0) break;
+       }
+       mcth_list[vindex] = NIIK_DMIN(x[n], max_cth);
+    } else {
+      niik_runavg_double_vector(dy,nx,nx/20);
+      niik_central_difference_double_vector(dy,nx);
       for(n=0; n<nx; n++) {
-        fprintf(stdout,"%3i %6.2f %6.2f %8.3f \n",n,x[n],y[n],dy[n]);
+        dy[n] /= dx;
       }
-    }
 
-    /* find the very max */
-    for(n=n0; n<nx; n++) { /*VF:hack*/
-      if(x[n]>=max_cth) {
-        if(verbose>5) {
-          fprintf(stdout,"\tmax cth %.5f\n",max_cth);
+      if(verbose>5) {
+        for(n=0; n<nx; n++) {
+          fprintf(stdout,"%3i %6.2f %6.2f %8.3f \n",n,x[n],y[n],dy[n]);
         }
-        break;
       }
-      if(y[n]<intCSF || yb[n]>0)   {
-        if(verbose>5) {
-          fprintf(stdout,"\tCSF %.2f < %.2f\n",y[n],intCSF);
-        }
-        break;
-      }
-      if( y[n]> intOCS && y[n]<intGM && dy[n]>gthresh) {
-        if(verbose>5) {
-          fprintf(stdout,"\ty=%.2f dy=%.2f\n",y[n],dy[n]);
-        }
-        break;
-      }
-      /* VF: not sure why we would do this
-      if(x[n]>=3 && y[n]>=intWM) { 
-        if(verbose>5) {
-          fprintf(stdout,"\tx=%5.2f\n",x[n]);
-        }
-        break;
-      }*/
-    }
-    if(verbose>5) {
-      fprintf(stdout,"%3i %6.2f %6.2f %8.3f   max\n",n,x[n],y[n],dy[n]);
-    }
 
-    /* pull back if really low */
-    if(y[n]<intCSF || yb[n]>0) {
-      for(m=n; m>n0; m--) {
-        if(y[m]>intCSF && y[n]<intGM) {
-          if(m==(nx-1)) {
-            continue;
+      /* find the very max */
+      for(n=n0; n<nx; n++) { /*VF:hack*/
+        if(x[n]>=max_cth) {
+          if(verbose>5) {
+            fprintf(stdout,"\tmax cth %.5f\n",max_cth);
           }
-          if(dy[m]<dy[m-1] && dy[m]<dy[m+1])
-            break;
+          break;
         }
+        if(y[n]<intCSF || yb[n]>0)   {
+          if(verbose>5) {
+            fprintf(stdout,"\tCSF %.2f < %.2f\n",y[n],intCSF);
+          }
+          break;
+        }
+        if( y[n]> intOCS && y[n]<intGM && dy[n]>gthresh) {
+          if(verbose>5) {
+            fprintf(stdout,"\ty=%.2f dy=%.2f\n",y[n],dy[n]);
+          }
+          break;
+        }
+        /* VF: not sure why we would do this
+        if(x[n]>=3 && y[n]>=intWM) { 
+          if(verbose>5) {
+            fprintf(stdout,"\tx=%5.2f\n",x[n]);
+          }
+          break;
+        }*/
       }
-      if(m>n0) n=m;
-    }
-    /* pull back if gradient is not the local max */
-    else if(dy[n]>gthresh) {
-      for(m=n; m>n0; m--) {
-        if(y[m]>intGM) continue;
-        if(dy[m]<=0) break;
+      if(verbose>5) {
+        fprintf(stdout,"%3i %6.2f %6.2f %8.3f   max\n",n,x[n],y[n],dy[n]);
       }
-      if(m>n0) n=m;
-    }
 
-    mcth_list[vindex] = NIIK_DMIN(x[n], max_cth);
-    if(verbose>5) fprintf(stdout,"%3i %6.2f %6.2f %8.3f \n",n,x[n],y[n],dy[n]);
+      /* pull back if really low */
+      if(y[n]<intCSF || yb[n]>0) {
+        for(m=n; m>n0; m--) {
+          if(y[m]>intCSF && y[n]<intGM) {
+            if(m==(nx-1)) {
+              continue;
+            }
+            if(dy[m]<dy[m-1] && dy[m]<dy[m+1])
+              break;
+          }
+        }
+        if(m>n0) n=m;
+      }
+      /* pull back if gradient is not the local max */
+      else if(dy[n]>gthresh) {
+        for(m=n; m>n0; m--) {
+          if(y[m]>intGM) continue;
+          if(dy[m]<=0) break;
+        }
+        if(m>n0) n=m;
+      }
+
+      mcth_list[vindex] = NIIK_DMIN(x[n], max_cth);
+      if(verbose>5) fprintf(stdout,"%3i %6.2f %6.2f %8.3f \n",n,x[n],y[n],dy[n]);
+    }
   } /* each vertex */
   free(x);
   free(y);
@@ -513,8 +517,9 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
 
     for(dist=0, sumdist=bb->delta, iter2=0;
         ( dist <= (max_cth+0.001) ) && iter2 < maxiter2 ;
-        iter2++, dist += step_size[iter], sumdist += step_size[iter] ) {
-      if(sumdist>bb->delta*0.5) {
+        iter2++, dist += step_size[iter], sumdist += step_size[iter] ) 
+    {
+      if(sumdist > bb->delta*0.5) {
         if(verbose>2) fprintf(stdout,"[%s] %i  bbox update\n",fcname,iter);
 
         #pragma omp parallel for private(n)

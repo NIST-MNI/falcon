@@ -719,9 +719,7 @@ kobj *off_kobj_read_off(const char * fname) {
   if(verbose) fprintf(stdout,"\t  tag = %s\n",tag);
 
   /* create an object now */
-  obj->fname = (char *)calloc(strlen(fname)+1,sizeof(char));
-  strncpy(obj->fname,fname,strlen(fname));
-  obj->fname[strlen(fname)]=0;
+  obj->fname = strdup(fname);
 
   if(verbose) fprintf(stdout,"    reading #vfe \n");
   if(fp!=NULL) {

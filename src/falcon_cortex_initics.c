@@ -558,7 +558,7 @@ int niikcortex_initics_shrink(nifti_image *gwi_img,      /* subject's gray-white
         fprintf(stderr,"ERROR: off_kobj_add_one_color\n");
         return 0;
       }
-      sprintf(fname,"tmp_initics_shrink%ip.off.gz",iter);
+      sprintf(fname,"tmp_initics_shrink%ip.ply",iter);
       fprintf(stdout,"[niikcortex_initics_shrink] %4i write output file: %s\n",iter,fname);
       off_kobj_write_offply(fname,obj,0);
     }
@@ -610,13 +610,13 @@ int niikcortex_initics_shrink(nifti_image *gwi_img,      /* subject's gray-white
         fprintf(stderr,"ERROR: off_kobj_add_one_color(obj,colormap->m[iter-1][0],colormap->m[iter-1][1],colormap->m[iter-1][2])\n");
         return 0;
       }
-      sprintf(fname,"tmp_initics_shrink%i.off.gz",iter);
+      sprintf(fname,"tmp_initics_shrink%i.ply",iter);
       fprintf(stdout,"[niikcortex_initics_shrink] %4i write output file: %s\n",iter,fname);
       off_kobj_write_offply(fname,obj,0);
     }
 
   } /* iteration */
-  /* off_kobj_write_offply("tmp_initics_shrink.off.gz",obj,0); */
+  /* off_kobj_write_offply("tmp_initics_shrink.ply",obj,0); */
 
   colormap = niikmat_free(colormap);
   bb=off_bbox_free(bb);

@@ -418,10 +418,10 @@ int niikcortex_smooth_cortex(niikcortex_deform * dfm)
 
     /* write output */
     if(verbose>3) {
-      sprintf(fname,"tmp_dfm_white.off.gz");
+      sprintf(fname,"tmp_dfm_white.ply");
       fprintf(stdout,"[%s] write temp files %s\n",fcname,fname);
       off_kobj_write_offply(fname,dfm->ctx[0],0);
-      sprintf(fname,"tmp_dfm_pial.off.gz");
+      sprintf(fname,"tmp_dfm_pial.ply");
       fprintf(stdout,"[%s] write temp files %s\n",fcname,fname);
       off_kobj_write_offply(fname,dfm->ctx[1],0);
     }
@@ -625,13 +625,13 @@ int niikcortex_smooth_cortex(niikcortex_deform * dfm)
     if(verbose>3 && (iter%5)==0) {
       if(cortex_id%2) {
         NIIK_RET0((!off_kobj_add_one_color(dfm->ctx[0],1,1,0)),fcname,"off_kobj_add_one_color ics");
-        sprintf(fname,"tmp_dfm%03i_ics.off.gz",iter+1);
+        sprintf(fname,"tmp_dfm%03i_ics.ply",iter+1);
         fprintf(stdout,"[%s] write temp files %s\n",fcname,fname);
         off_kobj_write_offply(fname,dfm->ctx[0],0);
       }
       if(cortex_id>=2) {
         NIIK_RET0((!off_kobj_add_one_color(dfm->ctx[1],1,0,0)),fcname,"off_kobj_add_one_color ocs");
-        sprintf(fname,"tmp_dfm%03i_ocs.off.gz",iter+1);
+        sprintf(fname,"tmp_dfm%03i_ocs.ply",iter+1);
         fprintf(stdout,"[%s] write temp files %s\n",fcname,fname);
         off_kobj_write_offply(fname,dfm->ctx[1],0);
       }
@@ -647,8 +647,8 @@ int niikcortex_smooth_cortex(niikcortex_deform * dfm)
 
   if(verbose>3) {
     fprintf(stdout,"[%s] write temp files\n",fcname);
-    off_kobj_write_offply("tmp_dfm_final_ics.off.gz",dfm->ctx[0],0);
-    off_kobj_write_offply("tmp_dfm_final_ocs.off.gz",dfm->ctx[1],0);
+    off_kobj_write_offply("tmp_dfm_final_ics.ply",dfm->ctx[0],0);
+    off_kobj_write_offply("tmp_dfm_final_ocs.ply",dfm->ctx[1],0);
   }
 
   off_bbox_free(bb);

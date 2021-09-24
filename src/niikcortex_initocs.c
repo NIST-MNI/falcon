@@ -47,11 +47,11 @@ void prog_usage() {
   fprintf(stdout,"  --ics <ICS>                white matter surface mean intensity [default=auto]\n");
   fprintf(stdout,"  --ocs <OCS>                pial surface mean intensity [default=auto]\n");
   fprintf(stdout,"  --gthresh <G>              threshold for first derivative [default=50]\n");
-  fprintf(stdout,"  --init-thick <MT>          initial thickness (mm) [default=0.1]\n");
   fprintf(stdout,"  --max-thick <MT>           maximum allowed thickness (mm) [default=3]\n");
   fprintf(stdout,"  --smooth-iter <iter>       smooth iteration [default=3]\n");
   fprintf(stdout,"  --smooth-factor <f>        smooth factor [default=0.75]\n");
   fprintf(stdout,"  --iter <iter>              maximum number of iterations [default=20]\n");
+  fprintf(stdout,"  --alt                      alt mode, using border only\n");
   fprintf(stdout,"  --mask <lesion.mnc>        lesion mask\n");
   fprintf(stdout,"  --border <border.mnc>      border for ocs expansion, for example CSF mask\n");
   fprintf(stdout,"  --delta <init_cth>         initial cortical thickness [default=0.1]\n");
@@ -72,6 +72,7 @@ int main(int argc,char *argv[],char *envp[]) {
   int numvlist=0;
   int numimglist=3;
   int maxiter2=20;
+  int alt_mode=0;
   nifti_image
     *img=NULL,
    **imglist=NULL,
@@ -92,7 +93,7 @@ int main(int argc,char *argv[],char *envp[]) {
   const char *out_init_ocs=NULL;
   const char *fcname="niikcortex_initocs";
   int i,n;
-  char* timestamp=niik_create_minc_timestamp(argc,argv);
+  char* timestamp = niik_create_minc_timestamp(argc,argv);
 
   struct option long_options[] = {
     {"clobber", no_argument, &clobber, 1},
@@ -117,6 +118,7 @@ int main(int argc,char *argv[],char *envp[]) {
     {"iter",required_argument,  0,       'T'},
     {"mask",required_argument,  0,       'm'},
     {"delta",required_argument, 0,       'd'},
+    {"alt", no_argument,        &alt_mode, 1},
     {0, 0, 0, 0}
   };
 
@@ -245,7 +247,7 @@ int main(int argc,char *argv[],char *envp[]) {
   }
 
   if(niik_check_double_problem(thresh)) { /* first derivative threshold (need to be a variable) */
-    thresh = 50;
+    thresh = 50.0;
   }
   if(niik_check_double_problem(omax)) { /* maximum thickness */
     omax = 3.0;
@@ -311,7 +313,8 @@ int main(int argc,char *argv[],char *envp[]) {
                                 maxiter2,
                                 smooth_factor,
                                 obj,obj2,
-                                border)) {
+                                border,
+                                alt_mode)) {
     fprintf(stderr,"[%s] ERROR: niikcortex_initocs_expand\n",fcname);
     exit(1);
   }

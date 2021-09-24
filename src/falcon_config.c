@@ -62,6 +62,9 @@ const char * get_DEBUG_PREFIX(void) {
   return getenv("FALCON_DEBUG_PREFIX");
 }
 
+const char * get_POSTMORTEM_PREFIX(void) {
+  return getenv("FALCON_POSTMORTEM_PREFIX");
+}
 
 
 /*

@@ -1518,7 +1518,7 @@ int niikcortex_deform_cortex(niikcortex_deform * dfm)
   /*curvature storage*/
   /*niikmat *deform_weights=dfm->weight;*/
 
-  char fname[512];
+  char fname[2048];
   const char *fcname=__func__;
 
   debug_tracing = falcon_tracing_init(dfm->t1img, &trace);
@@ -2105,13 +2105,13 @@ pthick.x,pthick.y,pthick.z\n");
         fprintf(stdout,"[%s] after remesh surface intersection %i\n",fcname,xsc);
         if(!xsc) break;
       }
-      if(xsc && get_DEBUG_PREFIX())
+      if(xsc && get_POSTMORTEM_PREFIX())
       {
-        sprintf(fname,"%s_failed_selfintersect_dfm%03i_ics.ply",get_DEBUG_PREFIX(),iter+1);
+        sprintf(fname,"%s_failed_selfintersect_dfm%03i_ics.ply",get_POSTMORTEM_PREFIX(),iter+1);
         fprintf(stdout,"[%s] write temp files %s\n",fcname,fname);
         off_kobj_write_offply(fname,dfm->ctx[0],0);
 
-        sprintf(fname,"%s_failed_selfintersect_dfm%03i_ocs.ply",get_DEBUG_PREFIX(),iter+1);
+        sprintf(fname,"%s_failed_selfintersect_dfm%03i_ocs.ply",get_POSTMORTEM_PREFIX(),iter+1);
         fprintf(stdout,"[%s] write temp files %s\n",fcname,fname);
         off_kobj_write_offply(fname,dfm->ctx[1],0);
       }
@@ -2171,13 +2171,13 @@ pthick.x,pthick.y,pthick.z\n");
     if(verbose>3 && (iter%5)==0 && get_DEBUG_PREFIX()) {
       if(cortex_id%2) {
         NIIK_RET0((!off_kobj_add_one_color(dfm->ctx[0],1,1,0)),fcname,"off_kobj_add_one_color ics");
-        sprintf(fname,"%s_tmp_dfm%03i_ics.off.gz",get_DEBUG_PREFIX(),iter+1);
+        sprintf(fname,"%s_tmp_dfm%03i_ics.ply",get_DEBUG_PREFIX(),iter+1);
         fprintf(stdout,"[%s] write temp files %s\n",fcname,fname);
         off_kobj_write_offply(fname,dfm->ctx[0],0);
       }
       if(cortex_id>=2) {
         NIIK_RET0((!off_kobj_add_one_color(dfm->ctx[1],1,0,0)),fcname,"off_kobj_add_one_color ocs");
-        sprintf(fname,"%s_tmp_dfm%03i_ocs.off.gz",get_DEBUG_PREFIX(),iter+1);
+        sprintf(fname,"%s_tmp_dfm%03i_ocs.ply",get_DEBUG_PREFIX(),iter+1);
         fprintf(stdout,"[%s] write temp files %s\n",fcname,fname);
         off_kobj_write_offply(fname,dfm->ctx[1],0);
       }

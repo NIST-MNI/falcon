@@ -950,10 +950,19 @@ int off_correct_self_intersection_with_elen(bbox *bb,kobj *obj,double elen)
           off_remesh_kvert_relocate(v);
         }
       }
-      fprintf(stderr,"  writing tmp_prob.off for error checking \n");
-      if(!off_kobj_write_offply("tmp_prob.off",obj,0)) {
-        fprintf(stderr,"ERROR: off_kobj_write_off \n");
-        exit(0);
+
+      if(get_POSTMORTEM_PREFIX())
+      {
+        char fname[2048];
+        sprintf(fname,"%s_fail_correct_self_intersection.ply",get_POSTMORTEM_PREFIX());
+
+        fprintf(stderr,"  writing %s for error checking \n",fname);
+        if(!off_kobj_write_offply(fname,obj,0)) {
+          fprintf(stderr,"ERROR: off_kobj_write_off \n");
+          exit(0);
+        }
+      } else {
+        fprintf(stderr,"Can't output postmortem file, set FALCON_POSTMORTEM_PREFIX environment variable\n");
       }
       return 0;
     }

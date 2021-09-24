@@ -31,6 +31,9 @@ void niik_set_verbose(int);
 /*get directory for dumping debug info*/
 const char * get_DEBUG_PREFIX(void);
 
+/*file prefix for post-mortem files*/
+const char * get_POSTMORTEM_PREFIX(void);
+
 
 #endif /*__NIIK_CONFIG_H__*/
 

@@ -1835,10 +1835,20 @@ int off_kobj_test(kobj *obj) {
         else if(niikpt_distance(v->v,e->endpts[1]->v)<0.1){
           off_display_vert_info(v,20); }
           }
-      fprintf(stderr,"  writing tmp_prob.ply for error checking \n");
-      if(!off_kobj_write_offply("tmp_prob.ply",obj,0)) {
-        fprintf(stderr,"ERROR: off_kobj_write_off \n");
-        exit(0);
+
+
+      if(get_POSTMORTEM_PREFIX())
+      {
+        char fname[2048];
+        sprintf(fname,"%s_fail_check.ply",get_POSTMORTEM_PREFIX());
+
+        fprintf(stderr,"  writing %s for error checking \n",fname);
+        if(!off_kobj_write_offply(fname,obj,0)) {
+          fprintf(stderr,"ERROR: off_kobj_write_off \n");
+          exit(0);
+        }
+      } else {
+        fprintf(stderr,"Can't output postmortem file, set FALCON_POSTMORTEM_PREFIX environment variable\n");
       }
       return 0;
     }
