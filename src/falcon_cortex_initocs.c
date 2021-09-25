@@ -383,10 +383,11 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
     }
     if(alt_mode && border)
     { //using only border
-       for(n=n0; n<nx; n++) {
-         if(yb[n]<1) break;
-       }
-       mcth_list[vindex] = NIIK_DMIN(x[n], max_cth);
+      //  for(n=n0; n<nx; n++) {
+      //    if(yb[n]>0) break;
+      //  }
+      //  mcth_list[vindex] = NIIK_DMIN(x[n], max_cth);
+      mcth_list[vindex] = max_cth; /*hack*/
     } else {
       niik_runavg_double_vector(dy,nx,nx/20);
       niik_central_difference_double_vector(dy,nx);
@@ -474,10 +475,10 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
   for(n=0; n<smooth_iter_maxcth; n++) {
     NIIK_RET0((!off_surface_smooth_using_vert(ics, mcth_list, 3, 1)), fcname,"off_surface_smooth_using_vert");
   }
-  if(verbose>0) {
+  /*if(verbose>0) {*/
     fprintf(stdout,"[niikcortex_initocs_expand] after surface smoothing\n");
     niik_display_stats_for_double_vector(mcth_list, ics->nvert);
-  }
+  /*}*/
 
   /************************************************
    *

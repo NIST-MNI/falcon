@@ -111,7 +111,6 @@ int main(int argc,char *argv[],char *envp[]) {
     {"border",required_argument, 0, 'B'},
 
     {"gthresh",required_argument, 0,     'G'},
-    {"init-thick",required_argument, 0,  'I'},
     {"max-thick",required_argument, 0,   'M'},
     {"smooth-iter",required_argument, 0, 'S'},
     {"smooth-factor",required_argument, 0,'F'},
@@ -173,9 +172,6 @@ int main(int argc,char *argv[],char *envp[]) {
       break;
     case 'B':
       in_border=optarg;
-      break;
-    case 'I':
-      initial = atof(optarg);
       break;
     case 'S':
       smooth_iter = atoi(optarg);
