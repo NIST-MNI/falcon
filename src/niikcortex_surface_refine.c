@@ -1094,45 +1094,39 @@ int niikmesh_refine( niikcortex_deform *dfm) {
     if(dfm->debug_pt[0]>0)
       fprintf(stdout,"  debug position       %9.2f %9.2f %9.2f\n",dfm->debug_pt[1]*dfm->t1img->dx,dfm->debug_pt[2]*dfm->t1img->dy,dfm->debug_pt[3]*dfm->t1img->dz);
 
-    if(verbose>0) fprintf(stdout,"[%s] gradient image\n",fcname);
+  if(verbose>0) fprintf(stdout,"[%s] gradient image\n",fcname);
 
-    NIIK_RET0(((blur_img[0]   = niik_image_copy_as_type(dfm->t1img,NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type");
-    NIIK_RET0(((blur_img[1]   = niik_image_copy_as_type(dfm->t1img,NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type");
+  NIIK_RET0(((blur_img[0]   = niik_image_copy_as_type(dfm->t1img,NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type");
+  NIIK_RET0(((blur_img[1]   = niik_image_copy_as_type(dfm->t1img,NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type");
 
-    if(dfm->gradient_FWHM[0]>0.0) {
-      if(verbose>1) fprintf(stdout,"[%s] gradient  gaussian filter\n",fcname);
-      NIIK_RET0((!niik_image_filter_gaussian_update(blur_img[0],11,dfm->gradient_FWHM[0])),fcname,"niik_image_filter_gaussian_update");
-      /*debug*/
-      /*
-      printf("Save:debug_blur.mnc blurred with fwhm:%f\n",dfm->gradient_FWHM[0]);
-      NIIK_EXIT((!niik_image_write("debug_blur.mnc",blur_img[0])),__func__,"niik_image_write",9);*/
+  if(dfm->gradient_FWHM[0]>0.0) {
+    if(verbose>1) fprintf(stdout,"[%s] gradient  gaussian filter\n",fcname);
+    NIIK_RET0((!niik_image_filter_gaussian_update(blur_img[0],11,dfm->gradient_FWHM[0])),fcname,"niik_image_filter_gaussian_update");
+  } else if(verbose>1) {
+    fprintf(stdout,"[%s]   no gradient gaussian filter\n",fcname);
+  }
 
-    } else if(verbose>1) {
-      fprintf(stdout,"[%s]   no gradient gaussian filter\n",fcname);
-    }
+  if(dfm->divergence_FWHM[0]>0.0) {
+    if(verbose>1) fprintf(stdout,"[%s] divergence  gaussian filter\n",fcname);
+    NIIK_RET0((!niik_image_filter_gaussian_update(blur_img[1],11,dfm->divergence_FWHM[0])),fcname,"niik_image_filter_gaussian_update");
+  } else if(verbose>1) {
+    fprintf(stdout,"[%s]   no gradient gaussian filter\n",fcname);
+  }
 
-    if(dfm->divergence_FWHM[0]>0.0) {
-      if(verbose>1) fprintf(stdout,"[%s] divergence  gaussian filter\n",fcname);
-      NIIK_RET0((!niik_image_filter_gaussian_update(blur_img[1],11,dfm->divergence_FWHM[0])),fcname,"niik_image_filter_gaussian_update");
-    } else if(verbose>1) {
-      fprintf(stdout,"[%s]   no gradient gaussian filter\n",fcname);
-    }
+  if(verbose>1) fprintf(stdout,"[%s]   sobel filter\n",fcname);
+  NIIK_RET0(((grad_img[0]  = niik_image_sobel_filters_with_mag(blur_img[0]))==NULL),fcname,"niik_image_sobel_filters_with_mag");
+  NIIK_RET0(((grad_img[1]  = niik_image_sobel_filters_with_mag(blur_img[1]))==NULL),fcname,"niik_image_sobel_filters_with_mag");
 
-    if(verbose>1) fprintf(stdout,"[%s]   sobel filter\n",fcname);
-    NIIK_RET0(((grad_img[0]  = niik_image_sobel_filters_with_mag(blur_img[0]))==NULL),fcname,"niik_image_sobel_filters_with_mag");
-    NIIK_RET0(((grad_img[1]  = niik_image_sobel_filters_with_mag(blur_img[1]))==NULL),fcname,"niik_image_sobel_filters_with_mag");
+  /*divergence of the gradient field*/
+  NIIK_RET0(((div_img[0] = niik_image_divergence(grad_img[1],0))==NULL),fcname, "niik_image_divergence");
 
-    /*divergence of the gradient field*/
-    NIIK_RET0(((div_img[0] = niik_image_divergence(grad_img[1],0))==NULL),fcname, "niik_image_divergence");
+  /*debug*/
+  /*NIIK_EXIT((!niik_image_write("tmp_divergence.mnc",div_img[0])),__func__,"niik_image_write",9);*/
 
-    /*debug*/
-    /*NIIK_EXIT((!niik_image_write("tmp_divergence.mnc",div_img[0])),__func__,"niik_image_write",9);*/
-
-    /*debug*/
+  /*debug*/
 
   for(n=0; n<2; n++)
     blur_img[n]=niik_image_free(blur_img[n]);
-
 
   for(n=0; n<3; n++) {
     if(dfm->prior[n]) {
@@ -1284,11 +1278,11 @@ int niikmesh_refine( niikcortex_deform *dfm) {
     fprintf(stdout,"[%s] iter %-4i of %-4i %s\n",fcname,iter+1,dfm->iter,tmstr);
     if(verbose>2) fprintf(stdout,"[%s] iter %-4i update normal\n",fcname,iter+1);
 
-    off_update_kobj_face_normal(dfm->ctx[cidx]);
-    off_update_kobj_vert_normal(dfm->ctx[cidx]);
-    off_smooth_kobj_vert_normal(dfm->ctx[cidx]);
+    off_update_kobj_face_normal(dfm->ctx[0]);
+    off_update_kobj_vert_normal(dfm->ctx[0]);
+    off_smooth_kobj_vert_normal(dfm->ctx[0]);
     if(dfm->weight->m[cidx][WEIGHT_CURVATURE]>0.0)
-        update_curvature(&dfm->crv[cidx],dfm->ctx[cidx]);
+        update_curvature(&dfm->crv[cidx],dfm->ctx[0]);
 
     if(dfm->weight->m[cidx][WEIGHT_CURVATURE]>0.0)
        fprintf(stdout,"iter %-4i mesh mean curvature=%8.6f\n",iter,mean_curvature(&dfm->crv[cidx],dfm->ctx[cidx]));
@@ -1448,6 +1442,65 @@ int niikmesh_refine( niikcortex_deform *dfm) {
         fprintf(stdout,"[%s] No movement, stopping \n",fcname);
         break;
     }
+
+    /*remesh if needed*/
+    if(dfm->remesh>0 && iter>0 && (iter%dfm->remesh)==0 )
+    {
+      int xsc;
+      int r;
+      kobj *backup;
+      /*make a backup surface*/
+      //backup=off_kobj_copy(dfm->ctx[0]);
+      /*keep same average edge length*/
+      double elen = off_get_kobj_mean_edge_length(dfm->ctx[0]);
+
+      off_update_kobj_face_normal(dfm->ctx[0]);
+      off_update_kobj_vert_normal(dfm->ctx[0]);
+      off_smooth_kobj_vert_normal(dfm->ctx[0]);
+
+      fprintf(stdout,"[%s] Remeshing\n",fcname);
+
+      //for(r=0;r<5;r++)
+      //{
+        NIIK_RET0((!off_remesh_kobj(dfm->ctx[0],elen,10,0)),fcname,"off_remesh_kobj");
+
+        off_update_kobj_face_normal(dfm->ctx[0]);
+        off_update_kobj_vert_normal(dfm->ctx[0]);
+        off_smooth_kobj_vert_normal(dfm->ctx[0]);
+
+        NIIK_RET0((!off_create_bbox_from_multiple_kobj(bb,dfm->ctx,1)),fcname,"off_create_bbox_from_multiple_kobj");
+        NIIK_RET0((!off_correct_self_intersection_with_elen(bb,dfm->ctx[0],elen)),fcname,"off_correct_self_intersection");
+
+        off_update_kobj_face_normal(dfm->ctx[0]);
+        off_update_kobj_vert_normal(dfm->ctx[0]);
+        off_smooth_kobj_vert_normal(dfm->ctx[0]);
+
+        NIIK_RET0((!off_create_bbox_from_multiple_kobj(bb,dfm->ctx,1)),fcname,"off_create_bbox_from_multiple_kobj");
+
+        // xsc = niikcortex_off_count_intersection(bb, dfm->ctx[0]);
+        // fprintf(stdout,"[%s] after remesh surface intersection %i\n",fcname,xsc);
+        // if(!xsc) break;
+      //}
+
+      // if(xsc && get_POSTMORTEM_PREFIX())
+      // {
+      //   sprintf(fname,"%s_failed_selfintersect_dfm%03i_refine.ply",get_POSTMORTEM_PREFIX(),iter+1);
+      //   fprintf(stdout,"[%s] write temp files %s\n",fcname,fname);
+      //   off_kobj_write_offply(fname,dfm->ctx,0);
+      // }
+      // if(xsc) {
+      //   /*rollback!*/
+      //   fprintf(stdout,"[%s] rolling back \n",__func__);
+      //   off_kobj_free(dfm->ctx);
+      //   dfm->ctx=backup;
+      //   remesh_fail++;
+      // } else {
+      //   off_kobj_free(backup);
+      // }
+
+      NIIK_RET0(!niicortex_mesh_deform_prepare(dfm), fcname, "niicortex_mesh_deform_prepare");
+    }
+
   } /* iteration */
 
 //  xsc = niikcortex_off_count_intersection(bb, dfm->ctx[0], dfm->ctx[1]);
