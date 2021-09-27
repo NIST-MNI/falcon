@@ -1377,8 +1377,8 @@ int niikmesh_refine( niikcortex_deform *dfm) {
     {
       /*VF: maybe do it more effeciently?*/
       NIIK_RET0((!off_kobj_add_one_color(dfm->ctx[0],1,0,0)),fcname,"off_kobj_add_one_color"); /* yellow for white matter-surface */
-      falcon_tracing_dump(&trace, iter,"refine", dfm->t1img, bb);
-      falcon_tracing_dump_objects(&trace, iter,"refine", dfm->ctx, 1 );
+      falcon_tracing_dump(&trace, iter,"surf_refine", dfm->t1img, bb);
+      falcon_tracing_dump_objects(&trace, iter,"surf_refine", dfm->ctx, 1 );
     }
 
     for(iter2=0,dist=dfm->apply_step; iter2<dfm->iter2; iter2++) {
