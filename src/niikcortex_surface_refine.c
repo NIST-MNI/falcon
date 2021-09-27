@@ -679,7 +679,7 @@ int mesh_deform_calc_deformation( niikcortex_deform * dfm  )
         k[0][0][vidx] = k[0][1][vidx] = niikpt_zero();
         continue;
       }
-      k[0][0][vidx] = mesh_deform_calc_deformation_vertex(&dfm_refine,dfm->vmat[CORTEX_ICS][vidx],vidx);
+      k[0][0][vidx] = mesh_deform_calc_deformation_vertex(&dfm_refine, dfm->vmat[CORTEX_ICS][vidx],vidx);
     } /* each vertex */
 
     /*
@@ -945,16 +945,6 @@ int niicortex_mesh_deform_prepare(niikcortex_deform * dfm)
   int vidx;
   dfm->nvert = dfm->ctx[0]->nvert;
 
-  /* nonctx labels
-   * -ctx_label is a list of zeros and non-zeros for non-cortex and cortex, respectively
-   */
-  if(dfm->nonctx_mask!=NULL) {
-    /*TODO: finish this!*/
-  } else {
-    int n;
-    dfm->ctx_label = (int *)realloc(dfm->ctx_label,dfm->nvert*sizeof(int));
-    for(n=0; n<dfm->nvert; n++) dfm->ctx_label[n] = 1;
-  } 
 
   dfm->indicator = (indicator_t*)realloc(dfm->indicator,dfm->nvert*sizeof(indicator_t));
  
@@ -987,6 +977,21 @@ int niicortex_mesh_deform_prepare(niikcortex_deform * dfm)
     fprintf(stderr,"[%s] ERROR: niikmesh_deform_mesh_calc_multiplication_factor\n", __func__);
     return 0;
   }
+
+  /* nonctx labels
+   * -ctx_label is a list of zeros and non-zeros for non-cortex and cortex, respectively
+   */
+  if(dfm->nonctx_mask!=NULL) {
+    dfm->ctx_label = (int *)realloc(dfm->ctx_label, dfm->nvert*sizeof(int));
+    for(int n=0; n<dfm->nvert; n++) /*dfm->ctx_label[n] = 1;*/
+    {
+      dfm->ctx_label[n]=niik_image_interpolate_3d_nn(dfm->nonctx_mask, dfm->vmat[0][n]->v)>0.5?0:1;
+    }
+  } else {
+    dfm->ctx_label = (int *)realloc(dfm->ctx_label, dfm->nvert*sizeof(int));
+    for(int n=0; n<dfm->nvert; n++) dfm->ctx_label[n] = 1;
+  } 
+
 
   return 1;
 }
@@ -1057,6 +1062,7 @@ int niikmesh_refine( niikcortex_deform *dfm) {
     fprintf(stdout,"[%s] parameters\n",fcname);
     fprintf(stdout,"  t1w image            %s\n",dfm->t1img->fname);
     fprintf(stdout,"  brain mask           %s\n",dfm->brain_mask->fname);
+    
     if(dfm->prior[0])
         fprintf(stdout,"  prior object         %s\n",dfm->prior[0]->fname);
     if(dfm->prior[1])
@@ -1297,7 +1303,8 @@ int niikmesh_refine( niikcortex_deform *dfm) {
 
     /*TODO: make this parameter (5 iterations)*/
     if(!(iter+1)%5) {
-      if(!niikmesh_deform_mesh_calc_multiplication_factor(dfm->t1img,dfm->brain_mask,dfm->ctx,dfm->tissue_val[0],dfm->mf_lim[0],dfm->mf_list)) {
+      if(!niikmesh_deform_mesh_calc_multiplication_factor(
+          dfm->t1img,dfm->brain_mask,dfm->ctx,dfm->tissue_val[0],dfm->mf_lim[0],dfm->mf_list)) {
         fprintf(stderr,"[%s] ERROR: niikmesh_deform_mesh_calc_multiplication_factor\n",fcname);
         return 0;
       }
@@ -1399,14 +1406,9 @@ int niikmesh_refine( niikcortex_deform *dfm) {
       dstdv = sqrt(dstdv / dfm->nvert - dmean * dmean);
 
       if(verbose>1 && iter2==(dfm->iter2-1)) { /* show deformation stats */
-          if(cidx==0) {
-            fprintf(stdout,"[%s]   actual deformation [%i white]: %9.5f +/- %9.5f (%9.5f, %6.4f)\n",
-                    fcname,cidx,dmean,dstdv,dmin,dmax);
-        }
-        if(cidx==1) {
-            fprintf(stdout,"[%s]   actual deformation [%i  pial]: %9.5f +/- %9.5f (%9.5f, %6.4f)\n",
-                    fcname,cidx,dmean,dstdv,dmin,dmax);
-        }
+          fprintf(stdout,"[%s]   actual deformation [%i white]: %9.5f +/- %9.5f (%9.5f, %6.4f)\n",
+                  fcname,cidx,dmean,dstdv,dmin,dmax);
+
         if(verbose>1) {
             fprintf(stdout,"[%s]          remaining deformation: %9.5f +/- %9.5f (%9.5f, %9.5f) Q=(%9.5f, %9.5f)\n",fcname,
                     niik_get_mean_from_double_vector(dfm->rd[cidx],dfm->nvert),
@@ -1454,15 +1456,17 @@ int niikmesh_refine( niikcortex_deform *dfm) {
       /*keep same average edge length*/
       double elen = off_get_kobj_mean_edge_length(dfm->ctx[0]);
 
+
       off_update_kobj_face_normal(dfm->ctx[0]);
       off_update_kobj_vert_normal(dfm->ctx[0]);
       off_smooth_kobj_vert_normal(dfm->ctx[0]);
 
-      fprintf(stdout,"[%s] Remeshing\n",fcname);
+      fprintf(stdout,"[%s] Remeshing, elen:%f\n",fcname,elen);
 
       //for(r=0;r<5;r++)
       //{
-        NIIK_RET0((!off_remesh_kobj(dfm->ctx[0],elen,10,0)),fcname,"off_remesh_kobj");
+        //NIIK_RET0((!off_remesh_kobj(dfm->ctx[0],elen,10,0)),fcname,"off_remesh_kobj");
+        NIIK_RET0((!off_remesh_kobj_ex(dfm->ctx[0],4.0/5*elen,4.0/3*elen,10,0,0)),fcname,"off_remesh_kobj");
 
         off_update_kobj_face_normal(dfm->ctx[0]);
         off_update_kobj_vert_normal(dfm->ctx[0]);
@@ -1497,21 +1501,12 @@ int niikmesh_refine( niikcortex_deform *dfm) {
       // } else {
       //   off_kobj_free(backup);
       // }
-
+      elen = off_get_kobj_mean_edge_length(dfm->ctx[0]);
+      fprintf(stdout,"[%s] Remeshing done elen:%f\n",fcname,elen);
       NIIK_RET0(!niicortex_mesh_deform_prepare(dfm), fcname, "niicortex_mesh_deform_prepare");
     }
 
   } /* iteration */
-
-//  xsc = niikcortex_off_count_intersection(bb, dfm->ctx[0], dfm->ctx[1]);
-//  fprintf(stdout,"[%s] surface intersection %i\n",fcname,xsc);
-
-//  if(verbose>3) {
-//    fprintf(stdout,"[niikcortex_deform_cortex] write temp files\n");
-//    off_kobj_write_offply("tmp_dfm_final_ics.off.gz",dfm->ctx[0],0);
-//    off_kobj_write_offply("tmp_dfm_final_ocs.off.gz",dfm->ctx[1],0);
-//  }
-
 
   off_bbox_free(bb);
 
