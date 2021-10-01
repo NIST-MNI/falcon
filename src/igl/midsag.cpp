@@ -76,6 +76,7 @@ int main(int argc, char *argv[])
     ("ftol", "Stopping criteria",            cxxopts::value<double>()->default_value("1e-7"))
     ("iter", "Maximum number of iterations", cxxopts::value<int>()->default_value("1000"))
     ("dist", "Cut distance",                 cxxopts::value<double>()->default_value("0.5"))
+    ("strip_width", "Central strip width",   cxxopts::value<double>()->default_value("4.0"))
 
     ("help", "Print help") ;
   
@@ -142,7 +143,9 @@ int main(int argc, char *argv[])
     int    iter = par["iter"].as<int>();
     double step = par["step"].as<double>();
     double ftol = par["ftol"].as<double>();
+    
     double center_dist=par["dist"].as<double>();
+    double strip_dist=par["strip_width"].as<double>()/2.0;
 
     // A hack, without the gradients just dump surface into output
     if(par.count("grad"))
@@ -307,6 +310,7 @@ int main(int argc, char *argv[])
             }
 
             // HACK : due to triangle orintation the Normals are pointing left
+            // split left from the right with given gap in the middle
             if(sqrD(0)>=(center_dist*center_dist)) 
             {
               if(proj<0.0) 
@@ -322,7 +326,8 @@ int main(int argc, char *argv[])
               right_vol.volume(idx)=0;
             }
 
-            if(sqrD(0)<(center_dist*center_dist))
+            // central mask should be wider, to account for imperfections
+            if(sqrD(0)<(strip_dist*strip_dist))
             {
               center_vol.volume(idx)=vol.volume(idx);
             } else {
