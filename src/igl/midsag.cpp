@@ -289,13 +289,14 @@ int main(int argc, char *argv[])
           for(int k=0;k<vol.dims(2);++k)
           {
             double proj=0.0;
+            bool inside=false;
             int idx=i*vol.stride(0)+j*vol.stride(1)+k*vol.stride(2);
             Eigen::RowVector3d ijk(i,j,k);
             Eigen::VectorXi I(1);
             Eigen::VectorXd sqrD(1);
             Eigen::MatrixXd C(1,3);
             
-            if(i<(tree.m_box.corner(Eigen::AlignedBox<double,3>::BottomLeftCeil)(0)-center_dist) )
+            if(i< (tree.m_box.corner(Eigen::AlignedBox<double,3>::BottomLeftCeil)(0)-center_dist) )
             {
               proj=100.0;
               sqrD(0)=(i-(tree.m_box.corner(Eigen::AlignedBox<double,3>::BottomLeftCeil)(0)));
@@ -327,7 +328,7 @@ int main(int argc, char *argv[])
             }
 
             // central mask should be wider, to account for imperfections
-            if(sqrD(0)<(strip_dist*strip_dist))
+            if(inside && sqrD(0)<(strip_dist*strip_dist))
             {
               center_vol.volume(idx)=vol.volume(idx);
             } else {
