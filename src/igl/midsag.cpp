@@ -306,13 +306,14 @@ int main(int argc, char *argv[])
               sqrD(0)=(i-(tree.m_box.corner(Eigen::AlignedBox<double,3>::BottomRightCeil)(0)));
               sqrD(0)*=sqrD(0);
             } else {
+              inside=true;
               tree.squared_distance(V,F,ijk,sqrD,I,C);
               proj=(FN.row(I(0)).array()*(ijk-C).array()).sum();
             }
 
             // HACK : due to triangle orintation the Normals are pointing left
             // split left from the right with given gap in the middle
-            if(sqrD(0)>=(center_dist*center_dist)) 
+            if(sqrD(0) >= (center_dist*center_dist)) 
             {
               if(proj<0.0) 
               {
