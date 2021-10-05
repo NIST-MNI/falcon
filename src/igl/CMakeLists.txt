@@ -22,7 +22,6 @@ IF(HAVE_BICPL)
 ENDIF()
 
 
-
 IF( LIBIGL_WITH_OPENGL_GLFW_IMGUI) # LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_GLFW AND
     message("Building interactive viewer")
     # Viewer APP
@@ -114,7 +113,6 @@ target_link_libraries(falcon_igl_mesh_transform igl::core minc2-simple )
 
 add_executable(falcon_igl_mesh_intersect mesh_intersect.cpp )
 target_link_libraries(falcon_igl_mesh_intersect igl::core )
-
 
 add_executable(falcon_igl_mesh_voxelizer mesh_voxelize.cpp minc_volume.h)
 target_link_libraries(falcon_igl_mesh_voxelizer igl::core minc2-simple )

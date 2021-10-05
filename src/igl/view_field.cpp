@@ -23,6 +23,7 @@
 #include "igl/readPLY.h"
 #include "csv/readCSV.h"
 
+#include "Guigue2003_tri_tri_intersect.h"
 
 #include "cxxopts.hpp"
 
@@ -61,6 +62,8 @@ int main(int argc, char *argv[])
       const size_t k = 5;
       static int idx_field = 0;
       static bool show_mesh_rgb=false;
+      double z_slice=0,z_lo,z_hi;
+
 
       if(argc>2)
         idx_field=atoi(argv[2]);
@@ -114,6 +117,23 @@ int main(int argc, char *argv[])
 
         std::cout<<std::endl;
       }
+
+
+      // extract borders
+      // intersect with a triangle along X-Y plane at Z=mean
+      Eigen::RowVectorXd lo=V.colwise().minCoeff();
+      Eigen::RowVectorXd hi=V.colwise().maxCoeff();
+      Eigen::RowVectorXd cnt=(lo+hi)/2.0;
+
+      z_slice=std::floor(cnt[2]);
+      z_lo=std::floor(lo[2]);
+      z_hi=std::ceil(hi[2]);
+
+      Eigen::Matrix<double,3,3,Eigen::RowMajor> sect_tri;
+
+      sect_tri<< lo(0),lo(1),z_slice,
+                 lo(0),2*hi(1)-lo(1),z_slice,
+                 2*hi(0)-lo(0),lo(1),z_slice;
 
       Eigen::MatrixXd U;
       Eigen::VectorXd S;
@@ -181,6 +201,54 @@ int main(int argc, char *argv[])
             update_field();
           }
         }
+
+        if(ImGui::InputDouble("slice",&z_slice))
+        {
+          sect_tri<< lo(0),lo(1),z_slice,
+                      lo(0),2*hi(1)-lo(1),z_slice,
+                      2*hi(0)-lo(0),lo(1),z_slice;
+
+          // extract edges
+          std::vector<Eigen::Matrix<double,1,3,Eigen::RowMajor> > edges1,edges2;
+
+          int coplanar_ctr=0;
+          // go over all triangles and check intersections
+          for(int i=0; i<F.rows(); ++i)
+          {
+            bool coplanar=false;
+
+            Eigen::Matrix<double,1,3,Eigen::RowMajor> edge1,edge2;
+            
+            if(igl::tri_tri_intersection_test_3d(
+              V.row(F(i,0)),  V.row(F(i,1)),  V.row(F(i,2)),
+              sect_tri.row(0),sect_tri.row(1),sect_tri.row(2),
+              coplanar,
+              edge1, edge2))
+            {
+              if(!coplanar)
+              {
+                edges1.push_back(edge1);
+                edges2.push_back(edge2);
+              }
+              else
+                coplanar_ctr++; // HACK: add all three edges?
+            }
+          }
+          // Draw a red segment parallel to the maximal curvature direction
+          const Eigen::RowVector3d red(0.8,0.2,0.2),blue(0.2,0.2,0.8);
+          //HACK: reshape
+          Eigen::Matrix<double,-1,3,Eigen::RowMajor> _edges1=
+            Eigen::Matrix<double,-1,3,Eigen::RowMajor>::NullaryExpr(edges1.size(),3,[&](int i,int j){return edges1[i](j);});
+          Eigen::Matrix<double,-1,3,Eigen::RowMajor> _edges2=
+            Eigen::Matrix<double,-1,3,Eigen::RowMajor>::NullaryExpr(edges1.size(),3,[&](int i,int j){return edges2[i](j);});
+
+          viewer.data().clear_edges();
+          viewer.data().add_edges(_edges1,
+            _edges2, 
+            blue);
+
+        }
+
       };
 
       viewer.plugins.push_back(&menu);
