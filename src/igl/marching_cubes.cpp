@@ -80,16 +80,16 @@ int main(int argc, char *argv[])
   cxxopts::Options options(argv[0], "Resample field");
 
   options
-      .positional_help("<source> <target>")
+      .positional_help("<input> <output>")
       .show_positional_help();
   
   options.add_options()
-    ("v,verbose", "Verbose output",     cxxopts::value<bool>()->default_value("false"))
-    ("i,input", "Source volume ",        cxxopts::value<std::string>())
-    ("o,output", "Output mesh ",        cxxopts::value<std::string>())
-    ("clobber", "Clobber output file ", cxxopts::value<bool>()->default_value("false"))
-    ("t,threshold",    "Threshold ", cxxopts::value<double>()->default_value("0.5"))
-    ("l,label",    "Extract label ", cxxopts::value<int>())
+    ("v,verbose",   "Verbose output",       cxxopts::value<bool>()->default_value("false"))
+    ("i,input",     "Source volume ",       cxxopts::value<std::string>())
+    ("o,output",    "Output mesh ",         cxxopts::value<std::string>())
+    ("clobber",     "Clobber output file ", cxxopts::value<bool>()->default_value("false"))
+    ("t,threshold", "Threshold ",           cxxopts::value<double>()->default_value("0.5"))
+    ("l,label",     "Extract label ",       cxxopts::value<int>())
 
     ("help", "Print help") ;
   
