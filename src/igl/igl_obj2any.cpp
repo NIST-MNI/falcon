@@ -33,6 +33,12 @@ int main(int argc,char **argv)
   if( par.count("input") && 
       par.count("output")  )
   {
+    if ( !par["clobber"].as<bool>() && 
+         !access( par["output"].as<std::string>().c_str(), F_OK)) {
+      std::cerr << par["output"].as<std::string>()<<" Exists!"<<std::endl;
+      return 1;
+    }
+
     bool verbose=par["verbose"].as<bool>();
     bool for_falcon=par["falcon"].as<bool>();
 
