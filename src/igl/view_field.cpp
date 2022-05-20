@@ -264,10 +264,11 @@ int main(int argc, char *argv[])
         return 1;
       }
     } else {
-      std::cerr<<"Usage:"<<argv[0]<<" input.off/ply [measurements field no]"<<std::endl;
+      std::cerr<<"Usage:"<<argv[0]<<" input.off/ply [measurement.csv] [measurements field no]"<<std::endl;
       return 1;
     }
-  } catch() {
+  } catch(const OptionException&err) { 
+      std::cerr<<"Usage:"<<argv[0]<<" input.off/ply [measurement.csv] [measurements field no]"<<std::endl;
 
   }
   return 0;
