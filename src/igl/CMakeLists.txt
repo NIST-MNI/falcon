@@ -117,7 +117,7 @@ target_link_libraries(falcon_igl_mesh_intersect igl::core )
 add_executable(falcon_igl_mesh_voxelizer mesh_voxelize.cpp minc_volume.h)
 target_link_libraries(falcon_igl_mesh_voxelizer igl::core minc2-simple )
 
-add_executable(laplace_field laplace_field.cpp fem_system.h fem_system.cxx)
+#add_executable(laplace_field laplace_field.cpp fem_system.h fem_system.cxx)
 
 #
 INSTALL( TARGETS 
