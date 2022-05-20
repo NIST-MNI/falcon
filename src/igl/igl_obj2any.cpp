@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <unistd.h>
 // IGL
 #include "readMNIObj.h"
 //#include "writeMNIObj.h"

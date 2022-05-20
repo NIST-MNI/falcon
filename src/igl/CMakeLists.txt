@@ -22,11 +22,11 @@ IF(HAVE_BICPL)
 ENDIF()
 
 
-IF( LIBIGL_WITH_OPENGL_GLFW_IMGUI) # LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_GLFW AND
+IF( LIBIGL_IMGUI) # LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_GLFW AND
     message("Building interactive viewer")
     # Viewer APP
     add_executable(falcon_igl_view_field view_field.cpp )
-    target_link_libraries(falcon_igl_view_field igl::csv igl::core igl::opengl_glfw igl::opengl_glfw_imgui)
+    target_link_libraries(falcon_igl_view_field igl::csv igl::core igl::opengl igl::imgui)
 
     INSTALL( TARGETS  falcon_igl_view_field)
 ENDIF()
