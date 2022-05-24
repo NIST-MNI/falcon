@@ -6,140 +6,33 @@
 #include <map>
 #include <set>
 
+#include "minc_volume.h"
 
 // Eigen
+#include <Eigen/Core>
 #include <Eigen/Dense>
-#include <Eigen/SparseCore>
+#include <Eigen/Sparse>
 #include <Eigen/LU>
 
-// Sparse solvers
-#include <Eigen/OrderingMethods>
-#include <Eigen/IterativeLinearSolvers>
 
 // MSH IO
 #include <igl/readMSH.h>
 #include <igl/writeMSH.h>
 
-#include "tri_to_tet.h"
+//#include "tri_to_tet.h"
 
 #define USE_SVD 0
-#include "mesh_util.h"
+//#include "mesh_util.h"
 
 // openmp stuff
-#ifdef USE_OPENMP
-#include <omp.h>
-#else
-#define omp_get_num_threads() 1
-#define omp_get_thread_num() 0
-#define omp_get_max_threads() 1
-#endif
+// #ifdef USE_OPENMP
+// #include <omp.h>
+// #else
+// #define omp_get_num_threads() 1
+// #define omp_get_thread_num() 0
+// #define omp_get_max_threads() 1
+// #endif
 
-
-template<class Interpolator, class Image> void sample_vector_field_v2(
-    typename Interpolator::Pointer interpolator,
-    const Eigen::Matrix<double,4,4> &coil_mat,
-    typename Image::Pointer image,
-    const Eigen::MatrixXd &coords,
-    Eigen::MatrixXd &field,
-    const Eigen::VectorXd & default_value,
-    bool flip
-    )
-{
-    using VoxelType = typename  Image::PixelType;
-    assert( field.cols() == image->GetNumberOfComponentsPerPixel() );
-    Eigen::Matrix<double,4,4> inv_coil_mat = coil_mat.inverse(); // .inverse();
-    Eigen::Matrix<double,3,3> vect_rotate=coil_mat.topLeftCorner<3,3>();
-
-    if(flip) {
-        Eigen::Matrix<double,3,3> flip_mx;
-        flip_mx<< -1,0,0,
-                   0,-1,0,
-                   0,0,1;
-        vect_rotate=flip_mx*flip_mx*flip_mx;
-    }
-
-    size_t out=0;
-    for(size_t i=0; i<coords.rows(); ++i)
-    {
-        // vertex coordinate, not needed?
-        Eigen::Vector3d vertex = inv_coil_mat.topLeftCorner<3,3>()*coords.row(i).transpose()+inv_coil_mat.topRightCorner<3,1>();
-
-        // convert to ITK point
-        itk::Point<double,3> itkvertex(vertex.data());
-        // apply inverse transform , to move it into coil space
-        itk::ContinuousIndex<double, 3 > img_idx;
-
-        //TODO: figure out if we need to adapt for LPS->RAS system here
-        
-        if( image->TransformPhysicalPointToContinuousIndex(itkvertex, img_idx) )
-        {
-            using  _MatrixType = Eigen::Matrix<typename Image::InternalPixelType, 3 , 1 >;
-            using  _MapType = Eigen::Map<const _MatrixType>;
-            VoxelType vox = interpolator->EvaluateAtContinuousIndex(img_idx);
-            Eigen::Vector3d fld=_MapType( vox.GetDataPointer() , 3, 1 ).template cast<double>();
-
-            field.row(i) = vect_rotate * fld;
-        } else {
-            // out of bounds
-            ++out;
-            field.row(i) = default_value;
-        }
-    }
-    std::cout<<"Out:"<< out <<" of "<< coords.rows()<<std::endl;
-}
-
-template<class Image> void xyz_to_index(
-    typename Image::Pointer image,
-    const Eigen::MatrixXd &X,
-    Eigen::MatrixXd &C
-    )
-{
-    using PointValueType=typename Image::PointValueType;
-    //assert(C.rows()==X.rows());
-    assert(C.cols()==3);
-    C.resize(X.rows(),3);
-    for(int i=0; i<X.rows(); ++i)
-    {
-        // convert to ITK point
-        typename Image::PointType itkvertex;
-        Eigen::Map< Eigen::Matrix<PointValueType,3,1> >(itkvertex.GetDataPointer(),3,1) = X.row(i);
-        typename itk::ContinuousIndex<PointValueType, 3> img_idx;
-
-        // TODO: check if we are inside image here?
-        image->TransformPhysicalPointToContinuousIndex(itkvertex, img_idx);
-
-        C.row(i) = Eigen::Map<const Eigen::Vector3d>( img_idx.GetDataPointer() , 3, 1 );
-    }
-}
-
-template<typename Image,
-        typename Derived1,
-        typename XT> 
-void index_to_xyz(
-    typename Image::Pointer image,
-    const Eigen::MatrixBase<Derived1> &C,
-    Eigen::Matrix<XT,-1,-1> &X
-    )
-{
-    using PointValueType=typename Image::PointValueType;
-
-    assert(C.cols()==3);
-    X.resize(C.rows(),3);
-
-    for(int i=0; i<C.rows(); ++i)
-    {
-        // convert to ITK point
-        typename Image::PointType itkvertex;
-        typename itk::ContinuousIndex<PointValueType, 3> img_idx;
-
-        Eigen::Map< Eigen::Matrix<PointValueType,3,1> >(img_idx.GetDataPointer(),3,1) = C.row(i).template cast<PointValueType>();
-
-        // TODO: check if we are inside image here?
-        image->TransformContinuousIndexToPhysicalPoint(img_idx, itkvertex);
-
-        X.row(i) = Eigen::Map<const Eigen::Matrix<PointValueType,3,1> >(itkvertex.GetDataPointer(),3,1).template cast<XT>();
-    }
-}
 
 template<typename DerivedX,
          typename DerivedT
@@ -168,278 +61,13 @@ void create_baricentric_matrix(
 }
 
 
-
-
-template<class Image> 
-void define_vec_image_bbox(
-    const Eigen::MatrixXd &X,
-    typename Image::Pointer &image,
-    int ncomp=3,
-    double step=2.0,
-    double border=20.0)
-{
-    assert(X.cols()==3);
-    // create empty image (filled with zeros)
-    Eigen::VectorXd bbox_bottom=X.colwise().minCoeff();
-    Eigen::VectorXd bbox_top=X.colwise().maxCoeff();
-
-    image=Image::New();
-
-    typename Image::IndexType start;
-    typename Image::SizeType size;
-    typename Image::PointType org;
-    typename Image::SpacingType spc;
-    typename Image::RegionType region;
-    typename Image::DirectionType identity;
-
-    typename Image::PixelType default_pixel;
-    default_pixel.SetSize(ncomp);
-    default_pixel.Fill(0.0);
-
-    identity.SetIdentity();
-    spc.Fill(step);
-    
-    for(int j=0;j<3;j++)
-    {
-        // add border to make zero-padding
-        size[j]  = ceil( (bbox_top[j]-bbox_bottom[j]+border*2)/step );
-        org[j]   = bbox_bottom[j]-border;
-        start[j] = 0;
-    }
-    region.SetSize  (size);
-    region.SetIndex (start);
-
-    image->SetLargestPossibleRegion (region);
-    image->SetBufferedRegion (region);
-    image->SetRequestedRegion (region);
-    image->SetSpacing( spc );
-    image->SetOrigin( org );
-    image->SetDirection(identity);
-    image->SetNumberOfComponentsPerPixel(ncomp);
-}
-
-template<class Image> void define_image_bbox(
-    const Eigen::MatrixXd &X,
-    typename Image::Pointer &image,
-    double step=2.0,
-    double border=20.0)
-{
-    assert(X.cols()==3);
-    // create empty image (filled with zeros)
-    Eigen::VectorXd bbox_bottom=X.colwise().minCoeff();
-    Eigen::VectorXd bbox_top=X.colwise().maxCoeff();
-
-    image = Image::New();
-
-    typename Image::IndexType start;
-    typename Image::SizeType size;
-    typename Image::PointType org;
-    typename Image::SpacingType spc;
-    typename Image::RegionType region;
-    typename Image::DirectionType identity;
-
-    identity.SetIdentity();
-    spc.Fill(step);
-    
-    for(int j=0;j<3;j++)
-    {
-        // add border to make zero-padding
-        size[j]  = ceil( (bbox_top[j]-bbox_bottom[j]+border*2)/step );
-        org[j]   = bbox_bottom[j]-border;
-        start[j] = 0;
-    }
-    region.SetSize  (size);
-    region.SetIndex (start);
-
-    image->SetLargestPossibleRegion (region);
-    image->SetBufferedRegion (region);
-    image->SetRequestedRegion (region);
-    image->SetSpacing( spc );
-    image->SetOrigin( org );
-    image->SetDirection(identity);
-}
-
-
-
-
-template<class ImageRef,class Image> void define_vec_image_byref(
-    ImageRef* ref,
-    typename Image::Pointer &image,
-    int ncomp=3)
-{
-    // create empty image (filled with zeros)
-
-    image = Image::New();
-
-    typename ImageRef::IndexType start;
-    typename ImageRef::SizeType size;
-    typename ImageRef::PointType org;
-    typename ImageRef::SpacingType spc;
-    typename ImageRef::RegionType region;
-    typename ImageRef::DirectionType dir;
-
-    // typename Image::PixelType default_pixel;
-    // default_pixel.SetSize(ncomp);
-    // default_pixel.Fill(0.0);
-
-    region=ref->GetLargestPossibleRegion ();
-    spc=ref->GetSpacing( );
-    org=ref->GetOrigin( );
-    dir=ref->GetDirection();
-
-    image->SetLargestPossibleRegion (region);
-    image->SetBufferedRegion (region);
-    image->SetRequestedRegion (region);
-    image->SetSpacing( spc );
-    image->SetOrigin( org );
-    image->SetDirection( dir );
-    image->SetNumberOfComponentsPerPixel(ncomp);
-}
-
-template<class ImageRef,class Image> void define_image_byref(
-    ImageRef* ref,
-    typename Image::Pointer &image)
-{
-    image=Image::New();
-
-    typename ImageRef::IndexType start;
-    typename ImageRef::SizeType size;
-    typename ImageRef::PointType org;
-    typename ImageRef::SpacingType spc;
-    typename ImageRef::RegionType region;
-    typename ImageRef::DirectionType dir;
-
-    region=ref->GetLargestPossibleRegion ();
-    spc=ref->GetSpacing( );
-    org=ref->GetOrigin( );
-    dir=ref->GetDirection();
-
-    image->SetLargestPossibleRegion (region);
-    image->SetBufferedRegion (region);
-    image->SetRequestedRegion (region);
-    image->SetSpacing( spc );
-    image->SetOrigin( org );
-    image->SetDirection( dir );
-}
-
-
-// normalize voxels in image by norm , where it's !=0
-template<class Image> void normalize_vec_image(
-    typename Image::Pointer image,
-    typename Image::Pointer norm )
-{
-    using ImageIterator=typename itk::ImageRegionIterator<Image>;
-    using PixelType=typename Image::PixelType; //will be VariableVector
-    int ncomp=image->GetNumberOfComponentsPerPixel();
-    ImageIterator it1(image,image->GetLargestPossibleRegion());
-    ImageIterator it2(norm,norm->GetLargestPossibleRegion());
-    for(it1.GoToBegin(),it2.GoToBegin(); !it1.IsAtEnd()&&!it2.IsAtEnd(); ++it1,++it2)
-    {
-
-        PixelType n=it2.Get();
-        PixelType o=it1.Get();
-        for(int i=0;i<ncomp;++i)
-        {
-            if(n[i]>0.0)
-            {
-                o[i]/=n[i];
-            }
-        }
-        it1.Set(o);
-    }
-}
-
-template<class Image> void normalize_image(
-    typename Image::Pointer image,
-    typename Image::Pointer norm )
-{
-    using ImageIterator=typename itk::ImageRegionIterator<Image>;
-    using PixelType=typename Image::PixelType; //will be VariableVector
-    int ncomp=image->GetNumberOfComponentsPerPixel();
-    ImageIterator it1(image,image->GetLargestPossibleRegion());
-    ImageIterator it2(norm,norm->GetLargestPossibleRegion());
-
-    for(it1.GoToBegin(),it2.GoToBegin(); !it1.IsAtEnd()&&!it2.IsAtEnd(); ++it1,++it2)
-    {
-
-        PixelType n=it2.Get();
-        PixelType o=it1.Get();
-
-        for(int i=0;i<ncomp;++i)
-        {
-            if(n[i]>0.0)
-            {
-                o[i]/=n[i];
-            }
-        }
-        if(n>0.0)
-            it1.Set(o/n);
-        else
-            it1.Set(o);
-    }
-}
-
-
-
-template<class Image1,class Image2> 
-typename Image2::Pointer convert_4d_image_type(typename Image1::Pointer img)
-{
-    using Image3D=itk::Image<double,3>;
-    using ExtractFilterType = typename itk::ExtractImageFilter<Image1, Image3D>;
-    using ComposeFilterType = typename itk::ComposeImageFilter<Image3D, Image2>;
-
-	using OrientFilterType=itk::OrientImageFilter<Image3D, Image3D> ;
-
-    typename ExtractFilterType::Pointer extractFilter = ExtractFilterType::New();
-    typename ComposeFilterType::Pointer composeFilter = ComposeFilterType::New();
-
-    // TODO: needed for NIFTI input ?
-	typename OrientFilterType::Pointer orienter = OrientFilterType::New();
-    // 
-
-    extractFilter->SetDirectionCollapseToSubmatrix();
-    typename Image1::RegionType inputRegion = img->GetBufferedRegion();
-    typename Image1::SizeType   size = inputRegion.GetSize();
-
-    assert(size[3]==3); // 3D vector
-    size[3] = 0; // we extract along t direction
-    typename Image1::IndexType start = inputRegion.GetIndex();
-    extractFilter->SetInput(img);
-
-    for(int i=0;i<3;i++)
-    {
-        typename Image1::RegionType desiredRegion;
-        start[3]=i;
-        desiredRegion.SetSize(size);  
-        desiredRegion.SetIndex(start);
-
-        extractFilter->SetExtractionRegion(desiredRegion);
-
-    	// orienter->SetInput(extractFilter->GetOutput());
-        // orienter->UseImageDirectionOff();
-        // orienter->SetGivenCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RPI);
-        // orienter->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_LPI);
-    	// orienter->Update();
-        // Image3D::Pointer slice=orienter->GetOutput();
-
-        extractFilter->Update();
-        Image3D::Pointer slice=extractFilter->GetOutput();
-        slice->DisconnectPipeline();
-
-        composeFilter->SetInput(i, slice);
-    }
-    composeFilter->Update();
-    return composeFilter->GetOutput();
-}
-
-
 template<class Image> void mesh_to_image(
     const Eigen::MatrixXd &C,
     const Eigen::MatrixXi &Tet,
     const std::vector<Eigen::Matrix3d> &IDX_to_BAR,
     const Eigen::MatrixXd &field,
-    typename Image::Pointer image,
-    typename Image::Pointer norm
+    minc_volume & out_vol,
+    minc_volume & out_norm
 )
 {
     // linerly interpolate field from volumetric mesh
@@ -448,11 +76,11 @@ template<class Image> void mesh_to_image(
     assert( IDX_to_BAR.size()==Tet.rows() );
     assert( C.cols()==3 );
     double eps = 1e-9;
-    typename Image::SizeType image_size = image->GetBufferedRegion().GetSize();
+    Eigen::RowVector3i  image_size = out_vol.dims;
  
     // here C is already continious index, rather then real XYZ coordinates
-    using VoxelType = typename  Image::PixelType;
-    assert(field.cols() == image->GetNumberOfComponentsPerPixel());
+    using VoxelType = double;
+    assert(field.cols() == out_vol.n_comp);
 
     // create a bounding box for each tetrahedra
     // using integer voxel coordinates
@@ -496,24 +124,17 @@ template<class Image> void mesh_to_image(
                     if( ( bar.array() >= -eps     ).all() && 
                         ( bar.array() <=(1.0+eps) ).all() )
                     {
-                        typename Image::IndexType voxelIndex = {{x, y, z}};
-                        using  _InternalPixelType = typename Image::InternalPixelType;
-                        using  _PixelType = typename Image::PixelType;
-                        using  _MatrixType = Eigen::Matrix<_InternalPixelType, -1 , 1 >;
-                        using  _MapTypeC  = Eigen::Map<const _MatrixType>;
-                        using  _MapType  = Eigen::Map<_MatrixType>;
+                        Eigen::RowVector3i voxelIndex(x, y, z);
 
-                        Eigen::VectorXd interpolated_value = tet_fields*bar;
+                        Eigen::RowVectorXd interpolated_value = tet_fields*bar;
                         // summarize fields
-                        interpolated_value += _MapTypeC( image->GetPixel( voxelIndex ).GetDataPointer(), field.cols(), 1); 
-                        _PixelType out_pixel(interpolated_value.data(), field.cols());
-                        image->SetPixel(voxelIndex, out_pixel );
+                        interpolated_value += out_vol.sample_nn_vec( voxelIndex ); 
+                        out_vol.set_voxel_vec(voxelIndex,interpolated_value);
 
                         // add the normalization factor
-                        Eigen::VectorXd norm_value(field.cols());norm_value.setOnes();
-                        norm_value += _MapTypeC( norm->GetPixel( voxelIndex ).GetDataPointer(), field.cols(), 1); 
-                        _PixelType out_pixel_norm(norm_value.data(), field.cols());
-                        norm->SetPixel(voxelIndex, out_pixel_norm );
+                        Eigen::RowVectorXd norm_value(field.cols());norm_value.setOnes();
+                        norm_value += out_norm.sample_nn_vec( voxelIndex ); 
+                        out_norm.set_voxel_vec(voxelIndex, norm_value );
                     }
                 }
             }
@@ -528,7 +149,7 @@ void mesh_to_image_nn(
     const Eigen::MatrixXi &Tet,
     const std::vector<Eigen::Matrix3d> &IDX_to_BAR,
     const Eigen::PlainObjectBase<Derived> &tetField,
-    typename Image::Pointer image
+    minc_volume & out_vol
 )
 {
     // set voxels inside each tetrahedra to the same value
@@ -537,14 +158,14 @@ void mesh_to_image_nn(
     assert( C.cols() == 3 );
     assert( Tet.cols() == 4 );
     assert( tetField.rows() == Tet.rows());
-    assert( tetField.cols() == image->GetNumberOfComponentsPerPixel());
+    assert( tetField.cols() == out_vol.n_comp);
 
-    using Scalar=typename Derived::Scalar;
+    using Scalar=double;
 
     double eps = 1e-9;
-    typename Image::SizeType image_size = image->GetBufferedRegion().GetSize();
+    Eigen::RowVector3i  image_size = out_vol.dims;
  
-    using VoxelType = typename  Image::PixelType;
+    using VoxelType = double;
 
     // create a bounding box for each tetrahedra
     // using integer voxel coordinates
@@ -582,17 +203,8 @@ void mesh_to_image_nn(
                     if( ( bar.array() >= -eps     ).all() && 
                         ( bar.array() <=(1.0+eps) ).all() )
                     {
-                        typename Image::IndexType voxelIndex = {{x, y, z}};
-                        using  _InternalPixelType = typename Image::InternalPixelType;
-                        using  _PixelType = typename Image::PixelType;
-                        using  _MatrixType = Eigen::Matrix<_InternalPixelType, -1 , 1 >;
-                        using  _MapTypeC  = Eigen::Map<const _MatrixType>;
-                        using  _MapType  = Eigen::Map<_MatrixType>;
-
-                        _MatrixType out = tetField.row(i).template cast<_InternalPixelType>();
-                        _PixelType out_pixel(out.data(), tetField.cols());
-
-                        image->SetPixel(voxelIndex, out_pixel );
+                        Eigen::RowVector3i voxelIndex(x, y, z);
+                        out_vol.set_voxel_vec(voxelIndex,tetField.row(i));
                     }
                 }
             }
@@ -613,7 +225,7 @@ void image_to_mesh_majority(
     const Eigen::MatrixBase<DerivedT> &Tet,
     const std::vector<Eigen::Matrix<typename DerivedC::Scalar,3,3>> &IDX_to_BAR,
     Eigen::PlainObjectBase<DerivedF>   &tetField,
-    typename Image::Pointer            image,
+    const minc_volume & volume,
     int n_cls,
     typename DerivedF::Scalar          default_value=0
 )
@@ -635,12 +247,9 @@ void image_to_mesh_majority(
     Scalar eps = 1e-9;
 
     // image index bounds 
-    typename  Image::RegionType region;
-    region = image->GetBufferedRegion(); 
-    typename  Image::IndexType i1 = region.GetIndex();
-    typename  Image::IndexType i2 = region.GetUpperIndex();
-
-    using VoxelType = typename  Image::PixelType;
+    Eigen::RowVector3i  i2 = volume.dims;
+    Eigen::RowVector3i  i1(0,0,0);
+    using VoxelType = double;
 
     // create a bounding box for each tetrahedra
     // using integer voxel coordinates
@@ -655,7 +264,7 @@ void image_to_mesh_majority(
                     [&C,&Tet](auto i, auto j)->double {
                         return (Index)std::ceil(std::max( { C(Tet(i,0),j), C(Tet(i,1),j), C(Tet(i,2),j), C(Tet(i,3),j) })) ;
                     } );
-    using  _PixelType = typename Image::PixelType;
+    using  _PixelType = double;
     
     for(size_t i=0; i<Tet.rows(); ++i)
     {
@@ -673,8 +282,9 @@ void image_to_mesh_majority(
             if(idx(0)>=i1[0] && idx(1)>=i1[1] && idx(2)>=i1[2] &&
                idx(0)< i2[0] && idx(1) <i2[2] && idx(2) <i2[2] )
             {
-                typename Image::IndexType voxelIndex = {{ (Index)std::floor(idx(0)+0.5), (Index)std::floor(idx(1)+0.5), (Index)std::floor(idx(2)+0.5)}};
-                _PixelType pix = image->GetPixel(voxelIndex);
+                Eigen::RowVector3i voxelIndex( (int)std::floor(idx(0)+0.5), (int)std::floor(idx(1)+0.5), (int)std::floor(idx(2)+0.5));
+
+                int pix = (int)volume.sample_nn(voxelIndex);
                 cls_counts(pix)++;
             }
         } else {
@@ -699,9 +309,8 @@ void image_to_mesh_majority(
                         if( ( bar.array() >= -eps     ).all() && 
                             ( bar.array() <=(1.0+eps) ).all() )
                         {
-                            typename Image::IndexType voxelIndex = {{x, y, z}};
-
-                            _PixelType pix = image->GetPixel(voxelIndex);
+                            Eigen::RowVector3i voxelIndex(x,y,z);
+                            int pix = (int)volume.sample_nn(voxelIndex);
                             cls_counts(pix)++;
                         }
                     }
@@ -719,78 +328,6 @@ void image_to_mesh_majority(
         } else {
             tetField(i) = default_value;
         }
-    }
-}
-
-template<class Image, 
-         typename DerivedC,
-         typename DerivedF> 
-void sample_image_nn(
-    const Eigen::MatrixBase<DerivedC> &C,
-    typename Image::Pointer image,
-    Eigen::MatrixBase<DerivedF> &vField,
-    typename DerivedF::Scalar default_value=0
-)
-{
-    // simple nearest neigbor sampler
-    // here C is already continious index, rather then real XYZ coordinates
-    assert( C.cols() == 3 );
-    assert( vField.rows() == C.rows());
-    assert( vField.cols() == 1);
-
-    using Scalar = typename DerivedF::Scalar;
-
-    typename Image::SizeType image_size = image->GetBufferedRegion().GetSize();
- 
-    using VoxelType = typename  Image::PixelType;
-
-    for(size_t i=0; i<C.rows(); ++i)
-    {
-        Eigen::Vector3d idx;
-        typename Image::IndexType voxelIndex = {{std::floor(C(i,0)+0.5), std::floor(C(i,1)+0.5), std::floor(C(i,2)+0.5)}};
-        if(voxelIndex[0]<image_size[0] && voxelIndex[1]<image_size[1] && voxelIndex[2]<image_size[2] &&
-           voxelIndex[0]>=0 && voxelIndex[1]>=0 && voxelIndex[2]>=0)
-            vField(i) = image->GetPixel(voxelIndex);
-        else
-            vField(i) = default_value;
-    }
-}
-
-
-template< class Interpolator, 
-          class Image,
-          typename DerivedC,
-          typename DerivedF > 
-void sample_image(
-    Interpolator*                     interpolator,
-    Image*                            image,
-    const Eigen::MatrixBase<DerivedC> &C,
-    Eigen::PlainObjectBase<DerivedF>  &vField,
-    typename DerivedF::Scalar         default_value=0
-    )
-{
-    assert( vField.rows()==C.rows() );
-    assert( vField.cols()==1 );
-
-    using VoxelType = typename Image::PixelType;
-    using Scalar = typename DerivedF::Scalar;
-    using Coord  = typename Interpolator::CoordRepType;
-    typename Image::RegionType region = image->GetLargestPossibleRegion(); 
-
-    typename Image::IndexType i1 = region.GetIndex();
-    typename Image::IndexType i2 = region.GetUpperIndex();
-
-    for(size_t i=0; i<C.rows(); ++i)
-    {
-        Eigen::Matrix<Coord,1,3> _ci = C.row(i).template cast<Coord>();
-        // convert to ITK point
-        typename Interpolator::ContinuousIndexType  ci( _ci.data() );
-
-        if( _ci[0] <i2[0] && _ci[1] <i2[1] && _ci[2] <i2[2] &&
-            _ci[0]>=i1[0] && _ci[1]>=i1[1] && _ci[2]>=i1[2] )
-            vField(i) = static_cast<Scalar>(interpolator->EvaluateAtContinuousIndex(ci));
-        else
-            vField(i) = default_value;
     }
 }
 
@@ -813,8 +350,6 @@ void compute_field_gradient_svd(const Eigen::MatrixXd &X,
                             const Eigen::VectorXd &Field,
                                   Eigen::MatrixXd &G,
                                   double epsilon);
-
-void print_image_info(itk::ImageBase<3>* ref);
 
 
 void create_laplacian_matrix(int si,int sj,int sk, Eigen::SparseMatrix<double, Eigen::RowMajor> &A, bool s27=false);

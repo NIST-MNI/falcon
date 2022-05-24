@@ -244,43 +244,56 @@ niikpt niikcortex_deform_calc_deformation_vertex_thickness_smoothness_term(kvert
 
 /**
 */
-niikpt niikcortex_deform_calc_deformation_prior_term(kvert *v, nifti_image **prior, nifti_image ***grad_prior, int cortex_id)
+// niikpt niikcortex_deform_calc_deformation_prior_term(kvert *v, nifti_image **prior, nifti_image ***grad_prior, int cortex_id)
+// {
+//     double prior_obj = niik_image_interpolate_3d_linear(     prior[cortex_id*2], v->v);
+//     double prior_bck = 0.0;
+//     double project;
+
+//     niikpt grad_prior_obj;
+//     niikpt grad_prior_bck;
+
+//     grad_prior_obj.x = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2][1], v->v);
+//     grad_prior_obj.y = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2][2], v->v);
+//     grad_prior_obj.z = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2][3], v->v);
+
+//     if(prior[cortex_id*2+1]){
+//         prior_bck = niik_image_interpolate_3d_linear(     prior[cortex_id*2+1], v->v);
+
+//         grad_prior_bck.x = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2+1][1], v->v);
+//         grad_prior_bck.y = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2+1][2], v->v);
+//         grad_prior_bck.z = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2+1][3], v->v);
+//     } else {
+//         prior_bck = 1.0 - prior_obj;
+
+//         grad_prior_bck.x = -grad_prior_obj.x;
+//         grad_prior_bck.y = -grad_prior_obj.y;
+//         grad_prior_bck.z = -grad_prior_obj.z;
+//     }
+
+//     /*TODO: normalize gradients ?*/
+//     grad_prior_obj   = niikpt_unit(grad_prior_obj);  /*only interested in the direction*/
+//     grad_prior_bck   = niikpt_unit(grad_prior_bck);  /*only interested in the direction*/
+
+//     /*should balance at 0.5 p value between WM and GM   or GM and CSF*/
+//     // bug is here , need to update balance
+//     project = ( niikpt_dot(v->normal, grad_prior_obj) * prior_obj +
+//                 niikpt_dot(v->normal, grad_prior_bck) * prior_bck ) / 2.0;
+
+//     return niikpt_kmul(v->normal, -1 * project);
+// }
+
+niikpt niikcortex_deform_calc_deformation_prior_term(kvert *v,  nifti_image *div_prior, int cortex_id) 
 {
-    double prior_obj = niik_image_interpolate_3d_linear(     prior[cortex_id*2], v->v);
-    double prior_bck = 0.0;
-    double project;
+  double d = niik_image_interpolate_3d_linear(div_prior, v->v);
 
-    niikpt grad_prior_obj;
-    niikpt grad_prior_bck;
+  /*clamp between -1 and 1 */
+  if(d<-1.0)     d=-1.0;
+  else if(d>1.0) d= 1.0;
 
-    grad_prior_obj.x = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2][1], v->v);
-    grad_prior_obj.y = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2][2], v->v);
-    grad_prior_obj.z = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2][3], v->v);
+  return niikpt_kmul(v->normal, -d); 
+} /* niikcortex_deform_calc_deformation_prior_term */
 
-    if(prior[cortex_id*2+1]){
-        prior_bck=niik_image_interpolate_3d_linear(     prior[cortex_id*2+1], v->v);
-
-        grad_prior_bck.x = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2+1][1], v->v);
-        grad_prior_bck.y = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2+1][2], v->v);
-        grad_prior_bck.z = niik_image_interpolate_3d_linear(grad_prior[cortex_id*2+1][3], v->v);
-    } else {
-        prior_bck = 1.0 - prior_obj;
-
-        grad_prior_bck.x = -grad_prior_obj.x;
-        grad_prior_bck.y = -grad_prior_obj.y;
-        grad_prior_bck.z = -grad_prior_obj.z;
-    }
-
-    /*TODO: normalize gradients ?*/
-    grad_prior_obj   = niikpt_unit(grad_prior_obj);  /*only interested in the direction*/
-    grad_prior_bck   = niikpt_unit(grad_prior_bck);  /*only interested in the direction*/
-
-    /*should balance at 0.5 p value between WM and GM   or GM and CSF*/
-    project = ( niikpt_dot(v->normal, grad_prior_obj) * prior_obj +
-                niikpt_dot(v->normal, grad_prior_bck) * prior_bck ) / 2.0;
-
-    return niikpt_kmul(v->normal, -1 * project);
-}
 
 
 /* VF: Balooning to stay on the edge of the tissue "class", and in the area with high intensity gradient
@@ -656,8 +669,9 @@ niikpt niikcortex_deform_calc_deformation_vertex(refine_info *dfm, kvert *vi, kv
   }
 
   /* prior term */
-  if(dfm->prior[cortex_id*2]!=NULL && dfm->deform_weights->m[cortex_id][WEIGHT_PRIOR]>0.0) {
-    pprior=niikcortex_deform_calc_deformation_prior_term(v[cortex_id], dfm->prior, dfm->grad_prior, cortex_id );
+  if(dfm->div_prior[cortex_id]!=NULL && dfm->deform_weights->m[cortex_id][WEIGHT_PRIOR]>0.0) {
+    //pprior=niikcortex_deform_calc_deformation_prior_term(v[cortex_id], dfm->prior, dfm->grad_prior, cortex_id );
+    pprior=niikcortex_deform_calc_deformation_prior_term(v[cortex_id], dfm->div_prior[cortex_id], cortex_id );
   } /* prior deformation */
 
 
@@ -762,7 +776,8 @@ int niikcortex_deform_calc_deformation( niikcortex_deform * dfm  )
   dfm_refine.deform_weights = dfm->weight;
   dfm_refine.div_img = dfm->div_img;
   dfm_refine.grad_img = dfm->grad_img;
-  dfm_refine.grad_prior = dfm->grad_prior;
+  /*dfm_refine.grad_prior = dfm->grad_prior;*/
+  dfm_refine.div_prior = dfm->div_prior;
   dfm_refine.prior = dfm->prior;
   dfm_refine.gradient_lambda = dfm->gradient_lambda;
   dfm_refine.lesion_mask = dfm->lesion_mask;
@@ -1476,7 +1491,7 @@ int niikcortex_deform_cortex(niikcortex_deform * dfm)
     *div_img[2],
     *blur_img[4],
     *tmpimg;
-  nifti_image **grad_prior[4];
+  nifti_image *div_prior[2]={NULL,NULL};
   bbox *bb;
   kface *f;
   kvert *vi,*vo;
@@ -1521,7 +1536,9 @@ int niikcortex_deform_cortex(niikcortex_deform * dfm)
   char fname[2048];
   const char *fcname=__func__;
 
-  debug_tracing = falcon_tracing_init(dfm->t1img, &trace);
+  //DEBUG
+  //debug_tracing = falcon_tracing_init(dfm->t1img, &trace);
+  //DEBUG
 
   ctm=time(NULL);
   stm=localtime(&ctm);
@@ -1670,26 +1687,38 @@ pthick.x,pthick.y,pthick.z\n");
   for(n=0; n<4; n++)
     blur_img[n] = niik_image_free(blur_img[n]);
 
-  for(n=0; n<4; n++) {
-    if(dfm->prior[n]) {
-        nifti_image *blur_prior;
-        NIIK_RET0(((blur_prior = niik_image_copy_as_type(dfm->prior[n], NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type");
+  for(n=0; n<2; n++) {
+    if(dfm->prior[n*2] && dfm->prior_FWHM[n]>0.0) {
+        char tmp[4095];
+        int ii;
+        nifti_image *blur_prior,**grad_prior;
+        NIIK_RET0(((blur_prior = niik_image_copy_as_type(dfm->prior[n*2], NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type");
 
-        if(dfm->prior_FWHM[n/2]>0.0) { 
-          if(verbose>1) fprintf(stdout,"[%s] gradient  gaussian filter\n",fcname);
-          NIIK_RET0((!niik_image_filter_gaussian_update(blur_prior,11, dfm->prior_FWHM[n/2] )),fcname,"niik_image_filter_gaussian_update");
-        } else if(verbose>1) {
-          fprintf(stdout,"[%s]   no gradient gaussian filter\n",fcname);
-        }
+        if(verbose>1) fprintf(stdout,"[%s] gradient  gaussian filter\n",fcname);
+        NIIK_RET0((!niik_image_filter_gaussian_update(blur_prior,11, dfm->prior_FWHM[n/2] )),fcname,"niik_image_filter_gaussian_update");
 
         if(verbose>1) fprintf(stdout,"[%s]   sobel filter\n",fcname);
-        NIIK_RET0(((grad_prior[n] = niik_image_sobel_filters_with_mag(blur_prior))==NULL),fcname,"niik_image_sobel_filters_with_mag");
+        NIIK_RET0(((grad_prior = niik_image_sobel_filters_with_mag(blur_prior))==NULL),fcname,"niik_image_sobel_filters_with_mag");
+
+        if(verbose>1) fprintf(stdout,"[%s]   divergence filter\n",fcname);
+        NIIK_RET0(((div_prior[n] = niik_image_divergence(grad_prior,0))==NULL),fcname,"niik_image_divergence");
 
         niik_image_free(blur_prior);
+
+        for(ii=0; ii<4; ii++)
+            grad_prior[ii] = niik_image_free(grad_prior[ii]);
+        free(grad_prior);
     } else {
-        grad_prior[n]=NULL;
+      div_prior[n]=NULL;
     }
   }
+  
+  // if(dfm->prior[0])
+  // {
+  //   debug_tracing = falcon_tracing_init(grad_prior[0][0], &trace); 
+  // } else {
+  debug_tracing = falcon_tracing_init(dfm->t1img, &trace);
+  // }
 
   if(verbose>1) fprintf(stdout,"[%s]   sobel filtered\n",fcname);
 
@@ -1752,7 +1781,8 @@ pthick.x,pthick.y,pthick.z\n");
   }
   dfm->grad_img=grad_img;
   dfm->div_img=div_img;
-  dfm->grad_prior=grad_prior;
+  dfm->div_prior=div_prior;
+  dfm->grad_img=grad_img;
 
   if(verbose>0) fprintf(stdout,"[niikcortex_deform_cortex]   smoothing multiplication factor\n");
 
@@ -2207,17 +2237,13 @@ pthick.x,pthick.y,pthick.z\n");
     free(grad_img[n]);
   }
 
-  for(n=0; n<3; n++) {
-    int i;
-    if(grad_prior[n]) {
-        for(i=0; i<4; i++)
-          grad_prior[n][i] = niik_image_free(grad_prior[n][i]);
-        free(grad_prior[n]);
-      }
+  for(n=0; n<2; n++) {
+    div_img[n]=niik_image_free(div_img[n]);
   }
 
   for(n=0; n<2; n++) {
-    div_img[n]=niik_image_free(div_img[n]);
+    if(div_prior[n])
+      div_prior[n]=niik_image_free(div_prior[n]);
   }
   invmat = niikmat_free(invmat);
   falcon_tracing_free(&trace);

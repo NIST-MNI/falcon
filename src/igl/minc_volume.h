@@ -1,6 +1,8 @@
 #ifndef MINC_VOLUME_H__
 #define MINC_VOLUME_H__
 
+#include <iostream>
+
 #include "minc2-simple.h"
 
 
@@ -28,13 +30,24 @@ struct minc_volume {
 
   double sample_nn(const Eigen::RowVector3d& ijk) const
   {
-    return this->volume( (ijk.array().round().cast<int>()*this->stride.array()).sum() );
+    return this->volume( (ijk.array().round().cast<int>()*this->stride.array()).sum(),0 );
   }
 
-  const Eigen::ArrayXd sample_nn_vec(const Eigen::RowVector3d& ijk) const
+  double set_voxel(const Eigen::RowVector3d& ijk,double val)
+  {
+    return this->volume( (ijk.array().round().cast<int>()*this->stride.array()).sum() )=val;
+  }
+
+  const Eigen::RowVectorXd sample_nn_vec(const Eigen::RowVector3d& ijk) const
   {
     return this->volume.row( (ijk.array().round().cast<int>()*this->stride.array()).sum() );
   }
+
+  const Eigen::RowVectorXd set_voxel_vec(const Eigen::RowVector3d& ijk,const Eigen::RowVectorXd& val)
+  {
+    return this->volume.row((ijk.array().round().cast<int>()*this->stride.array()).sum() )=val;
+  }
+
 
   double sample_interpolate(const Eigen::RowVector3d& ijk) const
   {
@@ -107,11 +120,24 @@ struct minc_volume {
                 
                 ijk_d[0]*ijk_d[1]*ijk_d[2]*      this->volume.row( (ijk_6*this->stride.array()).sum() );
   }
-
-
 };
 
-bool load_volume(const char*minc_file, minc_volume& vol, bool initialize_only=false )
+
+inline bool define_similar(minc_volume& vol, const minc_volume& like )
+{
+    vol.n_comp=like.n_comp;
+
+    vol.dims = like.dims;
+    vol.stride = like.stride;
+    vol.dir = like.dir;
+    vol.idir = like.idir;
+
+    vol.volume.resize(vol.dims.array().prod(),vol.n_comp);
+    
+    return true;
+}
+
+inline bool load_volume(const char*minc_file, minc_volume& vol, bool initialize_only=false )
 {
     struct minc2_dimension * _dims;
     int ndim;
@@ -174,7 +200,7 @@ bool load_volume(const char*minc_file, minc_volume& vol, bool initialize_only=fa
     return true;
 }
 
-bool save_volume(const char*minc_file, const char *minc_file_ref, minc_volume& vol, bool binarize=true)
+inline bool save_volume(const char*minc_file, const char *minc_file_ref, minc_volume& vol, bool binarize=true)
 {
     struct minc2_dimension * _dims;
     struct minc2_dimension * store_dims;
@@ -221,9 +247,7 @@ bool save_volume(const char*minc_file, const char *minc_file_ref, minc_volume& v
 }
 
 
-
-
-void sample_values_nn(const minc_volume& vol, const Eigen::MatrixXd &C, Eigen::VectorXd &O ) 
+inline void sample_values_nn(const minc_volume& vol, const Eigen::MatrixXd &C, Eigen::VectorXd &O ) 
 // C - ijk coordinates
 // O - values
 {

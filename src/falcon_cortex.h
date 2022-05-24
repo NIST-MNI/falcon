@@ -89,6 +89,8 @@ typedef struct {
   /*created during execution*/
   nifti_image ***grad_img;
   nifti_image ***grad_prior;
+  nifti_image **div_prior;
+
   nifti_image **div_img;
   bbox *bb;
   double *thklist;
@@ -125,6 +127,7 @@ typedef struct {
   nifti_image *img;
   nifti_image ***grad_img;
   nifti_image ***grad_prior;
+  nifti_image **div_prior;
   nifti_image **div_img;
   nifti_image *brain_mask;
   nifti_image *gwi_mask;

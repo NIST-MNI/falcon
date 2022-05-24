@@ -1,13 +1,20 @@
 #include <string>
 #include <chrono>
 
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
+
 #include "cxxopts.hpp"
 
-//#include "fem_system.h"
-
+#include "minc_volume.h"
+#include "fem_system.h"
 // unsupported
 #include <unsupported/Eigen/CXX11/Tensor>
 
+// Sparse solvers
+#include <Eigen/OrderingMethods>
+#include <Eigen/IterativeLinearSolvers>
 
 int main(int argc,char **argv)
 {
@@ -40,33 +47,37 @@ int main(int argc,char **argv)
         // using PixelType = double;
         // using ImageType = itk::Image<PixelType, 3>;
         // using LabelImageType = itk::Image<unsigned char, 3>;
-        // auto tick = std::chrono::steady_clock::now();
+        auto tick = std::chrono::steady_clock::now();
 
-        // using ReaderType = itk::ImageFileReader<LabelImageType>;
-        // ReaderType::Pointer reader = ReaderType::New();
-        // reader->SetFileName(par["in"].as<std::string>());
-        // reader->Update();
-        // LabelImageType::Pointer image = reader->GetOutput();
-        // LabelImageType::RegionType region = image->GetLargestPossibleRegion();
+        minc_volume image;
+        if( !load_volume(par["in"].as<std::string>().c_str(),image, true ) )
+        {
+            std::cerr<<"Error loading:"<<par["in"].as<std::string>().c_str()<<std::endl;
+            return 1;
+        }
 
-        // using LabelTensor = Eigen::Tensor<unsigned char,3,Eigen::ColMajor>;
-        // using Tensor = Eigen::Tensor<double,3,Eigen::ColMajor>;
+        using LabelTensor = Eigen::Tensor<unsigned char,3,Eigen::ColMajor>;
+        using Tensor = Eigen::Tensor<double,3,Eigen::ColMajor>;
 
-        // LabelTensor in_vol=Eigen::TensorMap< LabelTensor>(image->GetBufferPointer(),
-        //     region.GetSize(2), region.GetSize(1), region.GetSize(0));
-    
+        LabelTensor in_vol = Eigen::TensorMap< Tensor>(image.volume.data(),
+             image.dims(2), image.dims(1), image.dims(0)).cast<unsigned char>();
+
+        minc_volume out_image;
+        define_similar(out_image,image);
+        out_image.volume = 0.0;
         // ImageType::Pointer out_image;
         // define_image_byref<LabelImageType,ImageType>(image, out_image);
 
         // out_image->Allocate();
         // out_image->FillBuffer(0.0);
 
-        // Eigen::TensorMap<Tensor> out_vol(out_image->GetBufferPointer(),
-        //     region.GetSize(2), region.GetSize(1), region.GetSize(0));
+        Eigen::TensorMap<Tensor> out_vol(out_image.volume.data(),
+             image.dims(2), image.dims(1), image.dims(0));
         
         
         using SparseMatrix = Eigen::SparseMatrix<double, Eigen::RowMajor>;
-        int total_voxels=region.GetSize(2)*region.GetSize(1)*region.GetSize(0);
+        int total_voxels=image.dims.prod();
+
         SparseMatrix A;
         if(par["grad"].as<bool>())
         {
@@ -74,10 +85,10 @@ int main(int argc,char **argv)
             // FOR DEBUGGING ONLY!
             SparseMatrix Dxf,Dyf,Dzf;
             SparseMatrix Dxb,Dyb,Dzb;
-            create_grad_matrixes(region.GetSize(2), region.GetSize(1), region.GetSize(0), Dxf,Dxb,Dyf,Dyb,Dzf,Dzb);
+            create_grad_matrixes(image.dims(2), image.dims(1), image.dims(0), Dxf,Dxb,Dyf,Dyb,Dzf,Dzb);
             A=Dxf*Dxb+Dyf*Dyb+Dzf*Dzb;
         } else {
-            create_laplacian_matrix(region.GetSize(2), region.GetSize(1), region.GetSize(0), A, par["s27"].as<bool>());
+            create_laplacian_matrix(image.dims(2), image.dims(1), image.dims(0), A, par["s27"].as<bool>());
         }
         tick = std::chrono::steady_clock::now();
         ////
@@ -88,7 +99,7 @@ int main(int argc,char **argv)
 
         auto ijk_to_idx = [&](auto i,auto j,auto k) -> Eigen::Index 
         {
-            return k+j*region.GetSize(0)+i*region.GetSize(0)*region.GetSize(1);
+            return k+j*image.dims(0)+i*image.dims(0)*image.dims(1);
         };
 
         tick = std::chrono::steady_clock::now();
@@ -96,9 +107,9 @@ int main(int argc,char **argv)
         using triplet = Eigen::Triplet<double>;
         std::vector<triplet> B_;
 
-        for(Eigen::Index k=0;k<region.GetSize(0);++k) 
-            for(Eigen::Index j=0;j<region.GetSize(1);++j)
-                for(Eigen::Index i=0;i<region.GetSize(2);++i)
+        for(Eigen::Index k=0;k<image.dims(0);++k) 
+            for(Eigen::Index j=0;j<image.dims(1);++j)
+                for(Eigen::Index i=0;i<image.dims(2);++i)
                 {
                     if(in_vol(i,j,k)>0)
                     {
@@ -143,9 +154,9 @@ int main(int argc,char **argv)
         std::cout << "#iterations:     " << solver.iterations() << std::endl;
         std::cout << "estimated error: " << solver.error()      << std::endl;
 
-        for(Eigen::Index k=0;k<(region.GetSize(2));++k) 
-            for(Eigen::Index j=0;j<(region.GetSize(1));++j)
-                for(Eigen::Index i=0;i<(region.GetSize(0));++i)
+        for(Eigen::Index k=0;k<(image.dims(2));++k) 
+            for(Eigen::Index j=0;j<(image.dims(1));++j)
+                for(Eigen::Index i=0;i<(image.dims(0));++i)
                 {
                     out_vol(k,j,i) = solution(ijk_to_idx(i,j,k));
                 }

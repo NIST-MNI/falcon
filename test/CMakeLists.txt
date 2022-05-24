@@ -121,9 +121,11 @@ ENDMACRO(ADD_FALCON_TEST_PRL)
 
 ADD_FALCON_TEST(BINARY_MORPHOLOGY ${TESTDIR}/test_morphology.sh ${FALCON_BIN} ${OUTDIR}/morphology_temp ) 
 
-ADD_FALCON_TEST(SULCUS_PHANTOM    ${TESTDIR}/simple_cortex_thickness.sh ${FALCON_BIN} ${TESTDIR}/sulcus_2layers.mnc sulcus_phantom 250 90 4.0 ${OUTDIR}/sulcus_phantom_temp ) 
+ADD_FALCON_TEST(SULCUS_PHANTOM    ${TESTDIR}/simple_cortex_thickness.sh 
+  ${FALCON_BIN} ${TESTDIR}/sulcus_2layers.mnc sulcus_phantom 250 90 4.0 ${OUTDIR}/sulcus_phantom_temp ) 
 
-ADD_FALCON_TEST(SULCUS_PHANTOM_NOISY ${TESTDIR}/simple_cortex_thickness.sh ${FALCON_BIN} ${TESTDIR}/sulcus_2layers_noisy.mnc sulcus_phantom_noisy 250 90 4.0 ${OUTDIR}/sulcus_phantom_temp_noisy ) 
+ADD_FALCON_TEST(SULCUS_PHANTOM_NOISY ${TESTDIR}/simple_cortex_thickness.sh 
+  ${FALCON_BIN} ${TESTDIR}/sulcus_2layers_noisy.mnc sulcus_phantom_noisy 250 90 4.0 ${OUTDIR}/sulcus_phantom_temp_noisy ) 
 
 set_tests_properties(SULCUS_PHANTOM PROPERTIES TIMEOUT 1200)
 
@@ -148,7 +150,8 @@ add_custom_target(make_phantoms ALL
                   )
 
 ADD_FALCON_TEST(COMPLEX_PHANTOM ${TESTDIR}/simple_cortex_thickness.sh 
-    ${FALCON_BIN} ${CMAKE_CURRENT_BINARY_DIR}/complex_phantom.mnc complex_phantom 120 50 3.2 ${OUTDIR}/complex_phantom_temp 0.1 -complex ) 
+    ${FALCON_BIN} ${CMAKE_CURRENT_BINARY_DIR}/complex_phantom.mnc 
+      complex_phantom 120 50 3.0 ${OUTDIR}/complex_phantom_temp 0.1 -complex ) 
 
 set_tests_properties(COMPLEX_PHANTOM PROPERTIES TIMEOUT 1500)
 
@@ -157,7 +160,9 @@ ADD_FALCON_TEST(SURFACE_TOOLS ${TESTDIR}/run_surface_tools.sh
 
 
 ADD_FALCON_TEST(SURFACE_REFINE ${TESTDIR}/run_surface_refine.sh 
-    ${MINC_TOOLKIT_DIR} ${FALCON_BIN} ${CMAKE_CURRENT_BINARY_DIR}/fg_phantom.mnc ${CMAKE_CURRENT_BINARY_DIR}/bg_phantom.mnc ${CMAKE_CURRENT_BINARY_DIR}/bin_phantom.mnc ${CMAKE_CURRENT_BINARY_DIR}/dist_phantom.mnc ${CMAKE_CURRENT_BINARY_DIR}/surface_refine   )
+    ${MINC_TOOLKIT_DIR} ${FALCON_BIN} ${CMAKE_CURRENT_BINARY_DIR}/fg_phantom.mnc 
+    ${CMAKE_CURRENT_BINARY_DIR}/bg_phantom.mnc ${CMAKE_CURRENT_BINARY_DIR}/bin_phantom.mnc 
+    ${CMAKE_CURRENT_BINARY_DIR}/dist_phantom.mnc ${CMAKE_CURRENT_BINARY_DIR}/surface_refine   )
 
 #set_tests_properties(SURFACE_REFINE PROPERTIES TIMEOUT 1500)
 

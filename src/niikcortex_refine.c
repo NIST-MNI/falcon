@@ -718,7 +718,15 @@ int main(int argc,char *argv[],char *envp[]) {
   if(dfm->prior[1] && dfm->prior[0]) {
     NIIK_EXIT(((dfm->prior[2] = niik_image_copy_as_type(dfm->prior[0], NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type",1);
     NIIK_EXIT((!niik_image_add_2_images(dfm->prior[2],dfm->prior[1])),fcname,"niik_image_add_2_images",1);
+
+    // DEBUG
+    // niik_image_write("debug_prior_0.mnc",dfm->prior[0]);
+    // niik_image_write("debug_prior_1.mnc",dfm->prior[1]);
+    // niik_image_write("debug_prior_2.mnc",dfm->prior[2]);
+    // niik_image_write("debug_prior_3.mnc",dfm->prior[3]);
+    // DEBUG
   }
+
 
 
   /* get the tissue values (niikcortex-deform) */

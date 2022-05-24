@@ -1,12 +1,19 @@
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
+
 #include "fem_system.h"
 
+// Sparse solvers
+#include <Eigen/OrderingMethods>
+#include <Eigen/IterativeLinearSolvers>
 
-#include <igl/readMSH.h>
-#include <igl/writeMSH.h>
-#include "tri_to_tet.h"
+//#include <igl/readMSH.h>
+//#include <igl/writeMSH.h>
+//#include "tri_to_tet.h"
 
 #define USE_SVD 0
-#include "mesh_util.h"
+//#include "mesh_util.h"
 
 
 
@@ -211,23 +218,6 @@ void compute_field_gradient_svd(const Eigen::MatrixXd &X,
         }
         #endif        
     }       
-}
-
-
-
-void print_image_info(itk::ImageBase<3>* ref)
-{
-    using Image=itk::ImageBase<3>;
-    Image::PointType org=ref->GetOrigin( );
-    Image::SpacingType spc=ref->GetSpacing( );
-    Image::RegionType region=ref->GetLargestPossibleRegion ();
-    Image::DirectionType dir=ref->GetDirection();
-    Image::RegionType::SizeType size=region.GetSize();
-    // check if the image was flipped
-    std::vector<double> orig_spacing;
-    itk::ImageBase<3>::DirectionType orig_dir;
-
-    std::cout<<"sz:"<<size<<" sp:"<<spc<<" o:"<< org <<std::endl;
 }
 
 

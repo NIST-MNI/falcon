@@ -76,42 +76,15 @@ niikpt niikmesh_deform_calc_deformation_vertex_surface_smoothness_simple(kvert *
 
 /**
 */
-niikpt niikmesh_deform_calc_deformation_prior_term(kvert *v, nifti_image **prior, nifti_image ***grad_prior)
-{
-    double prior_obj = niik_image_interpolate_3d_linear(     prior[0], v->v);
-    double prior_bck = 0.0;
-    double project;
+niikpt niikmesh_deform_calc_deformation_prior_term(kvert *v,  nifti_image *div_prior)
+{  
+  double d = niik_image_interpolate_3d_linear(div_prior, v->v);
 
-    niikpt grad_prior_obj;
-    niikpt grad_prior_bck;
+  /*clamp between -1 and 1 */
+  if(d<-1.0)     d=-1.0;
+  else if(d>1.0) d= 1.0;
 
-    grad_prior_obj.x = niik_image_interpolate_3d_linear(grad_prior[0][1], v->v);
-    grad_prior_obj.y = niik_image_interpolate_3d_linear(grad_prior[0][2], v->v);
-    grad_prior_obj.z = niik_image_interpolate_3d_linear(grad_prior[0][3], v->v);
-
-    if(prior[1]){
-        prior_bck = niik_image_interpolate_3d_linear(     prior[1], v->v);
-
-        grad_prior_bck.x = niik_image_interpolate_3d_linear(grad_prior[1][1], v->v);
-        grad_prior_bck.y = niik_image_interpolate_3d_linear(grad_prior[1][2], v->v);
-        grad_prior_bck.z = niik_image_interpolate_3d_linear(grad_prior[1][3], v->v);
-    } else {
-        prior_bck = 1.0 - prior_obj;
-
-        grad_prior_bck.x = -grad_prior_obj.x;
-        grad_prior_bck.y = -grad_prior_obj.y;
-        grad_prior_bck.z = -grad_prior_obj.z;
-    }
-    grad_prior_obj   = niikpt_unit(grad_prior_obj);  /*only interested in the direction*/
-    grad_prior_bck   = niikpt_unit(grad_prior_bck);  /*only interested in the direction*/
-
-    /*TODO: normalize gradients ?*/
-
-    /*should balance at 0.5 p value between background and object*/
-    project = ( niikpt_dot(v->normal, grad_prior_obj) * prior_obj +
-                niikpt_dot(v->normal, grad_prior_bck) * prior_bck ) / 2.0;
-
-    return niikpt_kmul(v->normal, -1 * project);
+  return niikpt_kmul(v->normal, -d); 
 }
 
 /* VF: Balooning to stay on the edge of the tissue "class",
@@ -404,8 +377,8 @@ niikpt mesh_deform_calc_deformation_vertex(refine_info  *dfm, kvert* v, int vidx
   } /* curvature deformation */
 
   /* prior term */
-  if(dfm->prior[0]!=NULL && dfm->deform_weights->m[0][WEIGHT_PRIOR] != 0.0) {
-    pprior=niikmesh_deform_calc_deformation_prior_term(v, dfm->prior, dfm->grad_prior);
+  if(dfm->div_prior[0]!=NULL && dfm->deform_weights->m[0][WEIGHT_PRIOR] != 0.0) {
+    pprior=niikmesh_deform_calc_deformation_prior_term(v, dfm->div_prior[0]);
   } /* prior deformation */
 
   /* combine deformation with weighting */
@@ -484,6 +457,7 @@ int mesh_deform_calc_deformation( niikcortex_deform * dfm  )
   dfm_refine.deform_weights = dfm->weight;
   dfm_refine.mf_list = dfm->mf_list;
   dfm_refine.div_img = dfm->div_img;
+  dfm_refine.div_prior = dfm->div_prior;
   dfm_refine.grad_img = dfm->grad_img;
   dfm_refine.prior  = dfm->prior;
   dfm_refine.grad_prior = dfm->grad_prior;
@@ -1004,7 +978,7 @@ int niikmesh_refine( niikcortex_deform *dfm) {
     *blur_img[2],
     *tmpimg;
 
-  nifti_image **grad_prior[4];
+  nifti_image *div_prior=NULL;
 
   bbox *bb;
   kface *f;
@@ -1134,29 +1108,28 @@ int niikmesh_refine( niikcortex_deform *dfm) {
   for(n=0; n<2; n++)
     blur_img[n]=niik_image_free(blur_img[n]);
 
-  for(n=0; n<3; n++) {
-    if(dfm->prior[n]) {
-        char tmp_fname[1024];
-        int k;
-        nifti_image *blur_prior;
+  if(dfm->prior[0] && dfm->prior_FWHM[0]>0.0) 
+  {
+      int ii;
+      nifti_image *blur_prior,**grad_prior;
+      NIIK_RET0(((blur_prior = niik_image_copy_as_type(dfm->prior[0], NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type");
 
-        NIIK_RET0(((blur_prior = niik_image_copy_as_type(dfm->prior[n],NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type");
+      if(verbose>1) fprintf(stdout,"[%s] gradient  gaussian filter\n",fcname);
+      NIIK_RET0((!niik_image_filter_gaussian_update(blur_prior,11, dfm->prior_FWHM[0] )),fcname,"niik_image_filter_gaussian_update");
 
-        if(dfm->prior_FWHM[0]>0.0) { /*TODO: use different FWHM for ICS adn OCS*/
-          if(verbose>1) fprintf(stdout,"[%s] gradient  gaussian filter\n",fcname);
-          NIIK_RET0((!niik_image_filter_gaussian_update(blur_prior,11,dfm->prior_FWHM[0])),fcname,"niik_image_filter_gaussian_update");
+      if(verbose>1) fprintf(stdout,"[%s]   sobel filter\n",fcname);
+      NIIK_RET0(((grad_prior = niik_image_sobel_filters_with_mag(blur_prior))==NULL),fcname,"niik_image_sobel_filters_with_mag");
 
-        } else if(verbose>1) {
-          fprintf(stdout,"[%s]   no gradient gaussian filter\n",fcname);
-        }
+      if(verbose>1) fprintf(stdout,"[%s]   divergence filter\n",fcname);
+      NIIK_RET0(((div_prior = niik_image_divergence(grad_prior,0))==NULL),fcname,"niik_image_divergence");
 
-        if(verbose>1) fprintf(stdout,"[%s]   sobel filter\n",fcname);
-        NIIK_RET0(((grad_prior[n] = niik_image_sobel_filters_with_mag(blur_prior))==NULL),fcname,"niik_image_sobel_filters_with_mag");
+      niik_image_free(blur_prior);
 
-        niik_image_free(blur_prior);
-    } else {
-        grad_prior[n]=NULL;
-    }
+      for(ii=0; ii<4; ii++)
+          grad_prior[ii] = niik_image_free(grad_prior[ii]);
+      free(grad_prior);
+  } else {
+    div_prior=NULL;
   }
 
   if(dfm->gradient_lambda[0]<0) {
@@ -1223,7 +1196,7 @@ int niikmesh_refine( niikcortex_deform *dfm) {
   }
   dfm->grad_img=grad_img;
   dfm->div_img=div_img;
-  dfm->grad_prior=grad_prior;
+  dfm->div_prior=&div_prior;
 
   if(verbose>0)
     fprintf(stdout,"[%s]   %9.6f +/- %9.6f  (%9.6f %9.6f %9.6f %9.6f)\n",
@@ -1377,6 +1350,7 @@ int niikmesh_refine( niikcortex_deform *dfm) {
     {
       /*VF: maybe do it more effeciently?*/
       NIIK_RET0((!off_kobj_add_one_color(dfm->ctx[0],1,0,0)),fcname,"off_kobj_add_one_color"); /* yellow for white matter-surface */
+
       falcon_tracing_dump(&trace, iter,"surf_refine", dfm->t1img, bb);
       falcon_tracing_dump_objects(&trace, iter,"surf_refine", dfm->ctx, 1 );
     }
@@ -1517,13 +1491,8 @@ int niikmesh_refine( niikcortex_deform *dfm) {
     free(grad_img[n]);
   }
 
-  for(n=0; n<3; n++) {
-    int i;
-    if(grad_prior[n]) {
-        for(i=0; i<4; i++)
-          grad_prior[n][i] = niik_image_free(grad_prior[n][i]);
-        free(grad_prior[n]);
-    }
+  if(div_prior) {
+    div_prior = niik_image_free(div_prior);
   }
 
   div_img[0]=niik_image_free(div_img[0]);
