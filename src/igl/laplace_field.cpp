@@ -1,3 +1,15 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif /*HAVE_CONFIG_H*/
+
+#ifdef HAVE_OPENMP
+#include <omp.h>
+#else
+#define omp_get_num_threads() 1
+#define omp_get_thread_num() 0
+#define omp_get_max_threads() 1
+#endif
+
 #include <string>
 #include <chrono>
 
@@ -9,12 +21,13 @@
 
 #include "minc_volume.h"
 #include "fem_system.h"
-// unsupported
-#include <unsupported/Eigen/CXX11/Tensor>
 
 // Sparse solvers
 #include <Eigen/OrderingMethods>
 #include <Eigen/IterativeLinearSolvers>
+
+
+
 
 int main(int argc,char **argv)
 {
@@ -30,6 +43,7 @@ int main(int argc,char **argv)
         ("grad", "grad operator", cxxopts::value<bool>()->default_value("false"))
         ("in",  "Input volume",  cxxopts::value<std::string>())
         ("out", "Output volume", cxxopts::value<std::string>())
+        ("droptol", "Preconditioning tolerance ",           cxxopts::value<double>()->default_value("1e-3"))
         ("h,help", "Print help")
     ;
     
@@ -39,7 +53,7 @@ int main(int argc,char **argv)
     if(par.count("in") && par.count("out") && !par.count("help"))
     {
 
-#ifdef USE_OPENMP
+#ifdef HAVE_OPENMP
         std::cout<<"Using OpenMP, max number of threads="<<omp_get_max_threads()<<std::endl;
 #endif
         
@@ -50,30 +64,20 @@ int main(int argc,char **argv)
         auto tick = std::chrono::steady_clock::now();
 
         minc_volume image;
-        if( !load_volume(par["in"].as<std::string>().c_str(),image, true ) )
+        if( !load_volume(par["in"].as<std::string>().c_str(),image, false ) )
         {
             std::cerr<<"Error loading:"<<par["in"].as<std::string>().c_str()<<std::endl;
             return 1;
         }
+        std::cout<<"image.min="<<image.volume.minCoeff()
+                 <<" image.max="<<image.volume.maxCoeff()
+                 <<std::endl;
 
-        using LabelTensor = Eigen::Tensor<unsigned char,3,Eigen::ColMajor>;
-        using Tensor = Eigen::Tensor<double,3,Eigen::ColMajor>;
-
-        LabelTensor in_vol = Eigen::TensorMap< Tensor>(image.volume.data(),
-             image.dims(2), image.dims(1), image.dims(0)).cast<unsigned char>();
+        std::cout<<"Image.dims="<<image.dims(0)<<","<<image.dims(1)<<","<<image.dims(2)<<std::endl;
 
         minc_volume out_image;
         define_similar(out_image,image);
-        out_image.volume = 0.0;
-        // ImageType::Pointer out_image;
-        // define_image_byref<LabelImageType,ImageType>(image, out_image);
-
-        // out_image->Allocate();
-        // out_image->FillBuffer(0.0);
-
-        Eigen::TensorMap<Tensor> out_vol(out_image.volume.data(),
-             image.dims(2), image.dims(1), image.dims(0));
-        
+        out_image.volume = 0.0;        
         
         using SparseMatrix = Eigen::SparseMatrix<double, Eigen::RowMajor>;
         int total_voxels=image.dims.prod();
@@ -85,10 +89,11 @@ int main(int argc,char **argv)
             // FOR DEBUGGING ONLY!
             SparseMatrix Dxf,Dyf,Dzf;
             SparseMatrix Dxb,Dyb,Dzb;
-            create_grad_matrixes(image.dims(2), image.dims(1), image.dims(0), Dxf,Dxb,Dyf,Dyb,Dzf,Dzb);
+            create_grad_matrixes(image.dims(0), image.dims(1), image.dims(2), Dxf,Dxb,Dyf,Dyb,Dzf,Dzb);
             A=Dxf*Dxb+Dyf*Dyb+Dzf*Dzb;
         } else {
-            create_laplacian_matrix(image.dims(2), image.dims(1), image.dims(0), A, par["s27"].as<bool>());
+            // directly generate laplacian 
+            create_laplacian_matrix(image.dims(0), image.dims(1), image.dims(2), A, par["s27"].as<bool>());
         }
         tick = std::chrono::steady_clock::now();
         ////
@@ -99,23 +104,24 @@ int main(int argc,char **argv)
 
         auto ijk_to_idx = [&](auto i,auto j,auto k) -> Eigen::Index 
         {
-            return k+j*image.dims(0)+i*image.dims(0)*image.dims(1);
+            return i+j*image.dims(0)+k*image.dims(0)*image.dims(1);
         };
 
         tick = std::chrono::steady_clock::now();
         // setting the dirichlet boundary condition
         using triplet = Eigen::Triplet<double>;
         std::vector<triplet> B_;
-
-        for(Eigen::Index k=0;k<image.dims(0);++k) 
+        
+        for(Eigen::Index k=0;k<image.dims(2);++k) 
             for(Eigen::Index j=0;j<image.dims(1);++j)
-                for(Eigen::Index i=0;i<image.dims(2);++i)
+                for(Eigen::Index i=0;i<image.dims(0);++i)
                 {
-                    if(in_vol(i,j,k)>0)
+                    if(image.volume(ijk_to_idx(i,j,k))>0)
                     {
                         double val=0.0;
                         Eigen::Index idx = ijk_to_idx(i,j,k);
-                        if(in_vol(i,j,k)>1) val = 1.0;
+                        
+                        if(image.volume(ijk_to_idx(i,j,k))>1) val = 1.0;
  
                         B_.push_back(triplet( idx, 0, val ));
 
@@ -137,7 +143,7 @@ int main(int argc,char **argv)
 
         // solving....
         Eigen::BiCGSTAB<SparseMatrix, Eigen::IncompleteLUT<double > > solver; // seem to be the fastest single threaded
-        solver.preconditioner().setDroptol(1e-4); // preconditioner works slower, but solution is quite fast after
+        solver.preconditioner().setDroptol( par["droptol"].as<double>() ); // preconditioner works slower, but solution is quite fast after
 
         tick = std::chrono::steady_clock::now();
         solver.compute(A);
@@ -158,14 +164,14 @@ int main(int argc,char **argv)
             for(Eigen::Index j=0;j<(image.dims(1));++j)
                 for(Eigen::Index i=0;i<(image.dims(0));++i)
                 {
-                    out_vol(k,j,i) = solution(ijk_to_idx(i,j,k));
+                    out_image.volume(ijk_to_idx(i,j,k)) = solution(ijk_to_idx(i,j,k));
                 }
         
-        // using WriterType = itk::ImageFileWriter<ImageType>;
-        // WriterType::Pointer writer = WriterType::New();
-        // writer->SetFileName(par["out"].as<std::string>());
-        // writer->SetInput(out_image);
-        // writer->Update();
+
+        if(par.count("out"))
+            save_volume(par["out"].as<std::string>().c_str(),
+                        par["in"].as<std::string>().c_str(),
+                        out_image,false);
 
         return 0;
     } else {

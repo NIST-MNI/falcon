@@ -233,10 +233,12 @@ void create_grad_matrixes(int si,int sj,int sk,
     using triplet = Eigen::Triplet<double>;
     std::vector<triplet> Dx_,Dy_,Dz_;
     std::vector<triplet> Dx_2,Dy_2,Dz_2;
+    
     auto ijk_to_idx = [&](auto i,auto j,auto k) -> Eigen::Index 
     {
-        return k+j*sk+i*sk*sj;
+        return i+j*si+k*si*sj;
     };
+
     Dx_.reserve(total_voxels*2);
     Dy_.reserve(total_voxels*2);
     Dz_.reserve(total_voxels*2);
@@ -245,28 +247,29 @@ void create_grad_matrixes(int si,int sj,int sk,
     Dy_2.reserve(total_voxels*2);
     Dz_2.reserve(total_voxels*2);
 
+    // define finite difference operators
     for(Eigen::Index k=0;k<sk;++k) 
         for(Eigen::Index j=0;j<sj;++j)
             for(Eigen::Index i=0;i<si;++i)
             {
-                if(k>0)      Dx_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k-1), -1));
-                Dx_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), 1));
+                if(i>0)      Dx_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i-1, j, k), -1));
+                             Dx_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), 1));
 
                 if(j>0)      Dy_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j-1, k), -1));
-                Dy_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), 1));
+                             Dy_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), 1));
                 
-                if(i>0)      Dz_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i-1, j, k), -1));
-                Dz_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), 1));
+                if(k>0)      Dz_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k-1), -1));
+                             Dz_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), 1));
 
 
-                Dx_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), -1));
-                if(k<(sk-1)) Dx_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k+1), 1));
+                             Dx_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), -1));
+                if(i<(si-1)) Dx_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i+1, j, k), 1));
 
-                Dy_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), -1));
+                             Dy_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), -1));
                 if(j<(sj-1)) Dy_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j+1, k), 1));
                 
-                Dz_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), -1));
-                if(i<(si-1)) Dz_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i+1, j, k), 1));
+                             Dz_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k), -1));
+                if(k<(sk-1)) Dz_2.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k+1), 1));
             }
     Dxf=Eigen::SparseMatrix<double, Eigen::RowMajor>(total_voxels, total_voxels);
     Dyf=Eigen::SparseMatrix<double, Eigen::RowMajor>(total_voxels, total_voxels);
@@ -292,6 +295,8 @@ void create_grad_matrixes(int si,int sj,int sk,
     Dzb.makeCompressed();
 }
 
+
+// define centered version of the difference operator
 void create_grad_matrixes(int si,int sj,int sk, 
     Eigen::SparseMatrix<double, Eigen::RowMajor> &Dxc,
     Eigen::SparseMatrix<double, Eigen::RowMajor> &Dyc,
@@ -303,7 +308,7 @@ void create_grad_matrixes(int si,int sj,int sk,
     std::vector<triplet> Dx_,Dy_,Dz_;
     auto ijk_to_idx = [&](auto i,auto j,auto k) -> Eigen::Index 
     {
-        return k+j*sk+i*sk*sj;
+        return i+j*si+k*si*sj;
     };
     Dx_.reserve(total_voxels*2);
     Dy_.reserve(total_voxels*2);
@@ -313,14 +318,14 @@ void create_grad_matrixes(int si,int sj,int sk,
         for(Eigen::Index j=0;j<sj;++j)
             for(Eigen::Index i=0;i<si;++i)
             {
-                if(k>0)      Dx_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k-1), -0.5));
-                if(k<(sk-1)) Dx_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k+1), 0.5));
+                if(i>0)      Dx_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i-1, j, k), -0.5));
+                if(i<(si-1)) Dx_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i+1, j, k), 0.5));
 
                 if(j>0)      Dy_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j-1, k), -0.5));
                 if(j<(sj-1)) Dy_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j+1, k), 0.5));
                 
-                if(i>0)      Dz_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i-1, j, k), -0.5));
-                if(i<(si-1)) Dz_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i+1, j, k), 0.5));
+                if(k>0)      Dz_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k-1), -0.5));
+                if(k<(sk-1)) Dz_.push_back(triplet(ijk_to_idx(i,j,k), ijk_to_idx(i, j, k+1), 0.5));
 
             }
     Dxc=Eigen::SparseMatrix<double, Eigen::RowMajor>(total_voxels, total_voxels);
@@ -336,7 +341,7 @@ void create_grad_matrixes(int si,int sj,int sk,
     Dzc.makeCompressed();
 }
 
-
+// generate 2nd order finite difference directly
 void create_laplacian_matrix(int si,int sj,int sk, Eigen::SparseMatrix<double, Eigen::RowMajor> &A, bool s27)
 {
     // now we can determine 2nd order differential equation
@@ -347,7 +352,7 @@ void create_laplacian_matrix(int si,int sj,int sk, Eigen::SparseMatrix<double, E
     
     auto ijk_to_idx = [&](auto i,auto j,auto k) -> Eigen::Index 
     {
-        return k+j*sk+i*sk*sj;
+        return i+j*si+k*si*sj;
     };
 
     if(s27)
@@ -355,7 +360,7 @@ void create_laplacian_matrix(int si,int sj,int sk, Eigen::SparseMatrix<double, E
         auto ijk_hit = [&](int i,int j,int k) -> bool
         {
             return i>=0  && j>=0 && k>=0 && 
-                    i<si && j<sj && k<sk;
+                   i<si  && j<sj && k<sk;
         };
 
         auto ijk_27stencil = [&](int i,int j,int k) -> double
