@@ -96,6 +96,9 @@ target_link_libraries(falcon_igl_mesh_decimate igl::core )
 add_executable(falcon_igl_mesh_smooth mesh_smooth.cpp )
 target_link_libraries(falcon_igl_mesh_smooth igl::core )
 
+add_executable(falcon_igl_mesh_avg mesh_avg.cpp )
+target_link_libraries(falcon_igl_mesh_avg igl::core )
+
 add_executable(falcon_igl_mesh_debug mesh_debug.cpp )
 target_link_libraries(falcon_igl_mesh_debug igl::core )
 
@@ -117,6 +120,9 @@ target_link_libraries(falcon_igl_mesh_intersect igl::core )
 add_executable(falcon_igl_mesh_voxelizer mesh_voxelize.cpp minc_volume.h)
 target_link_libraries(falcon_igl_mesh_voxelizer igl::core minc2-simple )
 
+add_executable(falcon_igl_field_sampler field_sampler.cpp minc_volume.h)
+target_link_libraries(falcon_igl_field_sampler igl::csv igl::core minc2-simple )
+
 add_executable(laplace_field laplace_field.cpp  fem_system.h fem_system.cxx)
 target_link_libraries(laplace_field igl::core minc2-simple )
 
@@ -131,6 +137,7 @@ INSTALL( TARGETS
         falcon_igl_mesh_render
         falcon_igl_marching_cubes
         falcon_igl_mesh_smooth
+        falcon_igl_mesh_avg
         falcon_igl_mesh_decimate
         falcon_igl_midsag
         falcon_igl_mesh_transform

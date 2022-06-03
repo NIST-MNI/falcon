@@ -247,11 +247,18 @@ inline bool save_volume(const char*minc_file, const char *minc_file_ref, minc_vo
 }
 
 
-inline void sample_values_nn(const minc_volume& vol, const Eigen::MatrixXd &C, Eigen::VectorXd &O ) 
+template <typename Derived>
+Eigen::Matrix<typename Derived::Scalar,-1,1> sample_values_nn(const minc_volume& vol, const Eigen::MatrixXd &C, typename Derived::Scalar _default=0.0 ) 
 // C - ijk coordinates
 // O - values
 {
-  O=Eigen::VectorXd::NullaryExpr(C.rows(),[&](auto i) {return vol.sample_nn(C.row(i));});
+  Eigen::RowVector3d lo = Eigen::RowVector3d::Zero();
+  Eigen::RowVector3d hi(vol.dims[0]-1,vol.dims[1]-1,vol.dims[2]-1);
+
+  return Eigen::VectorXd::NullaryExpr(C.rows(),[&](auto i) {
+    return (C.row(i).array()>lo.array() && C.row(i).array()<hi.array()).all() ? 
+      static_cast<typename Derived::Scalar>(vol.sample_nn(C.row(i))) : _default;
+    });
 }
 
 template <typename Derived>

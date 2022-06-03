@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
       }
              
     } else {
-      std::cerr<<"Error reding ply:"<<argv[1]<<std::endl;
+      std::cerr<<"Error reading ply:"<<par["input"].as<std::string>()<<std::endl;
       return 1;
     }
   } else {

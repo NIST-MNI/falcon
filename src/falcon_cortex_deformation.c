@@ -320,7 +320,6 @@ niikpt niikcortex_deform_calc_deformation_vertex_image_term(
   switch(cortex_id) {
   case CORTEX_ICS: /* WHITE MATTER SURFACE */
     *grad = niik_image_interpolate_3d_linear(grad_img[0][0], v->v);
-
     return niikpt_kmul(v->normal, -1 * project *
                        gradient_lambda[0] / (*grad+gradient_lambda[0]) *
                        NIIK_Heaviside11(*gray-mean_ics_value, range_ics_value));
