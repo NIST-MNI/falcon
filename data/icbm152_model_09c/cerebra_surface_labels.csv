@@ -1,0 +1,103 @@
+cerebra_label,label_name,mindboggle_id,side
+81,Caudal Anterior Cingulate,2002,left
+93,Caudal Middle Frontal,2003,left
+94,Cuneus,2005,left
+87,Entorhinal,2006,left
+75,Fusiform,2007,left
+61,Inferior Parietal,2008,left
+54,Inferior temporal,2009,left
+84,Isthmus Cingulate,2010,left
+85,Lateral Occipital,2011,left
+58,Lateral Orbitofrontal,2012,left
+63,Lingual,2013,left
+66,Medial Orbitofrontal,2014,left
+79,Middle Temporal,2015,left
+69,Parahippocampal,2016,left
+67,Paracentral,2017,left
+83,Pars Opercularis,2018,left
+95,Pars Orbitalis,2019,left
+73,Pars Triangularis,2020,left
+57,Pericalcarine,2021,left
+64,Postcentral,2022,left
+98,Posterior Cingulate,2023,left
+86,Precentral,2024,left
+82,Precuneus,2025,left
+59,Rostral Anterior Cingulate,2026,left
+52,Rostral Middle Frontal,2027,left
+89,Superior Frontal,2028,left
+60,Superior Parietal,2029,left
+96,Superior Temporal,2030,left
+102,Supramarginal,2031,left
+65,Transverse Temporal,2034,left
+74,Insula,2035,left
+62,Brainstem,16,left
+80,Third Ventricle,14,left
+88,Fourth Ventricle,15,left
+68,Optic Chiasm,85,left
+92,Lateral Ventricle,43,left
+56,Inferior Lateral Ventricle,44,left
+97,Cerebellum Gray Matter,45,left
+90,Cerebellum White Matter,46,left
+91,Thalamus,49,left
+100,Caudate,50,left
+72,Putamen,51,left
+78,Pallidum,52,left
+99,Hippocampus,53,left
+70,Amygdala,54,left
+55,Accumbens Area,58,left
+77,Ventral Diencephalon,60,left
+76,Basal Forebrain,92,left
+101,Vermal lobules I-V,630,left
+53,Vermal lobules VI-VII,631,left
+71,Vermal lobules VIII-X,632,left
+30,Caudal Anterior Cingulate,2002,right
+42,Caudal Middle Frontal,2003,right
+43,Cuneus,2005,right
+36,Entorhinal,2006,right
+24,Fusiform,2007,right
+10,Inferior Parietal,2008,right
+3,Inferior temporal,2009,right
+33,Isthmus Cingulate,2010,right
+34,Lateral Occipital,2011,right
+7,Lateral Orbitofrontal,2012,right
+12,Lingual,2013,right
+15,Medial Orbitofrontal,2014,right
+28,Middle Temporal,2015,right
+18,Parahippocampal,2016,right
+16,Paracentral,2017,right
+32,Pars Opercularis,2018,right
+44,Pars Orbitalis,2019,right
+22,Pars Triangularis,2020,right
+6,Pericalcarine,2021,right
+13,Postcentral,2022,right
+47,Posterior Cingulate,2023,right
+35,Precentral,2024,right
+31,Precuneus,2025,right
+8,Rostral Anterior Cingulate,2026,right
+1,Rostral Middle Frontal,2027,right
+38,Superior Frontal,2028,right
+9,Superior Parietal,2029,right
+45,Superior Temporal,2030,right
+51,Supramarginal,2031,right
+14,Transverse Temporal,2034,right
+23,Insula,2035,right
+11,Brainstem,16,right
+29,Third Ventricle,14,right
+37,Fourth Ventricle,15,right
+17,Optic Chiasm,85,right
+41,Lateral Ventricle,43,right
+5,Inferior Lateral Ventricle,44,right
+46,Cerebellum Gray Matter,45,right
+39,Cerebellum White Matter,46,right
+40,Thalamus,49,right
+49,Caudate,50,right
+21,Putamen,51,right
+27,Pallidum,52,right
+48,Hippocampus,53,right
+19,Amygdala,54,right
+4,Accumbens Area,58,right
+26,Ventral Diencephalon,60,right
+25,Basal Forebrain,92,right
+50,Vermal lobules I-V,630,right
+2,Vermal lobules VI-VII,631,right
+20,Vermal lobules VIII-X,632,right
