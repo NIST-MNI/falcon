@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
 
     ("clobber", "Clobber output file ",     cxxopts::value<bool>()->default_value("false"))
     ("labels",  "Treat source as label volume", cxxopts::value<bool>()->default_value("false"))
+    ("header",  "Output header",                cxxopts::value<std::string>()->default_value("sample"))
 
     ("help", "Print help") ;
   
@@ -101,14 +102,14 @@ int main(int argc, char *argv[])
       if(par["labels"].as<bool>())
       {
         Eigen::VectorXi M_=M.cast<int>();
-        if(! igl::writeCSV(par["output"].as<std::string>().c_str(),M_,{"sample"}))
+        if(! igl::writeCSV(par["output"].as<std::string>().c_str(),M_,{par["header"].as<std::string>()}))
         {
           std::cerr<<"Error writing:"<<par["output"].as<std::string>().c_str()<<std::endl;
           return 1;
         }
       }
       else
-        if(! igl::writeCSV(par["output"].as<std::string>().c_str(),M,{"sample"}))
+        if(! igl::writeCSV(par["output"].as<std::string>().c_str(),M,{par["header"].as<std::string>()}))
         {
           std::cerr<<"Error writing:"<<par["output"].as<std::string>().c_str()<<std::endl;
           return 1;
