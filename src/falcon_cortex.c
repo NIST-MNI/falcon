@@ -41,7 +41,7 @@ char *niik_numerical_method_string( int code ) {
  *
  * niikcortex_estimate_tissue_values
  *
- * -estiamtes tissue and surface intensiites
+ * -estimates tissue and surface intensiites
  * -CSF from ventricle mask (mode)
  * -WM from GWI_mask and brain_mask
  *   -mode within GWI_mask and above threshold (mean brain_mask)

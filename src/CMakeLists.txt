@@ -230,6 +230,8 @@ ADD_EXECUTABLE(falcon_surface_check           niikcortex_check_surface.c )
 
 ADD_EXECUTABLE(falcon_cortex_initocs          niikcortex_initocs.c falcon_cortex_initocs.c )
 
+ADD_EXECUTABLE(falcon_cortex_initocs_simple   niikcortex_initocs_simple.c falcon_cortex_initocs.c )
+
 ADD_EXECUTABLE(falcon_cortex_shrinkwrap       niikcortex_shrinkwrap.c  )
 
 ADD_EXECUTABLE(falcon_cortex_mod              niikcortex_mod.c  )

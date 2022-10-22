@@ -60,7 +60,7 @@ void prog_usage() {
 
 int main(int argc,char *argv[],char *envp[]) {
   int clobber=0;
-
+ 
   double niikcortex_tissue_val[12]= {-1.0,-1.0,-1.0,-1.0, -1.0,-1.0,-1.0,-1.0, -1.0,-1.0,-1.0,-1.0};
   double thresh=50.0;
   double omax=3.0;
@@ -84,9 +84,6 @@ int main(int argc,char *argv[],char *envp[]) {
 
 
   const char *in_ctx=NULL;
-  const char *in_brain_mask=NULL;
-  const char *in_vent=NULL;
-  const char *in_gwi_mask=NULL;
   const char *in_mask=NULL;
   const char *in_border=NULL;
   const char *in_init_ics=NULL;
@@ -203,9 +200,6 @@ int main(int argc,char *argv[],char *envp[]) {
 #endif
 
   in_ctx       = argv[optind];
-  in_brain_mask= argv[optind+1];
-  /*in_vent      = argv[optind+2];
-  in_gwi_mask  = argv[optind+3];*/
   in_init_ics  = argv[optind+4];
   out_init_ocs = argv[optind+5];
 

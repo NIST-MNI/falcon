@@ -381,7 +381,7 @@ int niikcortex_initocs_expand(nifti_image *img,          /* t1w image */
       if(border)
         yb[n] = niik_image_interpolate_3d_nn(border,_pos);
     }
-    if(alt_mode && border)
+    if( (alt_mode && border) || (intCSF<0.0 && intGM<0.0 && intWM<0.0 ) )
     { //using only border
       //  for(n=n0; n<nx; n++) {
       //    if(yb[n]>0) break;
