@@ -1,3 +1,17 @@
+## [1.0.1] - 2022-04-06
+### Added
+- Added SIMD support for `UpperHessenbergSchur`. This should accelerate
+  general eigen solvers such as `GenEigsSolver`
+- Added test code for `UpperHessenbergSchur`
+
+### Changed
+- Fixed several bugs in the examples caused by the `const` keyword,
+  reported by [@alexpghayes](https://github.com/alexpghayes)
+  ([#135](https://github.com/yixuan/spectra/issues/135),
+  [#137](https://github.com/yixuan/spectra/pull/137))
+- Updated the included [Catch2](https://github.com/catchorg/Catch2) to v2.13.8
+
+
 ## [1.0.0] - 2021-07-01
 ### Added
 - Added version macros `SPECTRA_MAJOR_VERSION`, `SPECTRA_MINOR_VERSION`,
