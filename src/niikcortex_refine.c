@@ -735,7 +735,7 @@ int main(int argc,char *argv[],char *envp[]) {
     fprintf(stdout,"[%s] using predefined tissue intensities\n",fcname);
   } else {
     fprintf(stdout,"[%s] niikcortex_estimate_tissue_values\n",fcname);
-    NIIK_EXIT((!niikcortex_estimate_tissue_values(dfm->t1img,dfm->brain_mask,dfm->csf_mask,dfm->gwi_mask,
+    NIIK_EXIT((!niikcortex_estimate_tissue_values(dfm->t1img, dfm->brain_mask, dfm->csf_mask, dfm->gwi_mask,
                &dfm->tissue_val[2],  /*CSF*/
                &dfm->tissue_val[1],  /*WM*/
                &dfm->tissue_val[0],  /*GM*/
@@ -744,7 +744,7 @@ int main(int argc,char *argv[],char *envp[]) {
                &dfm->tissue_val[5],  /*OCS*/
                &dfm->tissue_val[6],  /*rangeICS*/
                &dfm->tissue_val[7],  /*rangeOCS*/
-               dfm->weight->m[0][WEIGHT_MIX] ,dfm->weight->m[1][WEIGHT_MIX])),
+               dfm->weight->m[0][WEIGHT_MIX], dfm->weight->m[1][WEIGHT_MIX])),
               fcname,"niikcortex_estimate_tissue_values",9);
   }
 

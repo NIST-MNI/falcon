@@ -131,7 +131,7 @@ int niikcortex_estimate_tissue_values(nifti_image *img,nifti_image *brain_mask,
   }
 
   /* make a temp image for WM intensity */
-  NIIK_RET0(((tmpimg=niik_image_copy_as_type(GWI_mask,NIFTI_TYPE_UINT8))==NULL),fcname,"niik_image_copy_as_type for GWI_mask -> tmpimg");
+  NIIK_RET0(((tmpimg=niik_image_copy_as_type(GWI_mask, NIFTI_TYPE_UINT8))==NULL),fcname,"niik_image_copy_as_type for GWI_mask -> tmpimg");
   bimg = (unsigned char *)tmpimg->data;
 
   for(i=0; i<img->nvox; i++) {
@@ -173,10 +173,10 @@ int niikcortex_estimate_tissue_values(nifti_image *img,nifti_image *brain_mask,
   }
 
   /* SURFACE MEAN INTENSITIES */
-  NIIK_RET0(((gradimg=niik_image_copy_as_type(img,NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type gradimg");
+  NIIK_RET0(((gradimg=niik_image_copy_as_type(img, NIFTI_TYPE_FLOAT32))==NULL),fcname,"niik_image_copy_as_type gradimg");
   NIIK_RET0((!niik_image_filter_gaussian_update(gradimg,9,1.0)),fcname,"niik_image_filter_gaussian_update");
   NIIK_RET0((!niik_image_sobel_filter_update(gradimg,'m')),fcname,"niik_image_sobel_filter_update");
-  gthresh = niik_image_get_percentile(gradimg,brain_mask,0.6);
+  gthresh = niik_image_get_percentile(gradimg, brain_mask, 0.6);
   if(verbose>2) {
     fprintf(stdout,"\t  gradient threshold = %8.2f\n",gthresh);
     niik_image_write("tmp_gradimg.mnc",gradimg);
@@ -187,8 +187,8 @@ int niikcortex_estimate_tissue_values(nifti_image *img,nifti_image *brain_mask,
   bimg = (unsigned char *) tmpimg->data;
   for(i=nvox=0; i<img->nvox; i++) {
     bimg[i] = bseg[i];
-    if(niik_image_get_voxel(img,i)<thresh) bimg[i]=0;
-    else if(niik_image_get_voxel(gradimg,i)<gthresh) bimg[i]=0;
+    if( niik_image_get_voxel(img,i)<thresh ) bimg[i]=0;
+    else if( niik_image_get_voxel(gradimg,i)<gthresh ) bimg[i]=0;
     nvox+=(bimg[i]>0);
   }
   if(*intICS<0) {
@@ -199,17 +199,17 @@ int niikcortex_estimate_tissue_values(nifti_image *img,nifti_image *brain_mask,
   }
   if(*ranICS<0) {
     /**ranICS = fabs(*iWM - *intICS) * 0.5;*/ /*VF: which one ?*/
-    *ranICS = 0.5 * (*iWM) - 0.5 * (*iGM);
+    *ranICS = 0.5 * (*iWM - *iGM); /* VF: half of the difference? */
   }
-  if(verbose) fprintf(stdout,"    WM surface      %8.2f  +/-  %8.2f   %9i\n",*intICS,*ranICS,nvox);
-  if(verbose>1) niik_image_write("tmp_wm_ics.mnc",tmpimg);
+  if(verbose) fprintf(stdout,"    WM surface      %8.2f  +/-  %8.2f   %9i\n", *intICS, *ranICS, nvox);
+  if(verbose>1) niik_image_write("tmp_wm_ics.mnc", tmpimg);
 
   /* ESTIMATE PIAL SURFACE INTENSITY */
-  NIIK_RET0(((gwi_dil=niik_image_copy_as_type(GWI_mask,NIFTI_TYPE_UINT8))==NULL),fcname,"niik_image_copy_as_type");
-  NIIK_RET0((!niik_image_morph_3d_radius_mask(gwi_dil,NULL,NIIK_MORPH_DILATE,1.24)),fcname,"niik_image_morph_3d_radius_mask");
+  NIIK_RET0(((gwi_dil=niik_image_copy_as_type(GWI_mask, NIFTI_TYPE_UINT8))==NULL),fcname,"niik_image_copy_as_type");
+  NIIK_RET0((!niik_image_morph_3d_radius_mask(gwi_dil, NULL, NIIK_MORPH_DILATE,1.24)),fcname,"niik_image_morph_3d_radius_mask");
 
-  NIIK_RET0(((brain_dil=niik_image_copy_as_type(brain_mask,NIFTI_TYPE_UINT8))==NULL),fcname,"niik_image_copy_as_type");
-  NIIK_RET0((!niik_image_morph_3d_radius_mask(brain_dil,NULL,NIIK_MORPH_DILATE,1.7)),fcname,"niik_image_morph_3d_radius_mask");
+  NIIK_RET0(((brain_dil=niik_image_copy_as_type(brain_mask, NIFTI_TYPE_UINT8))==NULL),fcname,"niik_image_copy_as_type");
+  NIIK_RET0((!niik_image_morph_3d_radius_mask(brain_dil, NULL, NIIK_MORPH_DILATE,1.7)),fcname,"niik_image_morph_3d_radius_mask");
 
   thresh = *iCSF;
   bimg = (unsigned char *) tmpimg->data;

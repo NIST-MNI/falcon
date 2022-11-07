@@ -273,7 +273,7 @@ int main(int argc,char *argv[],char *envp[]) {
     */
   fprintf(stdout,"[%s] niikcortex_estimate_tissue_values\n",fcname);
   for(n=0; n<3; n++) {
-    NIIK_RET1((!niik_image_type_convert(imglist[n],NIFTI_TYPE_UINT8)),fcname,"niik_image_type_convert");
+    NIIK_RET1((!niik_image_type_convert(imglist[n], NIFTI_TYPE_UINT8)),fcname,"niik_image_type_convert");
   }
 
   if(!niikcortex_estimate_tissue_values(img,imglist[0],imglist[1],imglist[2],

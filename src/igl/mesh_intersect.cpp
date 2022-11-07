@@ -99,7 +99,6 @@ int main(int argc, char *argv[])
         {
           if(!coplanar)
           {
-
             edges.push_back(edge1);
             edges.push_back(edge2);
           }

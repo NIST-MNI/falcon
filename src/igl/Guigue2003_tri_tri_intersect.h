@@ -4,7 +4,7 @@
 // 
 // This Source Code Form is subject to the terms of the Mozilla Public License 
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can 
-// obtain one at http://mozilla.org/MPL/2.0/.
+// obtain one at http://mozilla.org/MPL/2.0/
 #pragma once
 #ifndef IGL_TRI_TRI_INTERSECT_H
 #define IGL_TRI_TRI_INTERSECT_H
@@ -78,6 +78,7 @@ IGL_INLINE bool tri_tri_overlap_test_2d(
 
 
 };
+
 #ifndef IGL_STATIC_LIBRARY
 #  include "Guigue2003_tri_tri_intersect.cpp"
 #endif
