@@ -172,7 +172,6 @@ SET(FALCON_LIB_SRC
 
 ADD_LIBRARY(falcon_lib ${FALCON_LIB_HDR}  ${FALCON_LIB_SRC})
 
-LINK_LIBRARIES(falcon_lib)
 
 if(NOT LIBMINC_NIFTI_SUPPORT)
   ADD_LIBRARY(nifti_lib ${NIFTI_LIB_HDR}  ${NIFTI_LIB_SRC})
@@ -183,6 +182,7 @@ else()
   ADD_LIBRARY(nifti_lib_dummy nifti1_dummy.c)
   LINK_LIBRARIES(nifti_lib_dummy)
 endif()
+LINK_LIBRARIES(falcon_lib)
 
 
 ADD_EXECUTABLE(falcon_calc    falcon_calc.c)
