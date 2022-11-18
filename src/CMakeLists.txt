@@ -90,10 +90,10 @@ set_property(TARGET minc2-simple PROPERTY EXPORT_NAME minc2-simple)
 ADD_SUBDIRECTORY(igl)
 
 
+SET(NIFTI_LIB_HDR nifti1.h nifti1_io.h)
+SET(NIFTI_LIB_SRC znzlib.c nifti1_io.c )
 
 SET(FALCON_LIB_HDR
-    nifti1.h
-    nifti1_io.h
     falcon.h
     falcon_seg.h
     falcon_surfaces.h
@@ -108,8 +108,6 @@ SET(FALCON_LIB_HDR
 SET(FALCON_LIB_SRC
     falcon_stb.c
     falcon_config.c
-    znzlib.c 
-    nifti1_io.c 
     falcon.c 
     falcon_morph.c 
     falcon_nelder_mead.c 
@@ -175,6 +173,17 @@ SET(FALCON_LIB_SRC
 ADD_LIBRARY(falcon_lib ${FALCON_LIB_HDR}  ${FALCON_LIB_SRC})
 
 LINK_LIBRARIES(falcon_lib)
+
+if(NOT LIBMINC_NIFTI_SUPPORT)
+  ADD_LIBRARY(nifti_lib ${NIFTI_LIB_HDR}  ${NIFTI_LIB_SRC})
+  LINK_LIBRARIES(nifti_lib)
+else()
+  # using libmind bundled with libminc 
+  message("Using libnifti bundled with libminc!")
+  ADD_LIBRARY(nifti_lib_dummy nifti1_dummy.c)
+  LINK_LIBRARIES(nifti_lib_dummy)
+endif()
+
 
 ADD_EXECUTABLE(falcon_calc    falcon_calc.c)
 

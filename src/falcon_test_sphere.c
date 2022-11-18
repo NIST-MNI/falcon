@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
   if(out_err_off)
   {
     const char *meas[]={"error"};
-    NIIK_EXIT( ((off_kobj_write_ply_ex(out_err_off,obj, 0,1,1,0,1,meas, (const double**) &err))==0), fcname,"off_kobj_write_ply_ex", 20 );
+    NIIK_EXIT( ((off_kobj_write_ply_ex(out_err_off,obj, 0,1,1,0,1,meas, &err))==0), fcname,"off_kobj_write_ply_ex", 20 );
   }
 
   off_kobj_free(obj);

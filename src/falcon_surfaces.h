@@ -404,8 +404,8 @@ double mean_curvature(off_curvature_t *crv,kobj *obj);
 int niik_off_write_ply(const char *fname, kobj *obj, const double *meas, int output_sph, int output_normal, int output_edge);
 int off_kobj_write_ply(const char *fname, kobj *obj, int write_vertex_normal);
 int off_kobj_write_ply_ex(const char *fname,kobj *obj,
-       int output_normal,int output_sph,int output_edge, int output_color,
-       int n_meas,const char **meas_name, const double **meas);
+       int output_normal,int output_sph, int output_edge, int output_color,
+       int n_meas,const char **meas_name, double *const *const meas);
 
 kobj *off_kobj_read_ply(const char * fname);
 kobj *off_kobj_read_ply_ex(const char * fname, int *n_meas, char ***meas_name, double ***meas);

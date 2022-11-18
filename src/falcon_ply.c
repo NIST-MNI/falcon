@@ -39,7 +39,7 @@ int off_kobj_write_ply(const char *fname, kobj *obj, int write_vertex_normal) {
 
 int off_kobj_write_ply_ex(const char *fname, kobj *obj,
        int output_normal,int output_sph,int output_edge, int output_color,
-       int n_meas, const char **meas_name, const double **meas) {
+       int n_meas, const char **meas_name, double *const *const meas) {
   const char *fcname=__func__;
   FILE *fp=NULL;
   int i,n;
