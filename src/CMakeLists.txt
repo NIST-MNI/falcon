@@ -170,18 +170,23 @@ SET(FALCON_LIB_SRC
     ${CSV_LIB_SRC}
 )
 
-ADD_LIBRARY(falcon_lib ${FALCON_LIB_HDR}  ${FALCON_LIB_SRC})
 
 
 if(NOT LIBMINC_NIFTI_SUPPORT)
-  ADD_LIBRARY(nifti_lib ${NIFTI_LIB_HDR}  ${NIFTI_LIB_SRC})
-  LINK_LIBRARIES(nifti_lib)
+  #ADD_LIBRARY(nifti_lib ${NIFTI_LIB_HDR}  ${NIFTI_LIB_SRC})
+  #LINK_LIBRARIES(nifti_lib)
+  SET(FALCON_LIB_SRC ${NIFTI_LIB_SRC} ${FALCON_LIB_SRC} )
+  SET(FALCON_LIB_HDR ${NIFTI_LIB_HDR} ${FALCON_LIB_HDR})
 else()
-  # using libmind bundled with libminc 
+  # using lib_nifti bundled with libminc 
   message("Using libnifti bundled with libminc!")
-  ADD_LIBRARY(nifti_lib_dummy nifti1_dummy.c)
-  LINK_LIBRARIES(nifti_lib_dummy)
+  #ADD_LIBRARY(nifti_lib_dummy nifti1_dummy.c)
+  #LINK_LIBRARIES(nifti_lib_dummy)
+  SET(FALCON_LIB_SRC ${FALCON_LIB_SRC} nifti1_dummy.c)
 endif()
+
+ADD_LIBRARY(falcon_lib ${FALCON_LIB_HDR}  ${FALCON_LIB_SRC})
+
 LINK_LIBRARIES(falcon_lib)
 
 
