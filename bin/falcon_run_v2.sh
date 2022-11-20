@@ -873,9 +873,9 @@ ${FALCON_BIN}/falcon_surface_split ${OUTPUT}_ocs-${ver}.ply ${tempdir}/${nm}_ocs
 for s in 0 1;do
   if [[ $s == 0 ]];then hemi=lt;else hemi=rt;fi
   
-  atlas=${icbm_dir}/icbm152_model_09c/mni_icbm152_ics_sm_${hemi}_atlas_dirty.csv.gz
+  atlas=${icbm_dir}/icbm152_model_09c/mni_icbm152_ics_sm_${hemi}_atlas_cerebra.csv.gz
   model=${icbm_dir}/icbm152_model_09c/mni_icbm152_ics_sm_${hemi}.ply
-  atlas_hr=${icbm_dir}/icbm152_model_09c/mni_icbm152_ocs_${hemi}_atlas_dirty.txt
+  #atlas_hr=${icbm_dir}/icbm152_model_09c/mni_icbm152_ocs_${hemi}_atlas_dirty.txt
 
   if [[ ! -e ${tempdir}/${nm}_ics-${ver}_${s}.ply ]];then
     echo "Something went wrong, failed to split surfaces" 1>&2
@@ -949,26 +949,31 @@ for s in 0 1;do
     fi
   fi
 
-  if [[ ! -z $use_hr ]] && [[ ! -e ${OUTPUT}_thickness_icbm_hr-${ver}_${hemi}.csv.gz ]];then
 
-    if [[ ! -e ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv ]];then
-      ${FALCON_BIN}/falcon_cortex_calc_thickness \
-        ${tempdir}/${nm}_ics-${ver}_${s}.ply \
-        ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
-        ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv
-    fi
+  ## DISABLE
+  if false;then
+    # DISABLE
+    if [[ ! -z $use_hr ]] && [[ ! -e ${OUTPUT}_thickness_icbm_hr-${ver}_${hemi}.csv.gz ]];then
 
-
-    # resample thickness into common (MNI-ICBM152) hires space
-    ${FALCON_BIN}/falcon_igl_field_resample \
-          -i ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
+      if [[ ! -e ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv ]];then
+        ${FALCON_BIN}/falcon_cortex_calc_thickness \
+          ${tempdir}/${nm}_ics-${ver}_${s}.ply \
           ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
-          ${icbm_dir}/icbm152_model_09c/mni_icbm152_ocs_${hemi}.ply \
-          -o ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv \
-          --knn 3 --SO3  --invexp
+          ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv
+      fi
 
-    paste -d ','  ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv \
-                  $atlas_hr | gzip -9  -c > ${OUTPUT}_thickness_icbm_hr-${ver}_${hemi}.csv.gz
+
+      # resample thickness into common (MNI-ICBM152) hires space
+      ${FALCON_BIN}/falcon_igl_field_resample \
+            -i ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
+            ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
+            ${icbm_dir}/icbm152_model_09c/mni_icbm152_ocs_${hemi}.ply \
+            -o ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv \
+            --knn 3 --SO3  --invexp
+
+      paste -d ','  ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv \
+                    $atlas_hr | gzip -9  -c > ${OUTPUT}_thickness_icbm_hr-${ver}_${hemi}.csv.gz
+    fi
   fi
 done
 
