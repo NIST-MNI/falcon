@@ -316,10 +316,13 @@ int niik_image_write_minc2(char *outname,nifti_image *img) {
   /*free memory*/
   mifree_volume_props( props );
 
+  /*VF: disabling to be compatible with standard nifti*/
+  /*
   if(img->minc_history != NULL) {
     if(miset_attr_values(hvol,MI_TYPE_STRING,"","history",strlen(img->minc_history)+1,img->minc_history ) == MI_ERROR)
       fprintf(stderr,"[%s] miset_attr_values failed!\n",fcname);
   }
+  */
 
   miclose_volume( hvol );
 

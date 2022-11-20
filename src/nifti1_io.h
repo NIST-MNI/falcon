@@ -17,7 +17,7 @@
 #endif
 #include "nifti1.h"                  /*** NIFTI-1 header specification ***/
 
-#include "znzlib.h"
+#include <znzlib.h>
 
 /*=================*/
 #ifdef  __cplusplus
@@ -39,9 +39,9 @@ extern "C" {
 /*****  incidental or otherwise, caused by any use of this document.     *****/
 /*****===================================================================*****/
 
-/*
+/* 
    Modified by: Mark Jenkinson (FMRIB Centre, University of Oxford, UK)
-   Date: July/August 2004
+   Date: July/August 2004 
 
       Mainly adding low-level IO and changing things to allow gzipped files
       to be read and written
@@ -65,6 +65,20 @@ typedef struct {                   /** 3x3 matrix struct **/
 
 /*...........................................................................*/
 
+/*! \enum analyze_75_orient_code
+ *  \brief Old-style analyze75 orientation
+ *         codes.
+ */
+typedef enum _analyze75_orient_code {
+  a75_transverse_unflipped = 0,
+  a75_coronal_unflipped = 1,
+  a75_sagittal_unflipped = 2,
+  a75_transverse_flipped = 3,
+  a75_coronal_flipped = 4,
+  a75_sagittal_flipped = 5,
+  a75_orient_unknown = 6
+} analyze_75_orient_code;
+
 /*! \struct nifti_image
     \brief High level data structure for open nifti datasets in the
            nifti1_io API.  Note that this structure is not part of the
@@ -82,7 +96,7 @@ typedef struct {                /*!< Image storage struct **/
   int nv ;                      /*!< dimensions of grid array             */
   int nw ;                      /*!< dimensions of grid array             */
   int dim[8] ;                  /*!< dim[0]=ndim, dim[1]=nx, etc.         */
-  int nvox ;                    /*!< number of voxels = nx*ny*nz*...*nw   */
+  size_t nvox ;                    /*!< number of voxels = nx*ny*nz*...*nw   */
   int nbyper ;                  /*!< bytes per voxel, matches datatype    */
   int datatype ;                /*!< type of data in voxels: DT_* code    */
 
@@ -115,8 +129,8 @@ typedef struct {                /*!< Image storage struct **/
 
   /*! quaternion transform parameters
     [when writing a dataset, these are used for qform, NOT qto_xyz]   */
-  float quatern_b, quatern_c, quatern_d,
-        qoffset_x, qoffset_y, qoffset_z,
+  float quatern_b , quatern_c , quatern_d ,
+        qoffset_x , qoffset_y , qoffset_z ,
         qfac      ;
 
   mat44 qto_xyz ;               /*!< qform: transform (i,j,k) to (x,y,z) */
@@ -151,18 +165,80 @@ typedef struct {                /*!< Image storage struct **/
 
   int                num_ext ;  /*!< number of extensions in ext_list       */
   nifti1_extension * ext_list ; /*!< array of extension structs (with data) */
+  analyze_75_orient_code analyze75_orient; /*!< for old analyze files, orient */
 
-  char *minc_history;           /*!< minc history, if available*/
 } nifti_image ;
 
 
 
 /* struct for return from nifti_image_read_bricks() */
 typedef struct {
-  int     nbricks;    /* the number of allocated pointers in 'bricks' */
-  int     bsize;      /* the length of each data block, in bytes      */
-  void ** bricks;     /* array of pointers to data blocks             */
+  int       nbricks;    /* the number of allocated pointers in 'bricks' */
+  size_t    bsize;      /* the length of each data block, in bytes      */
+  void   ** bricks;     /* array of pointers to data blocks             */
 } nifti_brick_list;
+
+
+/*****************************************************************************/
+/*------------------ NIfTI version of ANALYZE 7.5 structure -----------------*/
+
+/* (based on fsliolib/dbh.h, but updated for version 7.5) */
+
+typedef struct {
+       /* header info fields - describes the header    overlap with NIfTI */
+       /*                                              ------------------ */
+       int sizeof_hdr;                  /* 0 + 4        same              */
+       char data_type[10];              /* 4 + 10       same              */
+       char db_name[18];                /* 14 + 18      same              */
+       int extents;                     /* 32 + 4       same              */
+       short int session_error;         /* 36 + 2       same              */
+       char regular;                    /* 38 + 1       same              */
+       char hkey_un0;                   /* 39 + 1                40 bytes */
+
+       /* image dimension fields - describes image sizes */
+       short int dim[8];                /* 0 + 16       same              */
+       short int unused8;               /* 16 + 2       intent_p1...      */
+       short int unused9;               /* 18 + 2         ...             */
+       short int unused10;              /* 20 + 2       intent_p2...      */
+       short int unused11;              /* 22 + 2         ...             */
+       short int unused12;              /* 24 + 2       intent_p3...      */
+       short int unused13;              /* 26 + 2         ...             */
+       short int unused14;              /* 28 + 2       intent_code       */
+       short int datatype;              /* 30 + 2       same              */
+       short int bitpix;                /* 32 + 2       same              */
+       short int dim_un0;               /* 34 + 2       slice_start       */
+       float pixdim[8];                 /* 36 + 32      same              */
+
+       float vox_offset;                /* 68 + 4       same              */
+       float funused1;                  /* 72 + 4       scl_slope         */
+       float funused2;                  /* 76 + 4       scl_inter         */
+       float funused3;                  /* 80 + 4       slice_end,        */
+                                                     /* slice_code,       */
+                                                     /* xyzt_units        */
+       float cal_max;                   /* 84 + 4       same              */
+       float cal_min;                   /* 88 + 4       same              */
+       float compressed;                /* 92 + 4       slice_duration    */
+       float verified;                  /* 96 + 4       toffset           */
+       int glmax,glmin;                 /* 100 + 8              108 bytes */
+
+       /* data history fields - optional */
+       char descrip[80];                /* 0 + 80       same              */
+       char aux_file[24];               /* 80 + 24      same              */
+       char orient;                     /* 104 + 1      NO GOOD OVERLAP   */
+       char originator[10];             /* 105 + 10     FROM HERE DOWN... */
+       char generated[10];              /* 115 + 10                       */
+       char scannum[10];                /* 125 + 10                       */
+       char patient_id[10];             /* 135 + 10                       */
+       char exp_date[10];               /* 145 + 10                       */
+       char exp_time[10];               /* 155 + 10                       */
+       char hist_un0[3];                /* 165 + 3                        */
+       int views;                       /* 168 + 4                        */
+       int vols_added;                  /* 172 + 4                        */
+       int start_field;                 /* 176 + 4                        */
+       int field_skip;                  /* 180 + 4                        */
+       int omax, omin;                  /* 184 + 8                        */
+       int smax, smin;                  /* 192 + 8              200 bytes */
+} nifti_analyze75;                                   /* total:  348 bytes */
 
 
 /*****************************************************************************/
@@ -184,44 +260,54 @@ mat33 nifti_mat33_polar  ( mat33 A ) ;
 float nifti_mat33_rownorm( mat33 A ) ;
 float nifti_mat33_colnorm( mat33 A ) ;
 float nifti_mat33_determ ( mat33 R ) ;
-mat33 nifti_mat33_mul    ( mat33 A, mat33 B ) ;
+mat33 nifti_mat33_mul    ( mat33 A , mat33 B ) ;
 
-void  nifti_swap_2bytes ( int n, void *ar ) ;
-void  nifti_swap_4bytes ( int n, void *ar ) ;
-void  nifti_swap_8bytes ( int n, void *ar ) ;
-void  nifti_swap_16bytes( int n, void *ar ) ;
-void  nifti_swap_Nbytes ( int n, int siz, void *ar ) ;
+void  nifti_swap_2bytes ( size_t n , void *ar ) ;
+void  nifti_swap_4bytes ( size_t n , void *ar ) ;
+void  nifti_swap_8bytes ( size_t n , void *ar ) ;
+void  nifti_swap_16bytes( size_t n , void *ar ) ;
+void  nifti_swap_Nbytes ( size_t n , int siz , void *ar ) ;
 
-void  swap_nifti_header ( struct nifti_1_header *h, int is_nifti ) ;
+int    nifti_datatype_is_valid   (int dtype, int for_nifti);
+int    nifti_datatype_from_string(const char * name);
+char * nifti_datatype_to_string  (int dtype);
+
 int   nifti_get_filesize( const char *pathname ) ;
+void  swap_nifti_header ( struct nifti_1_header *h , int is_nifti ) ;
+void  old_swap_nifti_header( struct nifti_1_header *h , int is_nifti );
+int   nifti_swap_as_analyze( nifti_analyze75 *h );
 
-int   nifti_io_get_problem_code_kunio();
-void  nifti_io_set_problem_code_kunio(int i);
 
 /* main read/write routines */
 
-nifti_image *nifti_image_read_bricks(const char *hname, int nbricks,
+nifti_image *nifti_image_read_bricks(const char *hname , int nbricks,
                                      const int *blist, nifti_brick_list * NBL);
-int          nifti_image_load_bricks(nifti_image *nim, int nbricks,
+int          nifti_image_load_bricks(nifti_image *nim , int nbricks,
                                      const int *blist, nifti_brick_list * NBL);
 void         nifti_free_NBL( nifti_brick_list * NBL );
 
-nifti_image *nifti_image_read    ( const char *hname, int read_data ) ;
+nifti_image *nifti_image_read    ( const char *hname , int read_data ) ;
 int          nifti_image_load    ( nifti_image *nim ) ;
 void         nifti_image_unload  ( nifti_image *nim ) ;
 void         nifti_image_free    ( nifti_image *nim ) ;
 
 int          nifti_read_collapsed_image( nifti_image * nim, const int dims [8],
-    void ** data );
+                                         void ** data );
+
+int          nifti_read_subregion_image( nifti_image * nim, 
+                                         int *start_index, int *region_size,
+                                         void ** data );
 
 void         nifti_image_write   ( nifti_image * nim ) ;
-void         nifti_image_write_bricks(nifti_image * nim,
+void         nifti_image_write_bricks(nifti_image * nim, 
                                       const nifti_brick_list * NBL);
 void         nifti_image_infodump( const nifti_image * nim ) ;
 
 void         nifti_disp_lib_hist( void ) ;     /* to display library history */
 void         nifti_disp_lib_version( void ) ;  /* to display library version */
 int          nifti_disp_matrix_orient( const char * mesg, mat44 mat );
+int          nifti_disp_type_list( int which );
+
 
 char *       nifti_image_to_ascii  ( const nifti_image * nim ) ;
 nifti_image *nifti_image_from_ascii( const char * str, int * bytes_read ) ;
@@ -236,37 +322,38 @@ char * nifti_makehdrname  (const char * prefix, int nifti_type, int check,
 char * nifti_makeimgname  (const char * prefix, int nifti_type, int check,
                            int comp);
 int    is_nifti_file      (const char *hname);
-char * nifti_find_file_extension(const char * name);
+const char * nifti_find_file_extension(const char * name);
 int    nifti_is_complete_filename(const char* fname);
 int    nifti_validfilename(const char* fname);
 
 int    disp_nifti_1_header(const char * info, const nifti_1_header * hp ) ;
 void   nifti_set_debug_level( int level ) ;
 void   nifti_set_skip_blank_ext( int skip ) ;
+void   nifti_set_allow_upper_fext( int allow ) ;
 
-int    valid_nifti_brick_list(nifti_image * nim, int nbricks,
+int    valid_nifti_brick_list(nifti_image * nim , int nbricks,
                               const int * blist, int disp_error);
 
 /* znzFile operations */
 znzFile nifti_image_open(const char * hname, char * opts, nifti_image ** nim);
 znzFile nifti_image_write_hdr_img(nifti_image *nim, int write_data,
                                   const char* opts);
-znzFile nifti_image_write_hdr_img2( nifti_image *nim, int write_opts,
-                                    const char* opts, znzFile imgfile, const nifti_brick_list * NBL);
+znzFile nifti_image_write_hdr_img2( nifti_image *nim , int write_opts ,
+               const char* opts, znzFile imgfile, const nifti_brick_list * NBL);
 size_t  nifti_read_buffer(znzFile fp, void* datatptr, size_t ntot,
-                          nifti_image *nim);
+                         nifti_image *nim);
 int     nifti_write_all_data(znzFile fp, nifti_image * nim,
                              const nifti_brick_list * NBL);
 size_t  nifti_write_buffer(znzFile fp, const void * buffer, size_t numbytes);
 nifti_image *nifti_read_ascii_image(znzFile fp, char *fname, int flen,
-                                    int read_data);
+                         int read_data);
 znzFile nifti_write_ascii_image(nifti_image *nim, const nifti_brick_list * NBL,
-                                const char * opts, int write_data, int leave_open);
+                         const char * opts, int write_data, int leave_open);
 
 
-void nifti_datatype_sizes( int datatype, int *nbyper, int *swapsize ) ;
+void nifti_datatype_sizes( int datatype , int *nbyper, int *swapsize ) ;
 
-void nifti_mat44_to_quatern( mat44 R,
+void nifti_mat44_to_quatern( mat44 R ,
                              float *qb, float *qc, float *qd,
                              float *qx, float *qy, float *qz,
                              float *dx, float *dy, float *dz, float *qfac ) ;
@@ -275,8 +362,8 @@ mat44 nifti_quatern_to_mat44( float qb, float qc, float qd,
                               float qx, float qy, float qz,
                               float dx, float dy, float dz, float qfac );
 
-mat44 nifti_make_orthog_mat44( float r11, float r12, float r13,
-                               float r21, float r22, float r23,
+mat44 nifti_make_orthog_mat44( float r11, float r12, float r13 ,
+                               float r21, float r22, float r23 ,
                                float r31, float r32, float r33  ) ;
 
 int nifti_short_order(void) ;              /* CPU byte order */
@@ -291,12 +378,12 @@ int nifti_short_order(void) ;              /* CPU byte order */
 #define NIFTI_I2S  5    /* Inferior to Superior  */
 #define NIFTI_S2I  6    /* Superior to Inferior  */
 
-void nifti_mat44_to_orientation( mat44 R, int *icod, int *jcod, int *kcod ) ;
+void nifti_mat44_to_orientation( mat44 R , int *icod, int *jcod, int *kcod ) ;
 
 /*--------------------- Low level IO routines ------------------------------*/
 
 char * nifti_findhdrname (const char* fname);
-char * nifti_findimgname (const char* fname, int nifti_type);
+char * nifti_findimgname (const char* fname , int nifti_type);
 int    nifti_is_gzfile   (const char* fname);
 
 char * nifti_makebasename(const char* fname);
@@ -304,26 +391,32 @@ char * nifti_makebasename(const char* fname);
 
 /* other routines */
 struct nifti_1_header   nifti_convert_nim2nhdr(const nifti_image* nim);
+nifti_1_header * nifti_make_new_header(const int arg_dims[], int arg_dtype);
 nifti_1_header * nifti_read_header(const char *hname, int *swapped, int check);
 nifti_image    * nifti_copy_nim_info(const nifti_image * src);
+nifti_image    * nifti_make_new_nim(const int dims[], int datatype,
+                                                      int data_fill);
 nifti_image    * nifti_simple_init_nim(void);
 nifti_image    * nifti_convert_nhdr2nim(struct nifti_1_header nhdr,
                                         const char * fname);
 
 int    nifti_hdr_looks_good        (const nifti_1_header * hdr);
+int    nifti_is_valid_datatype     (int dtype);
 int    nifti_is_valid_ecode        (int ecode);
 int    nifti_nim_is_valid          (nifti_image * nim, int complain);
 int    nifti_nim_has_valid_dims    (nifti_image * nim, int complain);
 int    is_valid_nifti_type         (int nifti_type);
+int    nifti_test_datatype_sizes   (int verb);
 int    nifti_type_and_names_match  (nifti_image * nim, int show_warn);
 int    nifti_update_dims_from_array(nifti_image * nim);
 void   nifti_set_iname_offset      (nifti_image *nim);
 int    nifti_set_type_from_names   (nifti_image * nim);
 int    nifti_add_extension(nifti_image * nim, const char * data, int len,
                            int ecode );
+int    nifti_compiled_with_zlib    (void);
 int    nifti_copy_extensions (nifti_image *nim_dest,const nifti_image *nim_src);
 int    nifti_free_extensions (nifti_image *nim);
-int  * nifti_get_intlist     (int nvals, const char *str);
+int  * nifti_get_intlist     (int nvals , const char *str);
 char * nifti_strdup          (const char *str);
 int    valid_nifti_extensions(const nifti_image *nim);
 
@@ -351,12 +444,32 @@ int    valid_nifti_extensions(const nifti_image *nim);
                                            mah5@leicester.ac.uk
                                            http://someplace/something         */
 
-#define NIFTI_ECODE_WORKFLOW_FWDS   12  /* Kate Fissell: fissel+@pitt.edu
+#define NIFTI_ECODE_WORKFLOW_FWDS   12  /* Kate Fissell: fissell@pitt.edu
                                            http://kraepelin.wpic.pitt.edu
                                             /~fissell/NIFTI_ECODE_WORKFLOW_FWDS
                                             /NIFTI_ECODE_WORKFLOW_FWDS.html   */
 
-#define NIFTI_MAX_ECODE             12  /******* maximum extension code *******/
+#define NIFTI_ECODE_FREESURFER      14  /* http://surfer.nmr.mgh.harvard.edu  */
+
+#define NIFTI_ECODE_PYPICKLE        16  /* embedded Python objects
+                                           http://niftilib.sourceforge.net
+                                                 /pynifti                     */
+
+        /* LONI MiND codes: http://www.loni.ucla.edu/twiki/bin/view/Main/MiND */
+#define NIFTI_ECODE_MIND_IDENT      18  /* Vishal Patel: vishal.patel@ucla.edu*/
+#define NIFTI_ECODE_B_VALUE         20
+#define NIFTI_ECODE_SPHERICAL_DIRECTION 22
+#define NIFTI_ECODE_DT_COMPONENT    24
+#define NIFTI_ECODE_SHC_DEGREEORDER 26  /* end LONI MiND codes                */
+
+#define NIFTI_ECODE_VOXBO           28  /* Dan Kimberg: www.voxbo.org         */
+
+#define NIFTI_ECODE_CARET           30  /* John Harwell: john@brainvis.wustl.edu
+                                           http://brainvis.wustl.edu/wiki
+                                             /index.php/Caret:Documentation
+                                             :CaretNiftiExtension             */
+
+#define NIFTI_MAX_ECODE             30  /******* maximum extension code *******/
 
 /* nifti_type file codes */
 #define NIFTI_FTYPE_ANALYZE   0
@@ -371,9 +484,17 @@ int    valid_nifti_extensions(const nifti_image *nim);
 #ifdef _NIFTI1_IO_C_
 
 typedef struct {
-  int debug;               /*!< debug level for status reports */
-  int skip_blank_ext;      /*!< skip extender if no extensions */
+    int debug;               /*!< debug level for status reports  */
+    int skip_blank_ext;      /*!< skip extender if no extensions  */
+    int allow_upper_fext;    /*!< allow uppercase file extensions */
 } nifti_global_options;
+
+typedef struct {
+    int    type;           /* should match the NIFTI_TYPE_ #define */
+    int    nbyper;         /* bytes per value, matches nifti_image */
+    int    swapsize;       /* bytes per swap piece, matches nifti_image */
+    char * name;           /* text string to match #define */
+} nifti_type_ele;
 
 #undef  LNI_FERR /* local nifti file error, to be compact and repetative */
 #define LNI_FERR(func,msg,file)                                      \
@@ -384,8 +505,8 @@ typedef struct {
 #define swap_2(s) nifti_swap_2bytes(1,&(s)) /* s: 2-byte short; swap in place */
 #define swap_4(v) nifti_swap_4bytes(1,&(v)) /* v: 4-byte value; swap in place */
 
-/***** isfinite() is a C99 macro, which is
-       present in many C implementations already *****/
+                        /***** isfinite() is a C99 macro, which is
+                               present in many C implementations already *****/
 
 #undef IS_GOOD_FLOAT
 #undef FIXED_FLOAT
@@ -420,7 +541,3 @@ typedef struct {
 /*=================*/
 
 #endif /* _NIFTI_IO_HEADER_ */
-
-/*
- kate: space-indent on; hl c;indent-width 2; indent-mode cstyle;replace-tabs on;word-wrap-column 80;tab-width 8
-*/

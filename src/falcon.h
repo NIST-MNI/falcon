@@ -28,6 +28,9 @@
 #include "nifti1.h"
 #include "nifti1_io.h"
 
+/*Additional NIFTI data type*/
+#define NIFTI_TYPE_FLOAT16 4096
+
 /* TIFF  library */
 //#include "tiffio.h"
 

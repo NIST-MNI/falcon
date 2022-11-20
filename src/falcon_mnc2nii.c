@@ -613,6 +613,7 @@ nifti_image *niik_image_read_minc2(const char *minc_name) {
   strncpy(img->iname,minc_name,4096);
 
   /*Read MINC history*/
+  #if 0
   if(miget_attr_length(minc_volume,"","history",&minc_history_length) == MI_NOERROR) {
     if(minc_history_length>0) {
       char *minc_history=malloc(minc_history_length+1);
@@ -625,7 +626,7 @@ nifti_image *niik_image_read_minc2(const char *minc_name) {
       }
     }
   }
-
+  #endif
   miclose_volume(minc_volume); /* Oops! KN January 27, 2014 */
 
   if(verbose>=1) niik_fc_display(fcname,0);

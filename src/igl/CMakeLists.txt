@@ -9,13 +9,16 @@ IF(HAVE_BICPL)
         set(SOURCES_MNI_OBJ
             readMNIObj.cpp readMNIObj.h writeMNIOjb.cpp writeMNIOjb.h
         )
+
         add_library(iglMNIobj STATIC ${SOURCES_MNI_OBJ})
         target_link_libraries(iglMNIobj ${IGL_SCOPE} igl_common)
         target_link_libraries(iglMNIobj ${IGL_SCOPE} igl)
-        target_link_libraries(iglMNIobj ${IGL_SCOPE} bicpl)
+        target_link_libraries(iglMNIobj ${IGL_SCOPE} ${BICPL_LIBRARIES})
+        target_link_libraries(iglMNIobj ${IGL_SCOPE} ${LIBMINC_LIBRARIES})
     else()
         add_library(iglMNIobj INTERFACE)
-        target_link_libraries(iglMNIobj INTERFACE bicpl)
+        target_link_libraries(iglMNIobj INTERFACE ${BICPL_LIBRARIES})
+        target_link_libraries(iglMNIobj INTERFACE ${LIBMINC_LIBRARIES})
     endif()
 
     target_include_directories(iglMNIobj INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

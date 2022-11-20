@@ -1047,7 +1047,7 @@ int niik_image_iscale(nifti_image *img,double imin,double imax,double omin,doubl
     d=(d-imin)*df+omin;
     niik_image_set_voxel(img,i,d);
   }
-  img->minc_history = NULL;
+  /*img->minc_history = NULL;*/
   return 1;
 }
 
@@ -7339,13 +7339,15 @@ int niik_image_append_history(nifti_image *img,const char *history_entry) {
 
   history_entry_len=strlen(history_entry);
   if(history_entry_len==0) return 1;
-  if(img->minc_history != NULL ) {
+
+  /*VF: disabling to be compatible with standard nifti*/
+  /*if(img->minc_history != NULL ) {
     size_t history_length=strlen(img->minc_history);
     img->minc_history=(char*)realloc(img->minc_history,history_length+history_entry_len+1);
     strcat(img->minc_history, history_entry);
   } else {
     img->minc_history=strdup(history_entry);
-  }
+  }*/
   return 1;
 }
 
