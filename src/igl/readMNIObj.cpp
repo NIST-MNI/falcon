@@ -1,10 +1,11 @@
-#pragma once
 #ifndef __READ_MNIOBJ_CPP__
 #define __READ_MNIOBJ_CPP__
 
 #include <iostream>
 #include <fstream>
 #include <bicpl.h>
+
+#include "readMNIObj.h"
 
 namespace igl {
 
@@ -107,5 +108,10 @@ inline bool readMNIObj(
 } 
 
 };//igl
+
+
+#ifdef IGL_STATIC_LIBRARY
+template bool igl::readMNIObj<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&);
+#endif
 
 #endif 

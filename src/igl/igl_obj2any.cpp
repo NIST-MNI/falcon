@@ -22,7 +22,7 @@ int main(int argc,char **argv)
     ("o,output", "Output mesh  ",           cxxopts::value<std::string>())
 
     ("clobber", "Clobber output file ",      cxxopts::value<bool>()->default_value("false"))
-    ("falcon", "Try to generate .ply file compatible with falcon ",      cxxopts::value<bool>()->default_value("false"))
+    ("falcon", "Try to generate .ply file compatible with falcon ", cxxopts::value<bool>()->default_value("false"))
 
     ("help", "Print help") ;
   
@@ -66,11 +66,11 @@ int main(int argc,char **argv)
           std::cout<<"Edges:"<<E.rows()<<std::endl;
         
         //TODO: save color if present
-        if(!igl::writePLY(par["output"].as<std::string>(), V,F,E))
+        if(!igl::writePLY(par["output"].as<std::string>(), V, F, E, igl::FileEncoding::Binary))
           std::cerr<<"Error writing:"<<par["output"].as<std::string>()<<std::endl;
 
       } else {
-        if(!igl::write_triangle_mesh(par["output"].as<std::string>(),V,F,igl::FileEncoding::Binary))
+        if(!igl::write_triangle_mesh(par["output"].as<std::string>(), V, F, igl::FileEncoding::Binary))
           std::cerr<<"Error writing:"<<par["output"].as<std::string>()<<std::endl;
       }
     } else {

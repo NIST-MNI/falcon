@@ -1,3 +1,4 @@
+#pragma once
 #ifndef __READ_MNI_OBJ_H__
 #define __READ_MNI_OBJ_H__
 

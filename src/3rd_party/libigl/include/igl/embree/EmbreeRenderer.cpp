@@ -446,4 +446,5 @@ template void igl::embree::EmbreeRenderer::set_rot<Eigen::Matrix<double, 3, 3, 0
 template void igl::embree::EmbreeRenderer::set_data<Eigen::Matrix<double, -1, 1, 0, -1, 1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> > const&, igl::ColorMapType);
 template void igl::embree::EmbreeRenderer::set_mesh<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, bool);
 template void igl::embree::EmbreeRenderer::set_zoom<double>(double);
+template void igl::embree::EmbreeRenderer::set_colors<Eigen::Matrix<double, 1, 3, 1, 1, 3> >(Eigen::MatrixBase<Eigen::Matrix<double, 1, 3, 1, 1, 3> > const&);
 #endif //IGL_STATIC_LIBRARY

@@ -7,16 +7,16 @@ IF(HAVE_BICPL)
     
     if(LIBIGL_USE_STATIC_LIBRARY)
         set(SOURCES_MNI_OBJ
-            readMNIObj.cpp readMNIObj.h writeMNIOjb.cpp writeMNIOjb.h
+            readMNIObj.cpp readMNIObj.h writeMNIObj.cpp writeMNIObj.h
         )
 
         add_library(iglMNIobj STATIC ${SOURCES_MNI_OBJ})
-        target_link_libraries(iglMNIobj ${IGL_SCOPE} igl_common)
-        target_link_libraries(iglMNIobj ${IGL_SCOPE} igl)
-        target_link_libraries(iglMNIobj ${IGL_SCOPE} ${BICPL_LIBRARIES})
-        target_link_libraries(iglMNIobj ${IGL_SCOPE} ${LIBMINC_LIBRARIES})
+        target_link_libraries(iglMNIobj igl::core)
+        target_link_libraries(iglMNIobj ${BICPL_LIBRARIES})
+        target_link_libraries(iglMNIobj ${LIBMINC_LIBRARIES})
     else()
         add_library(iglMNIobj INTERFACE)
+        target_link_libraries(iglMNIobj INTERFACE igl::core)
         target_link_libraries(iglMNIobj INTERFACE ${BICPL_LIBRARIES})
         target_link_libraries(iglMNIobj INTERFACE ${LIBMINC_LIBRARIES})
     endif()
@@ -29,7 +29,7 @@ IF( LIBIGL_IMGUI) # LIBIGL_WITH_OPENGL AND LIBIGL_WITH_OPENGL_GLFW AND
     message("Building interactive viewer")
     # Viewer APP
     add_executable(falcon_igl_view_field view_field.cpp )
-    target_link_libraries(falcon_igl_view_field igl::csv igl::core igl::opengl igl::imgui)
+    target_link_libraries(falcon_igl_view_field tri_tri_intersect igl::core igl::csv  igl::opengl igl::imgui)
 
     INSTALL( TARGETS  falcon_igl_view_field)
 ENDIF()
@@ -37,11 +37,11 @@ ENDIF()
 if(NOT TARGET igl::png)
     add_definitions(-DSTB_PNG)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/png ${CMAKE_CURRENT_SOURCE_DIR}/../3rd_party/stb/)
-    add_library(stb_image STATIC 
+    add_library(stb_image STATIC
         ../3rd_party/stb/stb_image.h 
         ../3rd_party/stb/stb_image_write.h
-        png/igl_stb_image.h 
-        png/igl_stb_image.cpp 
+        png/igl_stb_image.h
+        png/igl_stb_image.cpp
     )
     if(LIBIGL_USE_STATIC_LIBRARY)
         set(SOURCES_IGL_PNG
@@ -51,8 +51,8 @@ if(NOT TARGET igl::png)
            png/writePNG.h
         )
         add_library(igl_png STATIC ${SOURCES_IGL_PNG})
-        target_link_libraries(igl_png ${IGL_SCOPE} igl_common)
-        target_link_libraries(igl_png ${IGL_SCOPE} igl)
+        #target_link_libraries(igl_png ${IGL_SCOPE} igl_common)
+        target_link_libraries(igl_png ${IGL_SCOPE} igl::core)
         target_link_libraries(igl_png ${IGL_SCOPE} stb_image)
     else()
         add_library(igl_png INTERFACE)
@@ -61,6 +61,8 @@ if(NOT TARGET igl::png)
     target_include_directories(igl_png INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/png ${CMAKE_CURRENT_SOURCE_DIR}/../3rd_party/stb)
     add_library(igl::png ALIAS igl_png)
     set_property(TARGET igl_png PROPERTY EXPORT_NAME igl::png)
+else()
+    message("Found STB library")
 endif()
 
 IF(HAVE_BICPL)
@@ -71,8 +73,19 @@ IF(HAVE_BICPL)
     target_link_libraries(falcon_igl_any2obj igl::csv igl::core iglMNIobj)
 
     INSTALL( TARGETS falcon_igl_obj2any falcon_igl_any2obj )
-
 ENDIF(HAVE_BICPL)
+
+if(LIBIGL_USE_STATIC_LIBRARY)
+    set(SOURCES_TRI_TRI_INTERSECT
+        Guigue2003_tri_tri_intersect.h  Guigue2003_tri_tri_intersect.cpp
+    )
+
+    add_library(tri_tri_intersect STATIC ${SOURCES_TRI_TRI_INTERSECT})
+    target_link_libraries(tri_tri_intersect igl::core)
+else()
+    add_library(tri_tri_intersect INTERFACE)
+    target_link_libraries(tri_tri_intersect INTERFACE igl::core)
+endif()
 
 
 add_executable(falcon_igl_field_eig field_eig.cpp )
@@ -106,7 +119,7 @@ add_executable(falcon_igl_mesh_debug mesh_debug.cpp )
 target_link_libraries(falcon_igl_mesh_debug igl::core )
 
 add_executable(falcon_igl_mesh_render mesh_render.cpp )
-target_link_libraries(falcon_igl_mesh_render igl::png igl::csv igl::core  igl::embree )
+target_link_libraries(falcon_igl_mesh_render igl::png igl::csv igl::embree igl::core)
 
 add_executable(falcon_igl_marching_cubes marching_cubes.cpp)
 target_link_libraries(falcon_igl_marching_cubes igl::core minc2-simple )
@@ -118,10 +131,10 @@ add_executable(falcon_igl_mesh_transform mesh_transform.cpp)
 target_link_libraries(falcon_igl_mesh_transform igl::core minc2-simple )
 
 add_executable(falcon_igl_mesh_intersect mesh_intersect.cpp )
-target_link_libraries(falcon_igl_mesh_intersect igl::core )
+target_link_libraries(falcon_igl_mesh_intersect tri_tri_intersect igl::core )
 
 add_executable(falcon_igl_mesh_voxelizer mesh_voxelize.cpp minc_volume.h)
-target_link_libraries(falcon_igl_mesh_voxelizer igl::core minc2-simple )
+target_link_libraries(falcon_igl_mesh_voxelizer tri_tri_intersect igl::core minc2-simple )
 
 add_executable(falcon_igl_field_sampler field_sampler.cpp minc_volume.h)
 target_link_libraries(falcon_igl_field_sampler igl::csv igl::core minc2-simple )

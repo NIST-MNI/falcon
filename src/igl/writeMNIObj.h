@@ -1,3 +1,4 @@
+#pragma once
 #ifndef __WRITE_MNI_OBJ_H__
 #include <igl/igl_inline.h>
 #include <igl/FileEncoding.h>

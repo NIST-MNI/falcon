@@ -54,6 +54,9 @@
 */
 #ifndef IGL_TRI_TRI_INTERSECT_CPP
 #define IGL_TRI_TRI_INTERSECT_CPP
+
+#include "Guigue2003_tri_tri_intersect.h"
+
 namespace igl {
 
 // helper function
@@ -617,4 +620,24 @@ IGL_INLINE bool tri_tri_overlap_test_2d(
 
 
 }; //igl
+
+#ifdef IGL_STATIC_LIBRARY
+template bool igl::tri_tri_intersection_test_3d<Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false>, 
+  Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false>, 
+  Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false>, 
+  Eigen::Block<Eigen::Matrix<double, 3, 3, 1, 3, 3>, 1, 3, true>, 
+  Eigen::Block<Eigen::Matrix<double, 3, 3, 1, 3, 3>, 1, 3, true>, 
+  Eigen::Block<Eigen::Matrix<double, 3, 3, 1, 3, 3>, 1, 3, true>, 
+  Eigen::Matrix<double, 1, 3, 1, 1, 3>, 
+  Eigen::Matrix<double, 1, 3, 1, 1, 3> >(
+      Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false> > const&, 
+      Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false> > const&, 
+      Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false> > const&, 
+      Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, 3, 3, 1, 3, 3>, 1, 3, true> > const&, 
+      Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, 3, 3, 1, 3, 3>, 1, 3, true> > const&, 
+      Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, 3, 3, 1, 3, 3>, 1, 3, true> > const&, 
+      bool&, Eigen::MatrixBase<Eigen::Matrix<double, 1, 3, 1, 1, 3> >&, 
+      Eigen::MatrixBase<Eigen::Matrix<double, 1, 3, 1, 1, 3> >&);
+#endif
 #endif //IGL_TRI_TRI_INTERSECT_CPP
+

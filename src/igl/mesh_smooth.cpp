@@ -7,6 +7,7 @@
 #include "igl/massmatrix.h"
 #include "igl/adjacency_matrix.h"
 #include "igl/sum.h"
+#include "igl/diag.h"
 
 #include "cxxopts.hpp"
 

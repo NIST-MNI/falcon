@@ -12,7 +12,7 @@
 #include <igl/png/writePNG.h>
 #endif
 
-#include <Eigen/Geometry> 
+#include <Eigen/Geometry>
 
 // embree
 #include <igl/embree/EmbreeRenderer.h>

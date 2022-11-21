@@ -1,10 +1,11 @@
-#pragma once
 #ifndef __WRITE_MNIOBJ_CPP__
 #define __WRITE_MNIOBJ_CPP__
 
 #include <iostream>
 #include <fstream>
-#include  <bicpl.h>
+#include <bicpl.h>
+
+#include "writeMNIObj.h"
 
 namespace igl {
 
@@ -72,5 +73,9 @@ bool writeMNIObj(
 }
 
 }; //igl
+
+#ifdef IGL_STATIC_LIBRARY
+template bool igl::writeMNIObj<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, Eigen::Matrix<double, -1, -1, 0, -1, -1> > >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, Eigen::Matrix<double, -1, -1, 0, -1, -1> > > const&, igl::FileEncoding);
+#endif
 
 #endif

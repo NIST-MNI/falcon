@@ -12,6 +12,12 @@
 
 # libigl
 ADD_SUBDIRECTORY(3rd_party/libigl)
+igl_include(core)
+igl_include(png)
+igl_include(embree)
+igl_include(imgui)
+igl_include(glfw)
+igl_include(opengl)
 
 # STB
 #ADD_SUBDIRECTORY(3rd_party/stb)
