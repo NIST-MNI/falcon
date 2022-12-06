@@ -15,7 +15,8 @@
 
 MAJOR_VERSION=0
 MINOR_VERSION=9
-MICRO_VERSION=4
+MICRO_VERSION=5
+# this version relies much more on the priors
 ver=${MAJOR_VERSION}.${MINOR_VERSION}.${MICRO_VERSION}
 
 progname=$(basename $0)
@@ -394,8 +395,37 @@ if [[ -z "$cls" ]];then
     fi
   fi
 else
-  echo "This version doesn't work with external cls"
-  exit 1
+
+  if [[ ! -e ${fn}_supra_WM.mnc ]];then
+  # extract SUPRA_WM and DEEP  
+  tissue_prior=${prior_base}/tissue_prior8
+
+  for l in 2 3 4 5;do
+    itk_resample  ${tissue_prior}_$l.mnc ${tempdir}/prior_${l}.mnc \
+      --transform $nlxfm --invert_transform --order 1  --like $scan --float
+  done
+
+
+  #intersect Supratentiruak mask (2+3 with WM class)
+  minccalc -q -clob -express '(A[0]+A[1])*A[2]' \
+    ${tempdir}/prior_2.mnc ${tempdir}/prior_3.mnc \
+    $prior_WM ${fn}_supra_WM.mnc
+
+  prior_SUPRA_WM=${fn}_supra_WM.mnc
+
+  # just use original warped deep GM mask
+  cp ${tempdir}/prior_3.mnc ${fn}_DEEP_GM.mnc
+  prior_DEEP=${fn}_DEEP_GM.mnc
+
+  # same for the brainstem
+  # TODO: intersect with priorWM ? 
+  cp ${tempdir}/prior_5.mnc ${fn}_BS.mnc
+  prior_BS=${fn}_BS.mnc
+  else
+   prior_SUPRA_WM=${fn}_supra_WM.mnc
+   prior_DEEP=${fn}_DEEP_GM.mnc
+   prior_BS=${fn}_BS.mnc
+  fi
 fi
 
 ###############################################################
@@ -1001,11 +1031,12 @@ if [[ -n "${smooth}" ]] && [[ ! -e ${OUTPUT}_qc_ocs_thickness-${ver}_sm_${smooth
         -min 0 -max 7
 fi
 
-if [[ ! -e ${OUTPUT}_qc_ocs_lobe-${ver}.png ]];then
+if [[ ! -e ${OUTPUT}_qc_ocs_cerebra-${ver}.png ]];then
   ${FALCON_SCRIPTS}/falcon_off_qc_2.sh \
         ${tempdir}/${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt.csv.gz \
         ${tempdir}/${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt.csv.gz \
-        ${OUTPUT}_qc_ocs_lobe-${ver}.png \
+        ${OUTPUT}_qc_ocs_cerebra-${ver}.png \
         -min 0 -max 255 \
-        -column lobe -discrete -levels 256
+        -column cerebra \
+        -discrete -levels 256
 fi
