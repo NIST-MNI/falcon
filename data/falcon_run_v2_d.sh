@@ -15,8 +15,7 @@
 
 MAJOR_VERSION=0
 MINOR_VERSION=9
-MICRO_VERSION=5
-# this version relies much more on the priors
+MICRO_VERSION=9
 ver=${MAJOR_VERSION}.${MINOR_VERSION}.${MICRO_VERSION}
 
 progname=$(basename $0)
@@ -73,8 +72,6 @@ function Usage {
 
   --- Recomended parameters ---
   -nl <nl.xfm>                   :  nonlinear registration to icbm [default = None, will run ANTs]
-  -lin <lin.xfm>                 :  linear registration to icbm [default = None, will run use]
-                                 :  used to calculate corticat thickness in the native space
   -omp <omp>                     :  change number of processors [default=1]
   -use_icbm                      :  use mesh from ICBM for initialization , default - use shrink-wrap
   -anlm                          :  apply anlm filter to input t1w scan (if not done before)
@@ -139,7 +136,6 @@ while  [[ $# -gt 0 ]]; do
   elif [[ $1 = -brainstem ]]; then brainstem=$2;shift 2;
   elif [[ $1 = -cls     ]]; then cls=$2;     shift 2;
   elif [[ $1 = -nl      ]]; then nlxfm=$2;   shift 2;
-  elif [[ $1 = -lin     ]]; then linxfm=$2;  shift 2;
   elif [[ $1 = -gwimask ]]; then gwimask=$2; shift 2;
   elif [[ $1 = -wmmask  ]]; then wmmask=$2;  shift 2;
   elif [[ $1 = -csfmask ]]; then csfmask=$2;  shift 2;
@@ -197,6 +193,7 @@ else
 tempdir=$(mktemp -d --tmpdir)
 trap "rm -rf $tempdir" 0 1 2 15
 fi
+
 
 
 if [[ -n "$ATROPHY" ]];then
@@ -397,37 +394,8 @@ if [[ -z "$cls" ]];then
     fi
   fi
 else
-  # using provided priors
-  if [[ ! -e ${fn}_supra_WM.mnc ]];then
-  # extract SUPRA_WM and DEEP  
-  tissue_prior=${prior_base}/tissue_prior8
-
-  for l in 2 3 4 5;do
-    itk_resample  ${tissue_prior}_$l.mnc ${tempdir}/prior_${l}.mnc \
-      --transform $nlxfm --invert_transform --order 1  --like $scan --float
-  done
-
-
-  #intersect Supratentiruak mask (2+3 with WM class)
-  minccalc -q -clob -express '(A[0]+A[1])*A[2]' \
-    ${tempdir}/prior_2.mnc ${tempdir}/prior_3.mnc \
-    $prior_WM ${fn}_supra_WM.mnc
-
-  prior_SUPRA_WM=${fn}_supra_WM.mnc
-
-  # just use original warped deep GM mask
-  cp ${tempdir}/prior_3.mnc ${fn}_DEEP_GM.mnc
-  prior_DEEP=${fn}_DEEP_GM.mnc
-
-  # same for the brainstem
-  # TODO: intersect with priorWM ? 
-  cp ${tempdir}/prior_5.mnc ${fn}_BS.mnc
-  prior_BS=${fn}_BS.mnc
-  else
-   prior_SUPRA_WM=${fn}_supra_WM.mnc
-   prior_DEEP=${fn}_DEEP_GM.mnc
-   prior_BS=${fn}_BS.mnc
-  fi
+  echo "This version doesn't work with external cls"
+  exit 1
 fi
 
 ###############################################################
@@ -502,12 +470,16 @@ if [[ -n "${ATROPHY}" ]];then
   itk_morph --exp 'D[3]' ${ventmask} ${ventmaskd}
 else
   ventmaskd=$tempdir/${nm}_vent_mask_d.mnc
+  if [[ ! -e $ventmaskd ]];then
   itk_morph --exp 'D[1]' ${ventmask} ${ventmaskd}
+  fi
 fi
 
 
 # "non-ctx mask" # TODO: replace with something else ?
 if [[ ! -e ${fn}_nonctx_mask-${ver}.mnc ]]; then
+
+  if [[ ! -e $tempdir/${nm}_nonctx_mask.mnc ]];then
   mincresample ${icbm_dir}/icbm152_model_09c/mni_icbm152_t1_tal_nlin_sym_09c_CLADA_nonctx_mask_2mm.mnc \
             $tempdir/${nm}_nonctx_mask.mnc \
             -like ${img} \
@@ -515,12 +487,15 @@ if [[ ! -e ${fn}_nonctx_mask-${ver}.mnc ]]; then
             -transformation ${nlxfm} \
             -invert \
             -labels -q
-
+  fi
   # combine with ventricle mask, hippocampus masks and brainstem masks
   if [[ -z ${KEEP_HC} ]]; then
+
+    if [[ ! -e ${fn}_nonctx_mask-${ver}.mnc ]];then
     minccalc -q -labels -byte -express 'A[0]>=0.5||A[1]>=0.5||A[2]>=0.5?1:0' \
       $tempdir/${nm}_nonctx_mask.mnc ${ventmaskd} $prior_BS \
       ${fn}_nonctx_mask-${ver}.mnc
+    fi
   else
     minccalc -q -labels -byte -express 'A[0]>=0.5||A[1]>=0.5||A[2]>=0.5||A[3]>=0.5?1:0' \
       $tempdir/${nm}_nonctx_mask.mnc ${ventmaskd} ${tempdir}/${nm}_prior_hc.mnc $prior_BS \
@@ -548,9 +523,9 @@ fi
 if [[ -n "${trace}" ]];then
   mkdir -p ${OUTPUT}/${ver}
   export FALCON_TRACE=${OUTPUT}/${ver}/trace
-  export FALCON_TRACE_X=43
-  export FALCON_TRACE_Y=90
-  export FALCON_TRACE_Z=128
+  export FALCON_TRACE_X=60
+  export FALCON_TRACE_Y=96
+  export FALCON_TRACE_Z=150
   export FALCON_TRACE_SCALE=2.0
 fi
 
@@ -612,18 +587,16 @@ if [[ ! -e ${fn}_GWI_mask_init_ics.ply ]];then
       # erode cc mask, to move surface in
 
       # create laplace field map at 0.5^3mm resolution
-      ${FALCON_BIN}/falcon_math laplacemap \
-        -imglist=${tempdir}/${nm}_GWI_mask_${hemi}_cc.mnc,${tempdir}/${nm}_GWI_mask_${hemi}_dilate.mnc \
-        -out=${tempdir}/${nm}_GWI_${hemi}_Laplace_map.mnc -xyz=0.5,0.5,0.5 
+      ${FALCON_BIN}/falcon_math laplacemap -imglist=${tempdir}/${nm}_GWI_mask_${hemi}_cc.mnc,${tempdir}/${nm}_GWI_mask_${hemi}_dilate.mnc -out=${tempdir}/${nm}_GWI_${hemi}_Laplace_map.mnc -xyz=0.5,0.5,0.5 
 
       if [[ -n "${trace}" ]];then
         export FALCON_TRACE=${OUTPUT}/${ver}/trace_${hemi}
       fi
 
       if [[ "$hemi" == "lt" ]];then
-        export FALCON_TRACE_X=43
+        export FALCON_TRACE_X=60
       else
-        export FALCON_TRACE_X=153
+        export FALCON_TRACE_X=127
       fi
 
       if [[ -z "$use_icbm" ]];then
@@ -631,27 +604,16 @@ if [[ ! -e ${fn}_GWI_mask_init_ics.ply ]];then
           ${tempdir}/${nm}_GWI_mask_${hemi}_dilate_obj.ply --iter 10 --radius 35 --val 10
 
         ${FALCON_BIN}/falcon_cortex_initics ${scan} \
-          ${tempdir}/${nm}_GWI_mask_${hemi}_cc.mnc \
-          ${tempdir}/${nm}_GWI_${hemi}_Laplace_map.mnc \
-          ${tempdir}/${nm}_GWI_mask_${hemi}_dilate_obj.ply \
-          ${tempdir}/${nm}_GWI_mask_init_ics_${hemi}.ply ${noremesh}
+          ${tempdir}/${nm}_GWI_mask_${hemi}_cc.mnc ${tempdir}/${nm}_GWI_${hemi}_Laplace_map.mnc \
+          ${tempdir}/${nm}_GWI_mask_${hemi}_dilate_obj.ply ${tempdir}/${nm}_GWI_mask_init_ics_${hemi}.ply ${noremesh}
       else
-        if [[ -z $ATROPHY ]];then
-          ${FALCON_BIN}/falcon_transform_surface \
-            ${icbm_dir}/icbm152_model_09c/mni_icbm152_t1_tal_nlin_sym_09c_init_ics_${hemi}.ply \
-            ${nlxfm}  \
-            ${tempdir}/${nm}_init_ics_${hemi}_from_icbm.ply --invert_transform --clob
-        else
-          ${FALCON_BIN}/falcon_transform_surface \
-            ${icbm_dir}/adni_model_3d_v2/adni_model_3d_v2_init_ics_${hemi}.ply \
-            ${nlxfm}  \
-            ${tempdir}/${nm}_init_ics_${hemi}_from_icbm.ply --invert_transform --clob
-        fi
+        ${FALCON_BIN}/falcon_transform_surface \
+          ${icbm_dir}/icbm152_model_09c/mni_icbm152_t1_tal_nlin_sym_09c_init_ics_${hemi}.ply ${nlxfm}  \
+          ${tempdir}/${nm}_init_ics_${hemi}_from_icbm.ply --invert_transform --clob
 
         ${FALCON_BIN}/falcon_cortex_initics ${scan} \
           ${tempdir}/${nm}_GWI_mask_${hemi}_cc.mnc ${tempdir}/${nm}_GWI_${hemi}_Laplace_map.mnc \
-          ${tempdir}/${nm}_init_ics_${hemi}_from_icbm.ply \
-          ${tempdir}/${nm}_GWI_mask_init_ics_${hemi}.ply ${noremesh}
+          ${tempdir}/${nm}_init_ics_${hemi}_from_icbm.ply ${tempdir}/${nm}_GWI_mask_init_ics_${hemi}.ply ${noremesh}
       fi
     fi
   done
@@ -668,9 +630,7 @@ if [[ ! -e ${fn}_GWI_mask_init_ics.ply ]];then
       ${FALCON_BIN}/falcon_math dilate     -in=${tempdir}/${nm}_GWI_mask_CB_close.mnc \
         -out=${tempdir}/${nm}_GWI_mask_CB_dilate.mnc -radius=2
       # create laplace field map at 0.5^3mm resolution
-      ${FALCON_BIN}/falcon_math laplacemap \
-        -imglist=${tempdir}/${nm}_GWI_mask_CB_cc.mnc,${tempdir}/${nm}_GWI_mask_CB_dilate.mnc \
-        -out=${tempdir}/${nm}_GWI_CB_Laplace_map.mnc -xyz=0.5,0.5,0.5 
+      ${FALCON_BIN}/falcon_math laplacemap -imglist=${tempdir}/${nm}_GWI_mask_CB_cc.mnc,${tempdir}/${nm}_GWI_mask_CB_dilate.mnc -out=${tempdir}/${nm}_GWI_CB_Laplace_map.mnc -xyz=0.5,0.5,0.5 
       # now we don't have ICBM atlas yet
       # TODO: add ICBM template
       # if [[ -z "$use_icbm" ]];then
@@ -681,9 +641,9 @@ if [[ ! -e ${fn}_GWI_mask_init_ics.ply ]];then
       if [[ -n "${trace}" ]];then
         export FALCON_TRACE=${OUTPUT}/${ver}/trace_CB
         # TODO: choose  better values
-        export FALCON_TRACE_X=43
-        export FALCON_TRACE_Y=90
-        export FALCON_TRACE_Z=128
+        export FALCON_TRACE_X=60
+        export FALCON_TRACE_Y=96
+        export FALCON_TRACE_Z=150
       fi
 
       ${FALCON_BIN}/falcon_cortex_initics ${scan} \
@@ -698,22 +658,18 @@ if [[ ! -e ${fn}_GWI_mask_init_ics.ply ]];then
   fi
 
   if [[ -n "$PROCESS_CB" ]]; then
-    ${FALCON_BIN}/falcon_math combine-obj -objlist=${tempdir}/${nm}_GWI_mask_init_ics_lt.ply,${tempdir}/${nm}_GWI_mask_init_ics_rt.ply,${tempdir}/${nm}_GWI_mask_init_ics_CB.ply \
-      -out=${tempdir}/${nm}_GWI_mask_init_ics_1.ply
+    ${FALCON_BIN}/falcon_math combine-obj -objlist=${tempdir}/${nm}_GWI_mask_init_ics_lt.ply,${tempdir}/${nm}_GWI_mask_init_ics_rt.ply,${tempdir}/${nm}_GWI_mask_init_ics_CB.ply -out=${tempdir}/${nm}_GWI_mask_init_ics_1.ply
   else
-    ${FALCON_BIN}/falcon_math combine-obj -objlist=${tempdir}/${nm}_GWI_mask_init_ics_lt.ply,${tempdir}/${nm}_GWI_mask_init_ics_rt.ply \
-      -out=${tempdir}/${nm}_GWI_mask_init_ics_1.ply
+    ${FALCON_BIN}/falcon_math combine-obj -objlist=${tempdir}/${nm}_GWI_mask_init_ics_lt.ply,${tempdir}/${nm}_GWI_mask_init_ics_rt.ply -out=${tempdir}/${nm}_GWI_mask_init_ics_1.ply
   fi
 
   # fix potential errors
-  ${FALCON_BIN}/falcon_surface_check \
-    ${tempdir}/${nm}_GWI_mask_init_ics_1.ply \
-    ${fn}_GWI_mask_init_ics.ply --fix  # ${tempdir}/${nm}_GWI_mask_init_ics_2.ply 
+  ${FALCON_BIN}/falcon_surface_check ${tempdir}/${nm}_GWI_mask_init_ics_1.ply ${fn}_GWI_mask_init_ics.ply --fix  # ${tempdir}/${nm}_GWI_mask_init_ics_2.ply 
 fi
 
 if [[ -n "${trace}" ]];then
   export FALCON_TRACE=${OUTPUT}/${ver}/trace
-  export FALCON_TRACE_X=43
+  export FALCON_TRACE_X=60
 fi
 
 ###############################################################
@@ -756,9 +712,9 @@ fi
 ###############################################################
 if [[ ! -e ${OUTPUT}_ics-${ver}.ply ]];then
 
-  export FALCON_TRACE_X=43
-  export FALCON_TRACE_Y=90
-  export FALCON_TRACE_Z=128
+  export FALCON_TRACE_X=60
+  export FALCON_TRACE_Y=96
+  export FALCON_TRACE_Z=150
   export FALCON_TRACE_SCALE=2.0
 
   # find slices with errors
@@ -813,12 +769,13 @@ if [[ ! -e ${OUTPUT}_ics-${ver}.ply ]];then
             -delta     0.5    \
             -iter2     5      \
             -apply     0.2    \
-            -remesh    5      \
+            -remesh    0      \
             -log ${OUTPUT}_convergence-${ver}.csv \
             ${priors} \
             -rungekutta
     else
-      ${FALCON_BIN}/falcon_cortex_refine \
+#      ${FALCON_BIN}/falcon_cortex_refine \
+      /home/vfonov/src/falcon-gh/build/src/falcon_cortex_refine \
               ${scan} ${fn}_cerebral_brain_mask.mnc \
               ${ventmask} ${wmmask}  \
               ${fn}_cerebellum_and_brainstem.mnc \
@@ -828,29 +785,29 @@ if [[ ! -e ${OUTPUT}_ics-${ver}.ply ]];then
               -gradient-FWHM    1.0 1.0 \
               -divergence-FWHM  1.0 1.0 \
               -prior-FWHM       1.0 1.0 \
-              -wimag     0.8     0.8 \
-              -wprior    0.2     0.2 \
-              -wcurv     0.1     0.1 \
+              -wimag     0.2     0.2 \
+              -wprior    0.8     0.8 \
+              -wcurv     0.0     0.0 \
               -wsmooth   0.2     0.2 \
-              -wssmooth  0.1     0.1 \
-              -wtsmooth  1.0     1.0 \
+              -wssmooth  0.2     0.2 \
+              -wtsmooth  0.2     0.2 \
               -wgrad     0.0     0.0 \
-              -wflux     0.1     0.1 \
-              -wprox     0.5     0.5 \
+              -wflux     0.01    0.01 \
+              -wprox     0.8     0.8 \
               -wbrain    1.0     1.0 \
               -wvent     1.0     1.0 \
-              -wabs      0.2     0.2 \
-              -tmin      0.0     0.0 \
+              -wabs      0.1     0.1 \
+              -tmin      0.1     0.1 \
               -tmax      5.0     5.0 \
               -tsigma    1.0     1.0 \
               -supdate   0.0     0.0 \
-              -wmix      0.5     0.5 \
+              -wmix      0.0     0.0 \
               -pmin      0.4    \
               -iter      200    \
               -delta     0.5    \
               -iter2     5      \
               -apply     0.2    \
-              -remesh    5      \
+              -remesh    0      \
               -log ${OUTPUT}_convergence-${ver}.csv \
               ${priors} \
               -rungekutta
@@ -890,7 +847,7 @@ if [[ ! -e ${OUTPUT}_ics-${ver}.ply ]];then
             -delta     0.5    \
             -iter2     5      \
             -apply     0.2    \
-            -remesh    5      \
+            -remesh    0      \
             -log ${OUTPUT}_convergence-${ver}.csv \
             -rungekutta 
   fi
@@ -917,35 +874,23 @@ if [[ -z "$use_icbm" ]];then
 fi
 
 # split up to left and right surfaces
-if [[ -z $linxfm ]];then
-
-  for s in ics ocs;do
-    ${FALCON_BIN}/falcon_transform_surface \
-              ${OUTPUT}_ics-${ver}.ply \
-              ${linxfm}  \
-              ${tempdir}/${nm}_${s}-${ver}.ply --invert_transform --clob
-
-    ${FALCON_BIN}/falcon_surface_split ${tempdir}/${nm}_${s}-${ver}.ply ${tempdir}/${nm}_${s}-${ver}
-  done
-else
-  ${FALCON_BIN}/falcon_surface_split ${OUTPUT}_ics-${ver}.ply ${tempdir}/${nm}_ics-${ver}
-  ${FALCON_BIN}/falcon_surface_split ${OUTPUT}_ocs-${ver}.ply ${tempdir}/${nm}_ocs-${ver}
-fi
+${FALCON_BIN}/falcon_surface_split ${OUTPUT}_ics-${ver}.ply ${tempdir}/${nm}_ics-${ver}
+${FALCON_BIN}/falcon_surface_split ${OUTPUT}_ocs-${ver}.ply ${tempdir}/${nm}_ocs-${ver}
 
 # process left and right separately
 for s in 0 1;do
   if [[ $s == 0 ]];then hemi=lt;else hemi=rt;fi
   
-  atlas=${icbm_dir}/icbm152_model_09c/mni_icbm152_ics_sm_${hemi}_atlas_cerebra.csv.gz
+  atlas=${icbm_dir}/icbm152_model_09c/mni_icbm152_ics_sm_${hemi}_atlas_dirty.csv.gz
   model=${icbm_dir}/icbm152_model_09c/mni_icbm152_ics_sm_${hemi}.ply
-  #atlas_hr=${icbm_dir}/icbm152_model_09c/mni_icbm152_ocs_${hemi}_atlas_dirty.txt
+  atlas_hr=${icbm_dir}/icbm152_model_09c/mni_icbm152_ocs_${hemi}_atlas_dirty.txt
 
   if [[ ! -e ${tempdir}/${nm}_ics-${ver}_${s}.ply ]];then
     echo "Something went wrong, failed to split surfaces" 1>&2
     exit 1
   fi
 
-  #thickness  + atlas
+  #thickness in native space + atlas
   if [[ ! -e ${OUTPUT}_thickness-${ver}_${hemi}.csv.gz ]];then
     # measure thickness
     ${FALCON_BIN}/falcon_cortex_calc_thickness \
@@ -1012,31 +957,26 @@ for s in 0 1;do
     fi
   fi
 
+  if [[ ! -z $use_hr ]] && [[ ! -e ${OUTPUT}_thickness_icbm_hr-${ver}_${hemi}.csv.gz ]];then
 
-  ## DISABLE
-  if false;then
-    # DISABLE
-    if [[ ! -z $use_hr ]] && [[ ! -e ${OUTPUT}_thickness_icbm_hr-${ver}_${hemi}.csv.gz ]];then
-
-      if [[ ! -e ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv ]];then
-        ${FALCON_BIN}/falcon_cortex_calc_thickness \
-          ${tempdir}/${nm}_ics-${ver}_${s}.ply \
-          ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
-          ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv
-      fi
-
-
-      # resample thickness into common (MNI-ICBM152) hires space
-      ${FALCON_BIN}/falcon_igl_field_resample \
-            -i ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
-            ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
-            ${icbm_dir}/icbm152_model_09c/mni_icbm152_ocs_${hemi}.ply \
-            -o ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv \
-            --knn 3 --SO3  --invexp
-
-      paste -d ','  ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv \
-                    $atlas_hr | gzip -9  -c > ${OUTPUT}_thickness_icbm_hr-${ver}_${hemi}.csv.gz
+    if [[ ! -e ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv ]];then
+      ${FALCON_BIN}/falcon_cortex_calc_thickness \
+        ${tempdir}/${nm}_ics-${ver}_${s}.ply \
+        ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
+        ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv
     fi
+
+
+    # resample thickness into common (MNI-ICBM152) hires space
+    ${FALCON_BIN}/falcon_igl_field_resample \
+          -i ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
+          ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
+          ${icbm_dir}/icbm152_model_09c/mni_icbm152_ocs_${hemi}.ply \
+          -o ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv \
+          --knn 3 --SO3  --invexp
+
+    paste -d ','  ${tempdir}/${nm}_thickness_icbm_hr-${ver}_${hemi}.csv \
+                  $atlas_hr | gzip -9  -c > ${OUTPUT}_thickness_icbm_hr-${ver}_${hemi}.csv.gz
   fi
 done
 
@@ -1064,12 +1004,11 @@ if [[ -n "${smooth}" ]] && [[ ! -e ${OUTPUT}_qc_ocs_thickness-${ver}_sm_${smooth
         -min 0 -max 7
 fi
 
-if [[ ! -e ${OUTPUT}_qc_ocs_cerebra-${ver}.png ]];then
+if [[ ! -e ${OUTPUT}_qc_ocs_lobe-${ver}.png ]];then
   ${FALCON_SCRIPTS}/falcon_off_qc_2.sh \
         ${tempdir}/${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt.csv.gz \
         ${tempdir}/${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt.csv.gz \
-        ${OUTPUT}_qc_ocs_cerebra-${ver}.png \
+        ${OUTPUT}_qc_ocs_lobe-${ver}.png \
         -min 0 -max 255 \
-        -column cerebra \
-        -discrete -levels 256
+        -column lobe -discrete -levels 256
 fi
