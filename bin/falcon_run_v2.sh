@@ -397,36 +397,35 @@ if [[ -z "$cls" ]];then
     fi
   fi
 else
+
   # using provided priors
-  if [[ ! -e ${fn}_supra_WM.mnc ]];then
   # extract SUPRA_WM and DEEP  
   tissue_prior=${prior_base}/tissue_prior8
-
-  for l in 2 3 4 5;do
-    itk_resample  ${tissue_prior}_$l.mnc ${tempdir}/prior_${l}.mnc \
-      --transform $nlxfm --invert_transform --order 1  --like $scan --float
-  done
-
-
-  #intersect Supratentiruak mask (2+3 with WM class)
-  minccalc -q -clob -express '(A[0]+A[1])*A[2]' \
-    ${tempdir}/prior_2.mnc ${tempdir}/prior_3.mnc \
-    $prior_WM ${fn}_supra_WM.mnc
-
-  prior_SUPRA_WM=${fn}_supra_WM.mnc
-
-  # just use original warped deep GM mask
-  cp ${tempdir}/prior_3.mnc ${fn}_DEEP_GM.mnc
   prior_DEEP=${fn}_DEEP_GM.mnc
-
-  # same for the brainstem
-  # TODO: intersect with priorWM ? 
-  cp ${tempdir}/prior_5.mnc ${fn}_BS.mnc
+  prior_SUPRA_WM=${fn}_supra_WM.mnc
   prior_BS=${fn}_BS.mnc
-  else
-   prior_SUPRA_WM=${fn}_supra_WM.mnc
-   prior_DEEP=${fn}_DEEP_GM.mnc
-   prior_BS=${fn}_BS.mnc
+  prior_CB_WM=${fn}_CB_WM.mnc
+  prior_CB_GM=${fn}_CB_GM.mnc
+
+  if [[ ! -e $prior_CB_GM ]];then
+    for l in 2 3 4 5 6 7;do
+      itk_resample  ${tissue_prior}_$l.mnc ${tempdir}/prior_${l}.mnc \
+        --transform $nlxfm --invert_transform --order 1  --like $scan --float
+    done
+
+    #intersect Supratentiruak mask (2+3 with WM class)
+    minccalc -q -clob -express '(A[0]+A[1])*A[2]' \
+      ${tempdir}/prior_2.mnc ${tempdir}/prior_3.mnc \
+      $prior_WM ${fn}_supra_WM.mnc
+
+    # just use original warped deep GM mask
+    cp ${tempdir}/prior_3.mnc ${fn}_DEEP_GM.mnc
+
+    # same for the brainstem
+    # TODO: intersect with priorWM ? 
+    cp ${tempdir}/prior_5.mnc ${fn}_BS.mnc
+    cp ${tempdir}/prior_6.mnc $prior_CB_WM
+    cp ${tempdir}/prior_7.mnc $prior_CB_GM
   fi
 fi
 
