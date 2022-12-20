@@ -920,7 +920,7 @@ if [[ -n $linxfm ]];then
 
   for s in ics ocs;do
     ${FALCON_BIN}/falcon_transform_surface \
-              ${OUTPUT}_ics-${ver}.ply \
+              ${OUTPUT}_${s}-${ver}.ply \
               ${linxfm}  \
               ${tempdir}/${nm}_${s}-${ver}.ply --invert_transform --clob
 
@@ -966,7 +966,7 @@ for s in 0 1;do
                   | gzip -9 -c  > ${OUTPUT}_thickness-${ver}_${hemi}.csv.gz
   fi
 
-  #thickness in ICBM space, updated
+  # thickness in ICBM space, updated
   if [[ ! -e ${OUTPUT}_thickness_icbm-${ver}_${hemi}.csv.gz ]];then
     ${FALCON_BIN}/falcon_igl_field_resample \
               -i ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
@@ -995,7 +995,7 @@ for s in 0 1;do
           --mask ${fn}_nonctx_mask-${ver}.mnc
     fi
 
-    #thickness in ICBM space
+    # resample thickness to ICBM space
     if [[ ! -e ${OUTPUT}_thickness_icbm-${ver}_${hemi}_sm_${smooth}.csv.gz ]];then
       ${FALCON_BIN}/falcon_igl_field_resample \
                 -i ${OUTPUT}_thickness-${ver}_${hemi}_sm_${smooth}.csv.gz \
@@ -1047,26 +1047,32 @@ if [[ ! -e ${OUTPUT}_qc-${ver}.png ]];then
         ${OUTPUT}_qc-${ver}.png
 fi
 
+
+if [[ ! -e ${OUTPUT}_qc_ocs_thickness-${ver}.png ]] || [[ ! -e ${OUTPUT}_qc_ocs_cerebra-${ver}.png ]] ; then
+  ${FALCON_BIN}/falcon_surface_split ${OUTPUT}_ics-${ver}.ply ${tempdir}/qc_${nm}_ics-${ver}
+  ${FALCON_BIN}/falcon_surface_split ${OUTPUT}_ocs-${ver}.ply ${tempdir}/qc_${nm}_ocs-${ver}
+fi
+
 if [[ ! -e ${OUTPUT}_qc_ocs_thickness-${ver}.png ]];then
   ${FALCON_SCRIPTS}/falcon_off_qc_2.sh \
-        ${tempdir}/${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt.csv.gz \
-        ${tempdir}/${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt.csv.gz \
+        ${tempdir}/qc_${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt.csv.gz \
+        ${tempdir}/qc_${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt.csv.gz \
         ${OUTPUT}_qc_ocs_thickness-${ver}.png \
         -min 0 -max 7
 fi
 
 if [[ -n "${smooth}" ]] && [[ ! -e ${OUTPUT}_qc_ocs_thickness-${ver}_sm_${smooth}.png ]];then
   ${FALCON_SCRIPTS}/falcon_off_qc_2.sh  \
-        ${tempdir}/${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt_sm_${smooth}.csv.gz \
-        ${tempdir}/${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt_sm_${smooth}.csv.gz \
+        ${tempdir}/qc_${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt_sm_${smooth}.csv.gz \
+        ${tempdir}/qc_${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt_sm_${smooth}.csv.gz \
         ${OUTPUT}_qc_ocs_thickness-${ver}_sm_${smooth}.png \
         -min 0 -max 7
 fi
 
 if [[ ! -e ${OUTPUT}_qc_ocs_cerebra-${ver}.png ]];then
   ${FALCON_SCRIPTS}/falcon_off_qc_2.sh \
-        ${tempdir}/${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt.csv.gz \
-        ${tempdir}/${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt.csv.gz \
+        ${tempdir}/qc_${nm}_ocs-${ver}_0.ply  ${OUTPUT}_thickness-${ver}_lt.csv.gz \
+        ${tempdir}/qc_${nm}_ocs-${ver}_1.ply  ${OUTPUT}_thickness-${ver}_rt.csv.gz \
         ${OUTPUT}_qc_ocs_cerebra-${ver}.png \
         -min 0 -max 255 \
         -column cerebra \
