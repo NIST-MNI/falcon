@@ -256,7 +256,7 @@ Eigen::Matrix<typename Derived::Scalar,-1,1> sample_values_nn(const minc_volume&
   Eigen::RowVector3d hi(vol.dims[0]-1,vol.dims[1]-1,vol.dims[2]-1);
 
   return Eigen::VectorXd::NullaryExpr(C.rows(),[&](auto i) {
-    return (C.row(i).array()>lo.array() && C.row(i).array()<hi.array()).all() ? 
+    return (C.row(i).array()>=lo.array() && C.row(i).array()<hi.array()).all() ? 
       static_cast<typename Derived::Scalar>(vol.sample_nn(C.row(i))) : _default;
     });
 }
@@ -270,7 +270,7 @@ Eigen::Matrix<typename Derived::Scalar,-1,1> sample_values(const minc_volume& vo
   Eigen::RowVector3d hi(vol.dims[0]-1,vol.dims[1]-1,vol.dims[2]-1);
 
   return Eigen::Matrix<typename Derived::Scalar,-1,1>::NullaryExpr(C.rows(),[&](auto i) 
-    { return (C.row(i).array()>lo.array() && C.row(i).array()<hi.array()).all()? 
+    { return (C.row(i).array()>=lo.array() && C.row(i).array()<hi.array()).all()? 
       static_cast<typename Derived::Scalar>(vol.sample_interpolate(C.row(i))):
       _default;
     });
