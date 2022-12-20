@@ -138,8 +138,18 @@ int main(int argc,char *argv[],char *envp[]) {
 
     for(vi=ctx[0]->vert, vo=ctx[1]->vert,i=0; vi!=NULL && vo!=NULL; vi=vi->next,vo=vo->next,++i)
     { 
-      int mask_i = (niik_image_interpolate_3d_linear_xyz(maskimg, vi->v) >= 0.5);
-      int mask_o = (niik_image_interpolate_3d_linear_xyz(maskimg, vo->v) >= 0.5);
+      niikpt pi,po;
+      niik_world_to_ijk(maskimg,&vi->v,&pi);
+      niik_world_to_ijk(maskimg,&vo->v,&po);
+      int mask_i=0,mask_o=0;
+      if(pi.x>=0.0 && pi.y>=0.0 && pi.z>=0 &&
+         pi.x<maskimg->nx && pi.y<maskimg->ny && pi.z<maskimg->nz &&
+         po.x>=0.0 && po.y>=0.0 && po.z>=0 &&
+         po.x<maskimg->nx && po.y<maskimg->ny && po.z<maskimg->nz )
+      { 
+        mask_i = (niik_image_interpolate_3d_linear_ijk(maskimg, pi) >= 0.5);
+        mask_o = (niik_image_interpolate_3d_linear_ijk(maskimg, po) >= 0.5);
+      }
 
       if(mask_i||mask_o)
       {
