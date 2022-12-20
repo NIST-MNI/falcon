@@ -916,7 +916,7 @@ if [[ -z "$use_icbm" ]];then
 fi
 
 # split up to left and right surfaces
-if [[ -z $linxfm ]];then
+if [[ -n $linxfm ]];then
 
   for s in ics ocs;do
     ${FALCON_BIN}/falcon_transform_surface \
