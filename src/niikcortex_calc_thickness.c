@@ -128,7 +128,7 @@ int main(int argc,char *argv[],char *envp[]) {
     NIIK_RETURN(((the=(double *)calloc(ctx[0]->nvert,sizeof(double)))==NULL),"calloc for the array",1);
   }
 
-  NIIK_RETURN((!niikcortex_calc_thickness(ctx[0], ctx[1], thk,psi,the,1,0)),"niikcortex_calc_thickness",1);
+  NIIK_RETURN((!niikcortex_calc_thickness(ctx[0], ctx[1], thk, psi, the, 1,0)),"niikcortex_calc_thickness",1);
 
   if(maskimg)
   {
@@ -139,9 +139,11 @@ int main(int argc,char *argv[],char *envp[]) {
     for(vi=ctx[0]->vert, vo=ctx[1]->vert,i=0; vi!=NULL && vo!=NULL; vi=vi->next,vo=vo->next,++i)
     { 
       niikpt pi,po;
-      niik_world_to_ijk(maskimg,&vi->v,&pi);
-      niik_world_to_ijk(maskimg,&vo->v,&po);
+      niik_world_to_ijk(maskimg, &vi->v, &pi);
+      niik_world_to_ijk(maskimg, &vo->v, &po);
+
       int mask_i=0,mask_o=0;
+
       if(pi.x>=0.0 && pi.y>=0.0 && pi.z>=0 &&
          pi.x<maskimg->nx && pi.y<maskimg->ny && pi.z<maskimg->nz &&
          po.x>=0.0 && po.y>=0.0 && po.z>=0 &&

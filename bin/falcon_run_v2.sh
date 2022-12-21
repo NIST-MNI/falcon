@@ -918,6 +918,11 @@ fi
 # split up to left and right surfaces
 if [[ -n $linxfm ]];then
 
+  mincresample -nearest_neighbour -tfm_input_sampling \
+    -transform $linxfm \
+    -invert_transform -labels \
+    ${fn}_nonctx_mask-${ver}.mnc ${tempdir}/${nm}_nonctx_mask-${ver}.mnc
+
   for s in ics ocs;do
     ${FALCON_BIN}/falcon_transform_surface \
               ${OUTPUT}_${s}-${ver}.ply \
@@ -927,6 +932,7 @@ if [[ -n $linxfm ]];then
     ${FALCON_BIN}/falcon_surface_split ${tempdir}/${nm}_${s}-${ver}.ply ${tempdir}/${nm}_${s}-${ver}
   done
 else
+  cp ${fn}_nonctx_mask-${ver}.mnc ${tempdir}/${nm}_nonctx_mask-${ver}.mnc
   ${FALCON_BIN}/falcon_surface_split ${OUTPUT}_ics-${ver}.ply ${tempdir}/${nm}_ics-${ver}
   ${FALCON_BIN}/falcon_surface_split ${OUTPUT}_ocs-${ver}.ply ${tempdir}/${nm}_ocs-${ver}
 fi
@@ -951,7 +957,7 @@ for s in 0 1;do
       ${tempdir}/${nm}_ics-${ver}_${s}.ply \
       ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
       ${tempdir}/${nm}_thickness-${ver}_${hemi}.csv \
-      --mask ${fn}_nonctx_mask-${ver}.mnc
+      --mask ${tempdir}/${nm}_nonctx_mask-${ver}.mnc
 
     # resample atlas back into subject's space
     ${FALCON_BIN}/falcon_igl_field_resample \
@@ -992,7 +998,7 @@ for s in 0 1;do
         ${tempdir}/${nm}_ocs-${ver}_${s}.ply \
         ${OUTPUT}_thickness-${ver}_${hemi}_sm_${smooth}.csv.gz \
           --smooth ${smooth} \
-          --mask ${fn}_nonctx_mask-${ver}.mnc
+          --mask ${tempdir}/${nm}_nonctx_mask-${ver}.mnc
     fi
 
     # resample thickness to ICBM space
