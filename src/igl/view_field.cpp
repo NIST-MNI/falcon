@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
                     FD,headerF, ED,headerE, comments))
       {
         const size_t k = 5;
-        static int idx_field = 0;
+        static int idx_field = -1;
         static bool show_mesh_rgb=false;
         double z_slice=0,z_lo,z_hi;
 
@@ -72,7 +72,6 @@ int main(int argc, char *argv[])
         if(argc>2)
           idx_field=atoi(argv[2]);
 
-        if(idx_field>=VD.cols()||idx_field<0) idx_field=0;
 
         std::cout << "Vertices:   " << V.rows() << "x"<< F.cols() << std::endl;
         std::cout << "Faces:      " << F.rows() << "x"<< F.cols() << std::endl;
@@ -111,6 +110,7 @@ int main(int argc, char *argv[])
               headerV.push_back(h);
             VD = D_;
           }
+          show_mesh_rgb=false;
         }
 
         if(!headerV.empty())
@@ -121,6 +121,8 @@ int main(int argc, char *argv[])
 
           std::cout<<std::endl;
         }
+
+        if(idx_field>=VD.cols() || idx_field<0) idx_field=VD.cols()-1;
 
 
         // extract borders
@@ -160,7 +162,6 @@ int main(int argc, char *argv[])
         field_range.col(0) = VD.colwise().minCoeff();
         field_range.col(1) = VD.colwise().maxCoeff();
 
-
         auto update_field=[&]() {
           if(show_mesh_rgb)
           {
@@ -174,6 +175,8 @@ int main(int argc, char *argv[])
               field_range_current[1] = field_range(idx_field,1);
           }
         };
+
+        viewer.data().show_lines=false; // disable wireframe at start
 
         update_field();
 

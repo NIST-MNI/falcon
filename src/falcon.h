@@ -606,6 +606,7 @@ int niik_display_stats_for_double_vector(double *v,int num);
 int *niik_read_int_vector(const char *fname,int *num);
 int niik_write_int_vector(const char *fname,int *v,int num);
 int niik_write_int_vector_ex(const char *fname,int *v,int num,const char *colname);
+int niik_write_int_vectors_ex(const char *fname,int **v,int num,int ncol,const char **colnames);
 int niik_display_int_vector(int *v,int num);
 double niik_sum_int_vector(int *v,int num);
 int niik_count_nonzero_from_int_vector(int *v,int num);

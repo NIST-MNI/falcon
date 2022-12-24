@@ -26,6 +26,7 @@ void usage() {
   fprintf(stdout,"\t--smooth <fwhm> - apply smoothing kernel (default: disable) - will try to apply it iteratively\n");
   fprintf(stdout,"\t--mask <mask.mnc> - Use mask to mark vertices with unreliable thickness (non-cortex)\n");
   fprintf(stdout,"\t--maskval <mask value> - Use this value inside mask, default 0.0\n");
+  fprintf(stdout,"\t--inside <mask value> - value  of mask treated as inside, default 0.0\n");
 }
 
 
@@ -33,9 +34,9 @@ int main(int argc,char *argv[],char *envp[]) {
   kobj *ctx[2];
   double *thk=NULL,*psi=NULL,*the=NULL;
   unsigned char *mask_flag=NULL;
-  double *vectors[3];
+  double *mask_dbl=NULL;
+  double *vectors[4];
   double smooth=0.0;
-  double mask_val=0.0;
   const char *maskfn=NULL;
   const char *fcname="niikcortex_calc_thickness.c";
   int clobber=0;
@@ -43,6 +44,9 @@ int main(int argc,char *argv[],char *envp[]) {
   int output_ply=0;
   int output_white=0;
   nifti_image *maskimg=NULL;
+  double in_mask_val=0.0;
+  double out_mask_val=0.0;
+  int i;
 
   const char *in_ics,*in_ocs,*out_thickness;
   struct option long_options[] = {
@@ -55,6 +59,7 @@ int main(int argc,char *argv[],char *envp[]) {
     {"version",          no_argument, 0, 'v'},
     {"smooth",     required_argument, 0, 's'},
     {"mask",       required_argument, 0, 'm'},
+    {"inside",     required_argument, 0, 'I'},
     {"maskval",    required_argument, 0, 'M'},
     {0, 0, 0, 0}
   };
@@ -81,7 +86,10 @@ int main(int argc,char *argv[],char *envp[]) {
       maskfn=optarg;
       break;
     case 'M':
-      mask_val=atof(optarg);
+      out_mask_val=atof(optarg);
+      break;
+    case 'I':
+      in_mask_val=atof(optarg);
       break;
     case '?':
     case 'u':
@@ -112,16 +120,7 @@ int main(int argc,char *argv[],char *envp[]) {
   NIIK_RETURN(((thk=(double *)calloc(ctx[0]->nvert,sizeof(double)))==NULL),"calloc for thickness array",1);
 
   if(maskfn)
-  {
-     if( (maskimg=niik_image_read(maskfn))==NULL) {
-        fprintf(stderr,"[%s] ERROR: nifti_image_read %s\n",fcname,maskfn);
-        exit(1);
-     }
-     // binarize ?
-     //niik_image_type_convert(maskfn,NIFTI_TYPE_UINT8);
- 
-  }
-
+    NIIK_RETURN(((maskimg=niik_image_read(maskfn))==NULL),"niik_image_read for mask",1);
 
   if(output_sph && !output_ply) {
     NIIK_RETURN(((psi=(double *)calloc(ctx[0]->nvert,sizeof(double)))==NULL),"calloc for psi array",1);
@@ -129,12 +128,12 @@ int main(int argc,char *argv[],char *envp[]) {
   }
 
   NIIK_RETURN((!niikcortex_calc_thickness(ctx[0], ctx[1], thk, psi, the, 1,0)),"niikcortex_calc_thickness",1);
+  NIIK_RETURN(((mask_flag=(unsigned char *)calloc(ctx[0]->nvert,sizeof(unsigned char)))==NULL),"calloc for mask array",1);
 
   if(maskimg)
   {
     int i;
     kvert *vi,*vo;
-    NIIK_RETURN(((mask_flag=(unsigned char *)calloc(ctx[0]->nvert,sizeof(unsigned char)))==NULL),"calloc for mask array",1);
 
     for(vi=ctx[0]->vert, vo=ctx[1]->vert,i=0; vi!=NULL && vo!=NULL; vi=vi->next,vo=vo->next,++i)
     { 
@@ -149,18 +148,21 @@ int main(int argc,char *argv[],char *envp[]) {
          po.x>=0.0 && po.y>=0.0 && po.z>=0 &&
          po.x<maskimg->nx && po.y<maskimg->ny && po.z<maskimg->nz )
       { 
-        mask_i = (niik_image_interpolate_3d_linear_ijk(maskimg, pi) >= 0.5);
-        mask_o = (niik_image_interpolate_3d_linear_ijk(maskimg, po) >= 0.5);
+        mask_i = (fabs(niik_image_interpolate_3d_linear_ijk(maskimg, pi) - in_mask_val) < 0.5);
+        mask_o = (fabs(niik_image_interpolate_3d_linear_ijk(maskimg, po) - in_mask_val) < 0.5);
       }
 
       if(mask_i||mask_o)
       {
-        thk[i]=mask_val;
+        thk[i]=out_mask_val;
         mask_flag[i]=0;
       } else {
         mask_flag[i]=1;
       }
     }
+  } else {
+    // all vertex are defined
+    memset(mask_flag,1,ctx[0]->nvert*sizeof(unsigned char));
   }
 
   if(smooth>0.0)
@@ -178,7 +180,7 @@ int main(int argc,char *argv[],char *envp[]) {
 
     fprintf(stdout,"[%s] Smoothing: %f x %d\n",fcname, it_smooth, iterations);
 
-    if(mask_flag) 
+    if(maskimg) 
     {
       if(!off_surface_gauss_smooth_using_vert_with_mask(ctx[1], thk, it_sigma, iterations, mask_flag)) {
         fprintf(stderr,"[%s] ERROR: off_surface_gauss_smooth_using_vert\n",fcname);
@@ -194,20 +196,31 @@ int main(int argc,char *argv[],char *envp[]) {
 
   fprintf(stdout,"[%s] writing output file        %s\n",fcname,out_thickness);
 
+  /* conver to double*/
+  NIIK_RETURN(((mask_dbl=(double *)malloc(ctx[0]->nvert*sizeof(double)))==NULL),"malloc for mask_dbl array",1);
+  for(i=0;i<ctx[0]->nvert;++i)
+  {
+    mask_dbl[i]=(double)mask_flag[i];
+  }
+
   if(output_ply)
   {
-    const char * meas[]={"thickness"};
-    double *val[]={thk};
+    const char * meas[]={"thickness","defined"};
+    double *val[]={thk,mask_dbl};
     NIIK_RETURN((!off_kobj_write_ply_ex(out_thickness, (output_white?ctx[1]:ctx[0]) ,0, output_sph,1,0,1, meas, val)),"off_kobj_write_ply_ex",1);
   } else {
     if(output_sph) {
-      const char * headers[]={"thickness","psi","the"};
+      const char * headers[]={"thickness","defined","psi","the"};
       vectors[0]=thk;
-      vectors[1]=psi;
-      vectors[2]=the;
-      NIIK_RETURN((!niik_write_double_vectors_ex(out_thickness,vectors,ctx[0]->nvert,3, headers)),"niik_write_double_vectors",1);
+      vectors[1]=mask_dbl;
+      vectors[2]=psi;
+      vectors[3]=the;
+      NIIK_RETURN((!niik_write_double_vectors_ex(out_thickness,vectors,ctx[0]->nvert,4, headers)),"niik_write_double_vectors_ex",1);
     } else {
-      NIIK_RETURN((!niik_write_double_vector_ex(out_thickness,thk,ctx[0]->nvert,"thickness")),"niik_write_double_vector",1);
+      const char * headers[]={"thickness","defined"};
+      vectors[0]=thk;
+      vectors[1]=mask_dbl;
+      NIIK_RETURN((!niik_write_double_vectors_ex(out_thickness,vectors,ctx[0]->nvert,2, headers)),"niik_write_double_vectors_ex",1);
     }
     if(output_sph) {
       free(the);
@@ -216,6 +229,9 @@ int main(int argc,char *argv[],char *envp[]) {
   }
 
   free(thk);
+  free(mask_flag);
+  free(mask_dbl);
+
   ctx[0]=off_kobj_free(ctx[0]);
   ctx[1]=off_kobj_free(ctx[1]);
 

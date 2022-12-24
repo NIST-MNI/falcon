@@ -171,6 +171,101 @@ int niik_write_double_vectors_ex(const char *fname,double **v,int num,int ncol, 
 }
 
 
+int niik_write_int_vectors_ex(const char *fname,int **v,int num,int ncol, const char **colnames) {
+  FILE *fp=NULL;
+  gzFile gp=NULL;
+  int n,i;
+  int csv_format;
+  if(fname==NULL) {
+    fprintf(stderr,"[%s:%i:%s] ERROR: fname is null\n",__FILE__,__LINE__,__func__);
+    return 0;
+  }
+  csv_format=(!strncmp(fname+(strlen(fname)-4),".csv",4) || !strncmp(fname+(strlen(fname)-7),".csv.gz",7));
+
+
+  if(!strncmp(fname+(strlen(fname)-3),".gz",3)) {
+    if((gp = gzopen(fname,"w"))==NULL) {
+      fprintf(stderr,"[%s:%i:%s] ERROR: gzopen %s\n",__FILE__,__LINE__,__func__,fname);
+      return 0;
+    }
+
+    if(csv_format) 
+    {
+      if(colnames)
+      {
+        for(i=0; i<ncol; i++) {
+          gzprintf(gp,"%s",colnames[i]);
+          if(i<(ncol-1))
+            gzprintf(gp,",");
+          else
+            gzprintf(gp,"\n");
+        }
+      } else {
+        for(i=0; i<ncol; i++) {
+          gzprintf(gp,"V%d",i+1);
+          if(i<(ncol-1))
+            gzprintf(gp,",");
+          else
+            gzprintf(gp,"\n");
+        }
+      }
+    }
+
+    for(n=0; n<num; n++) {
+      for(i=0; i<ncol; i++) {
+        gzprintf(gp,"%i",v[i][n]);
+        if(i<(ncol-1))
+          gzprintf(gp,",");
+        else
+          gzprintf(gp,"\n");
+      }
+    }
+    gzclose(gp);
+  } else {  
+    if((fp=fopen(fname,"w"))==NULL) {
+      fprintf(stderr,"[%s:%i:%s] ERROR: fopen %s\n",__FILE__,__LINE__,__func__,fname);
+      return 0;
+    }
+
+
+    if(csv_format) 
+    {
+      if(colnames)
+      {
+        for(i=0; i<ncol; i++) {
+          fprintf(fp,"%s",colnames[i]);
+          if(i<(ncol-1))
+            fprintf(fp,",");
+          else
+            fprintf(fp,"\n");
+        }
+      } else {
+        for(i=0; i<ncol; i++) {
+          fprintf(fp,"V%d",i+1);
+          if(i<(ncol-1))
+            fprintf(fp,",");
+          else
+            fprintf(fp,"\n");
+        }
+      }
+    }
+
+    for(n=0; n<num; n++) {
+      for(i=0; i<ncol; i++) {
+        fprintf(fp,"%i",v[i][n]);
+        if(i<(ncol-1))
+          fprintf(fp,",");
+        else
+          fprintf(fp,"\n");
+      }
+    }
+    fclose(fp);
+  }
+  return 1;
+}
+
+
+
 int niik_write_double_vector_binary(const char *fname,double *v,int num) {
   FILE *fp;
   if(fname==NULL) {
