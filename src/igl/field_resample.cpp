@@ -67,8 +67,10 @@ template <typename Distance,
     idx.index->buildIndex();
 
     //Eigen::MatrixXd oD(sph2.rows(),D.cols());
+    //std::cout<<"Output size:"<<coord_trg.rows()<<"x"<<in_data.cols()<<std::endl;
     out_data.resize(coord_trg.rows(), in_data.cols());
-
+    //std::cout<<"Done"<<std::endl;
+    
     // for each vertex in the referece surface search for the k closest in the source surface
     for(size_t i=0; i<coord_trg.rows(); ++i)
     {
@@ -88,10 +90,11 @@ template <typename Distance,
 
         idx.index->findNeighbors(resultSet, row_sph.data(), nanoflann::SearchParams());
 
-        out_data.row(i) = agg(
+        auto r=  agg(
           Eigen::Array<typename DerivedD::Scalar,-1,-1>::NullaryExpr(num_results, in_data.cols(), 
-            [&] (Eigen::Index r, Eigen::Index c) { return in_data(ret_indexes(r), c);}),
-            out_dists_sqr );
+              [&] (Eigen::Index r, Eigen::Index c) { return in_data(ret_indexes(r), c);}),
+              out_dists_sqr );
+        out_data.row(i) = r;
     }
 
 }
@@ -195,7 +198,7 @@ int main(int argc, char *argv[])
     if( extract_psi_the(header1, D1, PT1) &&
         extract_psi_the(header2, D2, PT2) )
     {
-      int knn=10;
+      int knn=par["knn"].as<int>();
       sph_to_xyz(PT1, sph1);
       sph_to_xyz(PT2, sph2);
 
@@ -207,7 +210,7 @@ int main(int argc, char *argv[])
       } else if(par.count("input") ) {
         if(!igl::readCSV(par["input"].as<std::string>(), D, header))
         {
-          std::cerr<<"Error reding csv:"<<par["input"].as<std::string>()<<std::endl;
+          std::cerr<<"Error reading csv:"<<par["input"].as<std::string>()<<std::endl;
           return 1;
         }
         if(D.rows()!=sph1.rows())
@@ -225,7 +228,7 @@ int main(int argc, char *argv[])
             out_idx.push_back(i);
         }
         header.resize(out_idx.size());
-        D.resize(PT1.rows(),out_idx.size());
+        D.resize(PT1.rows(), out_idx.size());
         for(int i=0;i<out_idx.size();++i)
         {
           header[i]=header1[out_idx[i]];
@@ -241,26 +244,27 @@ int main(int argc, char *argv[])
       Eigen::MatrixXd oD; 
 
       // single nearest neighbor, the simplest case, ignore dist completely
-      auto nearest_neighbor_agg = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
+      auto nearest_neighbor_agg = [] (const auto& data, const auto& dist ) -> Eigen::RowVectorXd {
            return data.row(0);
       };
 
       // simple inv-distance-weighted average
-      auto weighted_avg = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
-          Eigen::ArrayXd w = (dist+1e-6).cwiseInverse();
+      auto weighted_avg = [] (const auto& data, const auto& dist) -> Eigen::RowVectorXd {
+          const double epsilon=1e-6;
+          Eigen::ArrayXd w = (dist+epsilon).cwiseInverse();
           w/=w.sum();
-          return (data*w).colwise().sum();
+          return (data.colwise()*w).colwise().sum();
       };
 
-      auto invexp_weighted_avg = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
+      auto invexp_weighted_avg = [] (const auto& data, const auto& dist ) -> Eigen::RowVectorXd {
           Eigen::ArrayXd w = Eigen::exp(-1.0*dist);
           w/=w.sum();
-          return (data*w).colwise().sum();
+          return (data.colwise()*w).colwise().sum();
       };
       
       // simple majority voting, works for single dimension data only
-      auto majority_voting = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
-        Eigen::VectorXd r=Eigen::VectorXd::Zero(data.cols());
+      auto majority_voting = [] (const auto& data, const auto& dist ) -> Eigen::RowVectorXd {
+        Eigen::RowVectorXd r=Eigen::RowVectorXd::Zero(data.cols());
         for(int c=0;c<data.cols();++c) 
         {
             std::unordered_map<double, int> cnts;
@@ -282,8 +286,9 @@ int main(int argc, char *argv[])
       };
 
       // weighted majority voting, works for single dimension data only
-      auto majority_weighted_voting = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
-          Eigen::ArrayXd w = (dist+1e-6).cwiseInverse();
+      auto majority_weighted_voting = [] (const auto& data, const auto& dist ) -> Eigen::RowVectorXd {
+          const double epsilon=1e-6;
+          Eigen::ArrayXd w = (dist+epsilon).cwiseInverse();
           w/=w.sum();
 
           Eigen::VectorXd r=Eigen::VectorXd::Zero(data.cols());
@@ -308,7 +313,7 @@ int main(int argc, char *argv[])
       };
 
       // inverse-exponential weighted majority voting, works for single dimension data only
-      auto majority_invexp_weighted_voting = [] (const Eigen::ArrayXd& data, const Eigen::ArrayXd& dist ) -> Eigen::VectorXd {
+      auto majority_invexp_weighted_voting = [] (const auto& data, const auto& dist ) -> Eigen::RowVectorXd {
           Eigen::ArrayXd w = Eigen::exp(-1.0*dist);
           w/=w.sum();
           Eigen::VectorXd r=Eigen::VectorXd::Zero(data.cols());
@@ -349,7 +354,7 @@ int main(int argc, char *argv[])
           resample_field<nanoflann::metric_SO3>(sph1, sph2, D, oD, majority_weighted_voting, knn);
         } else if( par["majority_invexp"].as<bool>() ) {
           resample_field<nanoflann::metric_SO3>(sph1, sph2, D, oD, majority_invexp_weighted_voting, knn);
-        }        
+        }
         else {
           std::cerr<< " Need to specify --weighted --invexp or --nearest" << std::endl;
           return 1;
