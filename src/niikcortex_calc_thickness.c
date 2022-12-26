@@ -152,7 +152,7 @@ int main(int argc,char *argv[],char *envp[]) {
         mask_o = (fabs(niik_image_interpolate_3d_linear_ijk(maskimg, po) - in_mask_val) < 0.5);
       }
 
-      if(mask_i||mask_o)
+      if( !mask_i || !mask_o )
       {
         thk[i]=out_mask_val;
         mask_flag[i]=0;
