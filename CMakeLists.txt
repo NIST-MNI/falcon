@@ -5,7 +5,7 @@ if(POLICY CMP0069)
 cmake_policy(SET CMP0069 NEW)
 endif()
 
-PROJECT(FALCON VERSION 0.9.16.11)
+PROJECT(FALCON VERSION 0.9.18)
 
 enable_language(C CXX)
 
@@ -24,8 +24,8 @@ option(LIBIGL_COPYLEFT_TETGEN         "Use Tetgen"                   OFF)
 option(LIBIGL_COPYLEFT_CGAL           "Use CGAL"                     OFF)
 
 option(LIBIGL_RESTRICTED_TRIANGLE     "Use Triangle"                 OFF)
-option(LIBIGL_RESTRICTED_MOSEK        "Use MOSEK"                    OFF) 
-option(LIBIGL_RESTRICTED_MATLAB       "Use MATLAB"                   OFF) 
+option(LIBIGL_RESTRICTED_MOSEK        "Use MOSEK"                    OFF)
+option(LIBIGL_RESTRICTED_MATLAB       "Use MATLAB"                   OFF)
 
 option(LIBIGL_OPENGL                  "Use OpenGL"                   OFF)
 option(LIBIGL_EMBREE                  "Use Embree"                   OFF)

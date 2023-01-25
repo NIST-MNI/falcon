@@ -15,7 +15,7 @@
 
 MAJOR_VERSION=0
 MINOR_VERSION=9
-MICRO_VERSION=5
+MICRO_VERSION=18
 # this version relies much more on the priors
 ver=${MAJOR_VERSION}.${MINOR_VERSION}.${MICRO_VERSION}
 
