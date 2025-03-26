@@ -36,13 +36,13 @@ ENDIF()
 
 if(NOT TARGET igl::png)
     add_definitions(-DSTB_PNG)
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/png ${CMAKE_CURRENT_SOURCE_DIR}/../3rd_party/stb/)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/png ${CMAKE_CURRENT_SOURCE_DIR}/../3rd_party/stb)
     add_library(stb_image STATIC
+        png/stb_image.cpp
         ../3rd_party/stb/stb_image.h 
         ../3rd_party/stb/stb_image_write.h
-        png/igl_stb_image.h
-        png/igl_stb_image.cpp
     )
+
     if(LIBIGL_USE_STATIC_LIBRARY)
         set(SOURCES_IGL_PNG
            png/readPNG.cpp  
@@ -61,8 +61,8 @@ if(NOT TARGET igl::png)
     target_include_directories(igl_png INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/png ${CMAKE_CURRENT_SOURCE_DIR}/../3rd_party/stb)
     add_library(igl::png ALIAS igl_png)
     set_property(TARGET igl_png PROPERTY EXPORT_NAME igl::png)
-else()
-    message("Found STB library")
+# else()
+#     message("Found STB library")
 endif()
 
 IF(HAVE_BICPL)

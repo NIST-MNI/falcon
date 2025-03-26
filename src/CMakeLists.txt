@@ -11,13 +11,24 @@
 #add_library(Eigen3::Eigen ALIAS igl_eigen)
 
 # libigl
+IF(LIBIGL_OPENGL)
+  message("Building with OpenGL support")
+ELSE()
+  message("Building without OpenGL support")
+ENDIF()
+
 ADD_SUBDIRECTORY(3rd_party/libigl)
+
 igl_include(core)
-igl_include(png)
 igl_include(embree)
-igl_include(imgui)
-igl_include(glfw)
-igl_include(opengl)
+
+# disable when we don't to have visual tools
+IF(LIBIGL_OPENGL)
+  igl_include(png)
+  igl_include(imgui)
+  igl_include(glfw)
+  igl_include(opengl)
+ENDIF()
 
 # STB
 #ADD_SUBDIRECTORY(3rd_party/stb)
