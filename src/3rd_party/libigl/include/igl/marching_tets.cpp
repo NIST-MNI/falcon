@@ -13,6 +13,9 @@
 #include <utility>
 #include <cstdint>
 #include <iostream>
+#include <algorithm>
+#include <utility>
+#include <cmath>
 
 template <typename DerivedTV,
           typename DerivedTT,
@@ -25,7 +28,7 @@ void igl::marching_tets(
     const Eigen::MatrixBase<DerivedTV>& TV,
     const Eigen::MatrixBase<DerivedTT>& TT,
     const Eigen::MatrixBase<DerivedS>& isovals,
-    double isovalue,
+    const typename DerivedS::Scalar isovalue,
     Eigen::PlainObjectBase<DerivedSV>& outV,
     Eigen::PlainObjectBase<DerivedSF>& outF,
     Eigen::PlainObjectBase<DerivedJ>& J,
@@ -37,7 +40,7 @@ void igl::marching_tets(
   // 32 bits of a key are the indices of vertices in the mesh. The implication is
   // that you can only have 2^32 vertices which I have deemed sufficient for
   // anything reasonable.
-  const auto make_edge_key = [](const pair<int32_t, int32_t>& p) -> int64_t
+  const auto make_edge_key = [](const pair<int32_t, int32_t>& p) -> std::int64_t
   {
     std::int64_t ret = 0;
     ret |= p.first;
@@ -107,7 +110,7 @@ void igl::marching_tets(
       const int tv1_idx = TT(i, mt_edge_lookup[mt_cell_lookup[key][e]][0]);
       const int tv2_idx = TT(i, mt_edge_lookup[mt_cell_lookup[key][e]][1]);
       const int vertex_id = edge_table.size();
-      edge_table.push_back(make_pair(min(tv1_idx, tv2_idx), max(tv1_idx, tv2_idx)));
+      edge_table.push_back(make_pair(std::min(tv1_idx, tv2_idx), std::max(tv1_idx, tv2_idx)));
       v_ids[e] = vertex_id;
     }
 
@@ -141,7 +144,7 @@ void igl::marching_tets(
   bc_triplets.reserve(edge_table.size());
 
   // Deduplicate vertices
-  unordered_map<int64_t, int> emap;
+  unordered_map<std::int64_t, int> emap;
   emap.max_load_factor(0.5);
   emap.reserve(edge_table.size());
 
@@ -155,17 +158,18 @@ void igl::marching_tets(
     {
       const int vi = faces[f].first[v];
       const pair<int32_t, int32_t> edge = edge_table[vi];
-      const int64_t key = make_edge_key(edge);
+      const std::int64_t key = make_edge_key(edge);
       auto it = emap.find(key);
       if (it == emap.end()) // New unique vertex, insert it
       {
         // Typedef to make sure we handle floats properly
         typedef Eigen::Matrix<typename DerivedTV::Scalar, 1, 3, Eigen::RowMajor, 1, 3> RowVector;
-        const RowVector v1 = TV.row(edge.first);
-        const RowVector v2 = TV.row(edge.second);
-        const double a = fabs(isovals(edge.first, 0) - isovalue);
-        const double b = fabs(isovals(edge.second, 0) - isovalue);
-        const double w = a / (a+b);
+        using Scalar = typename DerivedS::Scalar;
+        const RowVector v1 =  TV.row(edge.first).template cast<Scalar>();
+        const RowVector v2 = TV.row(edge.second).template cast<Scalar>();
+        const Scalar a = abs(isovals(edge.first, 0) - isovalue);
+        const Scalar b = abs(isovals(edge.second, 0) - isovalue);
+        const Scalar w = a / (a+b);
 
         // Create a casted copy in case BCType is a float and we need to downcast
         const BCType bc_w = static_cast<BCType>(w);
@@ -191,5 +195,5 @@ void igl::marching_tets(
 
 
 #ifdef IGL_STATIC_LIBRARY
-template void igl::marching_tets<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, double>(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> > const&, double, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::SparseMatrix<double, 0, int>&);
+template void igl::marching_tets<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, double>(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> > const&, const double, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::SparseMatrix<double, 0, int>&);
 #endif // IGL_STATIC_LIBRARY

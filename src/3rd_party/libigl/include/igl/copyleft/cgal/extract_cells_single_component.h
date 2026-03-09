@@ -18,40 +18,35 @@ namespace igl {
   {
     namespace cgal
     {
-      // Extract connected 3D space partitioned by mesh (V,F) composed of
-      // **possibly multiple components** (the name of this function is
-      // dubious).
-      //
-      // Inputs:
-      //   V  #V by 3 array of vertices.
-      //   F  #F by 3 array of faces.
-      //   P  #F list of patch indices.
-      //   E  #E by 2 array of vertex indices, one edge per row.
-      //  uE    #uE by 2 list of vertex_indices, represents undirected edges.
-      //  EMAP  #F*3 list of indices into uE.
-      //  uEC  #uE+1 list of cumsums of directed edges sharing each unique edge
-      //  uEE  #E list of indices into E (see `igl::unique_edge_map`)
-      // Output:
-      //  cells  #P by 2 array of cell indices.  cells(i,0) represents the
-      //    cell index on the positive side of patch i, and cells(i,1)
-      //    represents cell index of the negative side.
+      /// Extract connected 3D space partitioned by mesh (V,F) composed of
+      /// **possibly multiple components** (the name of this function is
+      /// dubious).
+      ///
+      /// @param[in] V  #V by 3 array of vertices.
+      /// @param[in] F  #F by 3 array of faces.
+      /// @param[in] P  #F list of patch indices.
+      /// @param[in] uE    #uE by 2 list of vertex_indices, represents undirected edges.
+      /// @param[in] uEC  #uE+1 list of cumsums of directed edges sharing each unique edge
+      /// @param[in] uEE  #E list of indices into E (see `igl::unique_edge_map`)
+      /// @param[out] cells  #P by 2 array of cell indices.  cells(i,0) represents the
+      ///    cell index on the positive side of patch i, and cells(i,1)
+      ///    represents cell index of the negative side.
+      /// @return number of components
       template<
         typename DerivedV,
         typename DerivedF,
         typename DerivedP,
         typename DeriveduE,
-        typename DerivedEMAP,
         typename DeriveduEC,
         typename DeriveduEE,
         typename DerivedC >
-      IGL_INLINE size_t extract_cells_single_component(
-        const Eigen::PlainObjectBase<DerivedV>& V,
-        const Eigen::PlainObjectBase<DerivedF>& F,
-        const Eigen::PlainObjectBase<DerivedP>& P,
-        const Eigen::PlainObjectBase<DeriveduE>& uE,
-        const Eigen::PlainObjectBase<DerivedEMAP>& EMAP,
-        const Eigen::PlainObjectBase<DeriveduEC>& uEC,
-        const Eigen::PlainObjectBase<DeriveduEE>& uEE,
+      IGL_INLINE int extract_cells_single_component(
+        const Eigen::MatrixBase<DerivedV>& V,
+        const Eigen::MatrixBase<DerivedF>& F,
+        const Eigen::MatrixBase<DerivedP>& P,
+        const Eigen::MatrixBase<DeriveduE>& uE,
+        const Eigen::MatrixBase<DeriveduEC>& uEC,
+        const Eigen::MatrixBase<DeriveduEE>& uEE,
         Eigen::PlainObjectBase<DerivedC>& cells);
     }
   }

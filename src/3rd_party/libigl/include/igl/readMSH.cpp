@@ -10,25 +10,35 @@
 #include "MshLoader.h"
 #include <iostream>
 
-IGL_INLINE  bool  igl::readMSH(const std::string &msh,
-            Eigen::MatrixXd &X,
-            Eigen::MatrixXi &Tri,
-            Eigen::MatrixXi &Tet,
-            Eigen::VectorXi &TriTag,
-            Eigen::VectorXi &TetTag,
-            std::vector<std::string>     &XFields,
-            std::vector<Eigen::MatrixXd> &XF,
-            std::vector<std::string>     &EFields,
-            std::vector<Eigen::MatrixXd> &TriF,
-            std::vector<Eigen::MatrixXd> &TetF
-            )
+template <
+  typename DerivedX,
+  typename DerivedTri,
+  typename DerivedTet,
+  typename DerivedTriTag,
+  typename DerivedTetTag,
+  typename MatrixXF,
+  typename MatrixTriF,
+  typename MatrixTetF
+  >
+IGL_INLINE bool igl::readMSH(
+  const std::string &msh,
+  Eigen::PlainObjectBase<DerivedX> &X,
+  Eigen::PlainObjectBase<DerivedTri> &Tri,
+  Eigen::PlainObjectBase<DerivedTet> &Tet,
+  Eigen::PlainObjectBase<DerivedTriTag> &TriTag,
+  Eigen::PlainObjectBase<DerivedTetTag> &TetTag,
+  std::vector<std::string>     &XFields,
+  std::vector<MatrixXF> &XF,
+  std::vector<std::string>     &EFields,
+  std::vector<MatrixTriF> &TriF,
+  std::vector<MatrixTetF> &TetF)
 {
     try 
     {
         igl::MshLoader _loader(msh);
         const int USETAG = 1;
 
-        #ifndef NDEBUG
+#ifdef IGL_READMESH_DEBUG
         std::cout<<"readMSH:Total number of nodes:" << _loader.get_nodes().size()<<std::endl;   
         std::cout<<"readMSH:Total number of elements:" << _loader.get_elements().size()<<std::endl;
 
@@ -49,7 +59,7 @@ IGL_INLINE  bool  igl::readMSH(const std::string &msh,
         else
             std::cout<<"readMSH:Element ids map is NOT identity"<<std::endl;
         
-        #endif
+#endif
         
         // convert nodes
         // hadrcoded for 3D 
@@ -77,11 +87,11 @@ IGL_INLINE  bool  igl::readMSH(const std::string &msh,
             auto j=element_counts.insert({i,1});
             if(!j.second) (*j.first).second+=1;
         }
-        #ifndef NDEBUG
+#ifdef IGL_READMESH_DEBUG
         std::cout<<"ReadMSH: elements found"<<std::endl;
         for(auto i:element_counts)
             std::cout<<"\t"<<i.first<<":"<<i.second<<std::endl;
-        #endif
+#endif
         int n_tri_el=0;
         int n_tet_el=0;
         
@@ -158,54 +168,64 @@ IGL_INLINE  bool  igl::readMSH(const std::string &msh,
     return true;
 }
 
-IGL_INLINE bool igl::readMSH(const std::string &msh,
-                Eigen::MatrixXd &X,
-                Eigen::MatrixXi &Tri,
-                Eigen::MatrixXi &Tet,
-                Eigen::VectorXi &TriTag,
-                Eigen::VectorXi &TetTag
-                )
+template <int EigenMatrixOptions>
+IGL_INLINE bool igl::readMSH(
+  const std::string &msh,
+  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions> &X,
+  Eigen::Matrix<int,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions> &Tri,
+  Eigen::Matrix<int,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions> &Tet,
+  Eigen::VectorXi &TriTag,
+  Eigen::VectorXi &TetTag)
 {
     std::vector<std::string>     XFields;
-    std::vector<Eigen::MatrixXd> XF;
     std::vector<std::string>     EFields;
-    std::vector<Eigen::MatrixXd> TriF;
-    std::vector<Eigen::MatrixXd> TetF;
+    std::vector<Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions>> XF;
+    std::vector<Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions>> TriF;
+    std::vector<Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions>> TetF;
     return igl::readMSH(msh,X,Tri,Tet,TriTag,TetTag,XFields,XF,EFields,TriF,TetF);
 }
 
-IGL_INLINE bool igl::readMSH(const std::string &msh,
-                Eigen::MatrixXd &X,
-                Eigen::MatrixXi &Tri,
-                Eigen::VectorXi &TriTag
-                )
+template <int EigenMatrixOptions>
+IGL_INLINE bool igl::readMSH(
+  const std::string &msh,
+  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions> &X,
+  Eigen::Matrix<int,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions> &Tri,
+  Eigen::VectorXi &TriTag)
 {
-    Eigen::MatrixXi Tet;
+    Eigen::Matrix<int,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions> Tet;
     Eigen::VectorXi TetTag;
 
     std::vector<std::string>     XFields;
-    std::vector<Eigen::MatrixXd> XF;
     std::vector<std::string>     EFields;
-    std::vector<Eigen::MatrixXd> TriF;
-    std::vector<Eigen::MatrixXd> TetF;
+    std::vector<Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions>> XF;
+    std::vector<Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions>> TriF;
+    std::vector<Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions>> TetF;
 
     return igl::readMSH(msh,X,Tri,Tet,TriTag,TetTag,XFields,XF,EFields,TriF,TetF);
 }
 
-IGL_INLINE bool igl::readMSH(const std::string &msh,
-                Eigen::MatrixXd &X,
-                Eigen::MatrixXi &Tri
-                )
+template <int EigenMatrixOptions>
+IGL_INLINE bool igl::readMSH(
+  const std::string &msh,
+  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions> &X,
+  Eigen::Matrix<int,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions> &Tri)
 {
-    Eigen::MatrixXi Tet;
+    Eigen::Matrix<int,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions> Tet;
     Eigen::VectorXi TetTag;
     Eigen::VectorXi TriTag;
 
     std::vector<std::string>     XFields;
-    std::vector<Eigen::MatrixXd> XF;
     std::vector<std::string>     EFields;
-    std::vector<Eigen::MatrixXd> TriF;
-    std::vector<Eigen::MatrixXd> TetF;
+    std::vector<Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions>> XF;
+    std::vector<Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions>> TriF;
+    std::vector<Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,EigenMatrixOptions>> TetF;
 
     return igl::readMSH(msh,X,Tri,Tet,TriTag,TetTag,XFields,XF,EFields,TriF,TetF);
 }
+
+#ifdef IGL_STATIC_LIBRARY
+// Explicit template instantiation
+template bool igl::readMSH<0>(std::basic_string<char, std::char_traits<char>, std::allocator<char>> const&, Eigen::Matrix<double, -1, -1, 0, -1, -1>&, Eigen::Matrix<int, -1, -1, 0, -1, -1>&, Eigen::Matrix<int, -1, -1, 0, -1, -1>&, Eigen::Matrix<int, -1, 1, 0, -1, 1>&, Eigen::Matrix<int, -1, 1, 0, -1, 1>&);
+template bool igl::readMSH<Eigen::Matrix<double, -1, -1, 1, -1, -1>, Eigen::Matrix<int, -1, -1, 1, -1, -1>, Eigen::Matrix<int, -1, -1, 1, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 1, -1, -1>, Eigen::Matrix<double, -1, -1, 1, -1, -1>, Eigen::Matrix<double, -1, -1, 1, -1, -1>>(std::basic_string<char, std::char_traits<char>, std::allocator<char>> const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 1, -1, -1>>&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 1, -1, -1>>&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 1, -1, -1>>&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1>>&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1>>&, std::vector<std::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>>&, std::vector<Eigen::Matrix<double, -1, -1, 1, -1, -1>, std::allocator<Eigen::Matrix<double, -1, -1, 1, -1, -1>>>&, std::vector<std::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>>&, std::vector<Eigen::Matrix<double, -1, -1, 1, -1, -1>, std::allocator<Eigen::Matrix<double, -1, -1, 1, -1, -1>>>&, std::vector<Eigen::Matrix<double, -1, -1, 1, -1, -1>, std::allocator<Eigen::Matrix<double, -1, -1, 1, -1, -1>>>&);
+#endif
+

@@ -11,13 +11,14 @@
 #include <cmath>
 #include <vector>
 #include <deque>
-#include <igl/comb_cross_field.h>
-#include <igl/per_face_normals.h>
-#include <igl/is_border_vertex.h>
-#include <igl/vertex_triangle_adjacency.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/rotation_matrix_from_directions.h>
-#include <igl/PI.h>
+#include "comb_cross_field.h"
+#include "per_face_normals.h"
+#include "is_border_vertex.h"
+#include "vertex_triangle_adjacency.h"
+#include "triangle_triangle_adjacency.h"
+#include "rotation_matrix_from_directions.h"
+#include "PI.h"
+#include "PlainMatrix.h"
 
 namespace igl {
   template <typename DerivedV, typename DerivedF, typename DerivedM>
@@ -30,7 +31,7 @@ namespace igl {
     const Eigen::MatrixBase<DerivedV> &PD1;
     const Eigen::MatrixBase<DerivedV> &PD2;
     
-    DerivedV N;
+    PlainMatrix<DerivedV> N;
 
   private:
     // internal
@@ -38,8 +39,8 @@ namespace igl {
     std::vector<std::vector<int> > VF;
     std::vector<std::vector<int> > VFi;
     
-    DerivedF TT;
-    DerivedF TTi;
+    PlainMatrix<DerivedF> TT;
+    PlainMatrix<DerivedF> TTi;
 
 
   private:
@@ -47,7 +48,6 @@ namespace igl {
     inline int mismatchByCross(const int f0,
                                const int f1)
     {
-      Eigen::Matrix<typename DerivedV::Scalar, 3, 1> dir0 = PD1.row(f0);
       Eigen::Matrix<typename DerivedV::Scalar, 3, 1> dir1 = PD1.row(f1);
       Eigen::Matrix<typename DerivedV::Scalar, 3, 1> n0 = N.row(f0);
       Eigen::Matrix<typename DerivedV::Scalar, 3, 1> n1 = N.row(f1);

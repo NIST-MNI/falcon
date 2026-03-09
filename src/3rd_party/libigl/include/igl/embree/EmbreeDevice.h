@@ -11,14 +11,14 @@
 
 #ifndef IGL_EMBREE_EMBREE_DEVICE_H
 #define IGL_EMBREE_EMBREE_DEVICE_H
-#include <embree3/rtcore.h>
+#include <embree4/rtcore.h>
 #include <iostream>
 
 namespace igl
 {
   namespace embree
   {
-     // keep track of embree device
+     /// keep track of embree device instance
      struct EmbreeDevice
      {
         RTCDevice embree_device;
@@ -59,11 +59,16 @@ namespace igl
             {
                 embree_device = rtcNewDevice (config);
                 if(rtcGetDeviceError (embree_device) != RTC_ERROR_NONE)
-                    std::cerr << "Embree: An error occurred while initializing embree core!" << std::endl;
-            #ifdef IGL_VERBOSE
+                {
+                  assert(false && "Embree: An error occurred while initializing embree core!");
+#ifdef IGL_VERBOSE
+                  std::cerr << "Embree: An error occurred while initializing embree core!" << std::endl;
+                }
                 else
-                    std::cerr << "Embree: core initialized." << std::endl;
-            #endif
+                {
+                  std::cerr << "Embree: core initialized." << std::endl;
+#endif
+                }
             }
             ++embree_device_cntr;
             return embree_device;
@@ -74,9 +79,9 @@ namespace igl
             if(!--embree_device_cntr) {
                 rtcReleaseDevice (embree_device);
                 embree_device = nullptr;                
-            #ifdef IGL_VERBOSE
-                    std::cerr << "Embree: core released." << std::endl;
-            #endif
+#ifdef IGL_VERBOSE
+                std::cerr << "Embree: core released." << std::endl;
+#endif
             }
         }
      };

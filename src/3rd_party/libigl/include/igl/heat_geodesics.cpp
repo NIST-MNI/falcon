@@ -12,12 +12,13 @@
 #include "cotmatrix.h"
 #include "intrinsic_delaunay_cotmatrix.h"
 #include "massmatrix.h"
+#include "PlainVector.h"
 #include "massmatrix_intrinsic.h"
 #include "grad_intrinsic.h"
 #include "boundary_facets.h"
 #include "unique.h"
-#include "slice.h"
 #include "avg_edge_length.h"
+#include "PlainMatrix.h"
 
 
 template < typename DerivedV, typename DerivedF, typename Scalar >
@@ -40,10 +41,9 @@ IGL_INLINE bool igl::heat_geodesics_precompute(
   HeatGeodesicsData<Scalar> & data)
 {
   typedef Eigen::Matrix<Scalar,Eigen::Dynamic,1> VectorXS;
-  typedef Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> MatrixXS;
   Eigen::SparseMatrix<Scalar> L,M;
   Eigen::Matrix<Scalar,Eigen::Dynamic,3> l_intrinsic;
-  DerivedF F_intrinsic;
+  PlainMatrix<DerivedF> F_intrinsic;
   VectorXS dblA;
   if(data.use_intrinsic_delaunay)
   {
@@ -84,7 +84,7 @@ IGL_INLINE bool igl::heat_geodesics_precompute(
         return false;
       }
     }
-    const DerivedV M_diag_tr = M.diagonal().transpose();
+    const Eigen::Matrix<Scalar,1,Eigen::Dynamic> M_diag_tr = M.diagonal().transpose();
     const Eigen::SparseMatrix<Scalar> Aeq = M_diag_tr.sparseView();
     L *= -0.5;
     if(!igl::min_quad_with_fixed_precompute(
@@ -153,8 +153,7 @@ IGL_INLINE void igl::heat_geodesics_solve(
   const DerivedD div_X = -data.Div*grad_u;
   const DerivedD Beq = (DerivedD(1,1)<<0).finished();
   igl::min_quad_with_fixed_solve(data.Poisson,(-div_X).eval(),DerivedD(),Beq,D);
-  DerivedD Dgamma;
-  igl::slice(D,gamma,Dgamma);
+  DerivedD Dgamma = D(gamma.derived());
   D.array() -= Dgamma.mean();
   if(D.mean() < 0)
   {

@@ -16,20 +16,18 @@ namespace igl
   {
     namespace cgal
     {
-      // Find a vertex that is reachable from infinite without crossing any faces.
-      // Such vertex is called "outer vertex."
-      //
-      // Precondition: The input mesh must have all self-intersection resolved and
-      // no duplicated vertices.  See cgal::remesh_self_intersections.h for how to
-      // obtain such input.
-      //
-      // Inputs:
-      //   V  #V by 3 list of vertex positions
-      //   F  #F by 3 list of triangle indices into V
-      //   I  #I list of facets to consider
-      // Outputs:
-      //   v_index  index of outer vertex
-      //   A  #A list of facets incident to the outer vertex
+      /// Find a vertex that is reachable from infinite without crossing any faces.
+      /// Such vertex is called "outer vertex."
+      ///
+      /// \pre The input mesh must have all self-intersection resolved and
+      /// no duplicated vertices.  See cgal::remesh_self_intersections.h for how to
+      /// obtain such input.
+      ///
+      /// @param[in] V  #V by 3 list of vertex positions
+      /// @param[in] F  #F by 3 list of triangle indices into V
+      /// @param[in] I  #I list of facets to consider
+      /// @param[out] v_index  index of outer vertex
+      /// @param[out] A  #A list of facets incident to the outer vertex
       template <
           typename DerivedV,
           typename DerivedF,
@@ -38,9 +36,9 @@ namespace igl
           typename DerivedA
           >
       IGL_INLINE void outer_vertex(
-              const Eigen::PlainObjectBase<DerivedV> & V,
-              const Eigen::PlainObjectBase<DerivedF> & F,
-              const Eigen::PlainObjectBase<DerivedI> & I,
+              const Eigen::MatrixBase<DerivedV> & V,
+              const Eigen::MatrixBase<DerivedF> & F,
+              const Eigen::MatrixBase<DerivedI> & I,
               IndexType & v_index,
               Eigen::PlainObjectBase<DerivedA> & A);
     }
