@@ -9,8 +9,8 @@
 
 #include "cotmatrix.h"
 #include "sort.h"
-#include "slice.h"
 #include "massmatrix.h"
+#include "placeholders.h"
 #include <iostream>
 
 template <
@@ -80,7 +80,6 @@ IGL_INLINE bool igl::eigs(
       sigma = x.dot(A*x)/x.dot(B*x);
       //x *= sigma>0?1.:-1.;
 
-      Scalar err_prev = err;
       err = (A*x-sigma*B*x).array().abs().maxCoeff();
       if(err<conv)
       {
@@ -111,10 +110,14 @@ IGL_INLINE bool igl::eigs(
             case Eigen::Success:
               break;
             case Eigen::NumericalIssue:
+#ifdef IGL_EIGS_DEBUG
               cerr<<"Error: Numerical issue."<<endl;
+#endif
               return false;
             default:
+#ifdef IGL_EIGS_DEBUG
               cerr<<"Error: Other."<<endl;
+#endif
               return false;
           }
           const VectorXS rhs = B*x;
@@ -161,7 +164,7 @@ IGL_INLINE bool igl::eigs(
   // finally sort
   VectorXi I;
   igl::sort(S,1,false,sS,I);
-  igl::slice(U,I,2,sU);
+  sU = U(igl::placeholders::all,I);
   sS /= rescale;
   sU /= sqrt(rescale);
   return true;

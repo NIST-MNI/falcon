@@ -22,7 +22,7 @@
 
 #ifndef tinyply_h
 #define tinyply_h
-#include <igl/igl_inline.h>
+#include "igl_inline.h"
 
 #include <vector>
 #include <string>
@@ -34,6 +34,7 @@
 #include <map>
 #include <algorithm>
 #include <functional>
+#include <stdint.h>
 
 namespace igl
 {

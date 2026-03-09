@@ -13,8 +13,10 @@
 #include "submesh_aabb_tree.h"
 #include "../../extract_manifold_patches.h"
 #include "../../facet_components.h"
+#include "../../IGL_ASSERT.h"
 #include "../../parallel_for.h"
 #include "../../get_seconds.h"
+#include "../../PlainMatrix.h"
 #include "../../triangle_triangle_adjacency.h"
 #include "../../unique_edge_map.h"
 #include "../../C_STR.h"
@@ -39,22 +41,28 @@ template<
   typename DerivedF,
   typename DerivedC >
 IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
-  const Eigen::PlainObjectBase<DerivedV>& V,
-  const Eigen::PlainObjectBase<DerivedF>& F,
+  const Eigen::MatrixBase<DerivedV>& V,
+  const Eigen::MatrixBase<DerivedF>& F,
   Eigen::PlainObjectBase<DerivedC>& cells)
 {
+  using Index = typename DerivedF::Scalar;
+  static_assert(
+    std::is_same<Index, typename DerivedC::Scalar>::value,
+    "Index type mismatch");
+  using MatrixXI = Eigen::Matrix<Index, Eigen::Dynamic, Eigen::Dynamic>;
+  using VectorXI = Eigen::Matrix<Index, Eigen::Dynamic, 1>;
   const size_t num_faces = F.rows();
   // Construct edge adjacency
-  Eigen::MatrixXi E, uE;
-  Eigen::VectorXi EMAP;
-  Eigen::VectorXi uEC,uEE;
+  MatrixXI E, uE;
+  VectorXI EMAP;
+  VectorXI uEC,uEE;
   igl::unique_edge_map(F, E, uE, EMAP, uEC, uEE);
   // Cluster into manifold patches
-  Eigen::VectorXi P;
+  VectorXI P;
   igl::extract_manifold_patches(F, EMAP, uEC, uEE, P);
   // Extract cells
   DerivedC per_patch_cells;
-  const size_t ncells = extract_cells(V,F,P,E,uE,EMAP,uEC,uEE,per_patch_cells);
+  const size_t ncells = extract_cells(V,F,P,uE,EMAP,uEC,uEE,per_patch_cells);
   // Distribute per-patch cell information to each face
   cells.resize(num_faces, 2);
   for (size_t i=0; i<num_faces; i++)
@@ -69,21 +77,19 @@ template<
   typename DerivedV,
   typename DerivedF,
   typename DerivedP,
-  typename DerivedE,
   typename DeriveduE,
   typename DerivedEMAP,
   typename DeriveduEC,
   typename DeriveduEE,
   typename DerivedC >
 IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
-  const Eigen::PlainObjectBase<DerivedV>& V,
-  const Eigen::PlainObjectBase<DerivedF>& F,
-  const Eigen::PlainObjectBase<DerivedP>& P,
-  const Eigen::PlainObjectBase<DerivedE>& E,
-  const Eigen::PlainObjectBase<DeriveduE>& uE,
-  const Eigen::PlainObjectBase<DerivedEMAP>& EMAP,
-  const Eigen::PlainObjectBase<DeriveduEC>& uEC,
-  const Eigen::PlainObjectBase<DeriveduEE>& uEE,
+  const Eigen::MatrixBase<DerivedV>& V,
+  const Eigen::MatrixBase<DerivedF>& F,
+  const Eigen::MatrixBase<DerivedP>& P,
+  const Eigen::MatrixBase<DeriveduE>& uE,
+  const Eigen::MatrixBase<DerivedEMAP>& EMAP,
+  const Eigen::MatrixBase<DeriveduEC>& uEC,
+  const Eigen::MatrixBase<DeriveduEE>& uEE,
   Eigen::PlainObjectBase<DerivedC>& cells)
 {
   // Trivial base case
@@ -95,14 +101,6 @@ IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
   }
 
   typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
-  typedef Kernel::Point_3 Point_3;
-  typedef Kernel::Plane_3 Plane_3;
-  typedef Kernel::Segment_3 Segment_3;
-  typedef Kernel::Triangle_3 Triangle;
-  typedef std::vector<Triangle>::iterator Iterator;
-  typedef CGAL::AABB_triangle_primitive<Kernel, Iterator> Primitive;
-  typedef CGAL::AABB_traits<Kernel, Primitive> AABB_triangle_traits;
-  typedef CGAL::AABB_tree<AABB_triangle_traits> Tree;
 
 #ifdef EXTRACT_CELLS_TIMING
   const auto & tictoc = []() -> double
@@ -123,13 +121,14 @@ IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
 #endif
   const size_t num_faces = F.rows();
   typedef typename DerivedF::Scalar Index;
+  using VectorXI = Eigen::Matrix<Index, Eigen::Dynamic, 1>;
   assert(P.size() > 0);
   const size_t num_patches = P.maxCoeff()+1;
 
   // Extract all cells...
   DerivedC raw_cells;
-  const size_t num_raw_cells =
-    extract_cells_single_component(V,F,P,uE,EMAP,uEC,uEE,raw_cells);
+  const int num_raw_cells =
+    extract_cells_single_component(V,F,P,uE,uEC,uEE,raw_cells);
   log_time("extract_cells_single_component");
 
   // Compute triangle-triangle adjacency data-structure
@@ -154,7 +153,7 @@ IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
   // and precompute data-structures for each component
   std::vector<std::vector<size_t> > VF,VFi;
   igl::vertex_triangle_adjacency(V.rows(), F, VF, VFi);
-  std::vector<Eigen::VectorXi> Is(num_components);
+  std::vector<VectorXI> Is(num_components);
   std::vector<
     CGAL::AABB_tree<
       CGAL::AABB_traits<
@@ -171,9 +170,9 @@ IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
   std::vector<std::vector<bool> > in_Is(num_components);
 
   // Find outer facets, their orientations and cells for each component
-  Eigen::VectorXi outer_facets(num_components);
-  Eigen::VectorXi outer_facet_orientation(num_components);
-  Eigen::VectorXi outer_cells(num_components);
+  VectorXI outer_facets(num_components);
+  VectorXI outer_facet_orientation(num_components);
+  VectorXI outer_cells(num_components);
   igl::parallel_for(num_components,[&](size_t i)
   {
     Is[i].resize(components[i].size());
@@ -203,8 +202,8 @@ IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
   if(num_components > 1)
   {
     // construct bounding boxes for each component
-    DerivedV bbox_min(num_components, 3);
-    DerivedV bbox_max(num_components, 3);
+    PlainMatrix<DerivedV,Eigen::Dynamic,3> bbox_min(num_components, 3);
+    PlainMatrix<DerivedV,Eigen::Dynamic,3> bbox_max(num_components, 3);
     // Assuming our mesh (in exact numbers) fits in the range of double.
     bbox_min.setConstant(std::numeric_limits<double>::max());
     bbox_max.setConstant(std::numeric_limits<double>::lowest());
@@ -256,7 +255,7 @@ IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
 
       // Get query points on each candidate component: barycenter of
       // outer-facet
-      DerivedV queries(num_candidate_comps, 3);
+      PlainMatrix<DerivedV,Eigen::Dynamic,3> queries(num_candidate_comps, 3);
       for (size_t j=0; j<num_candidate_comps; j++)
       {
         const size_t index = candidate_comps[j];
@@ -270,7 +269,7 @@ IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
       const auto& in_I = in_Is[i];
       const auto& triangles = triangle_lists[i];
 
-      Eigen::VectorXi closest_facets, closest_facet_orientations;
+      VectorXI closest_facets, closest_facet_orientations;
       closest_facet(
         V,
         F,
@@ -333,8 +332,8 @@ IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
                     break;
                 }
             }
-            assert(embedded_comp != INVALID);
-            assert(embedded_cell != INVALID);
+            IGL_ASSERT(embedded_comp != INVALID);
+            IGL_ASSERT(embedded_cell != INVALID);
             embedded_cells[outer_cell] = embedded_cell;
         } else {
             embedded_cells[outer_cell] = INFINITE_CELL;
@@ -387,11 +386,9 @@ IGL_INLINE size_t igl::copyleft::cgal::extract_cells(
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 // Explicit template instantiation
 // generated by autoexplicit.sh
-template size_t igl::copyleft::cgal::extract_cells<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 1, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 1, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
-// generated by autoexplicit.sh
-template size_t igl::copyleft::cgal::extract_cells<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
-// generated by autoexplicit.sh
-template size_t igl::copyleft::cgal::extract_cells<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
+template size_t igl::copyleft::cgal::extract_cells<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
+template size_t igl::copyleft::cgal::extract_cells<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 1, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 1, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
+template size_t igl::copyleft::cgal::extract_cells<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<CGAL::Epeck::FT, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
 #ifdef WIN32
 #endif
 #endif

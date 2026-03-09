@@ -6,6 +6,7 @@
 #include <igl/readDMAT.h>
 
 #include <igl/find.h>
+#include <igl/sortrows.h>
 
 #include <Eigen/Core>
 #include <catch2/catch.hpp>
@@ -24,6 +25,20 @@
 #define IGL_DEBUG_OFF "[!hide]"
 #endif
 
+#if !defined(NDEBUG) && defined(__linux__)
+#include <fenv.h>
+#define IGL_PUSH_FPE \
+  fexcept_t current_exceptions; \
+  fegetexceptflag(&current_exceptions, FE_ALL_EXCEPT); \
+  fedisableexcept(FE_ALL_EXCEPT);
+#define IGL_POP_FPE \
+  /* Surprise! Use fesetexceptflag here not feenableexcept */ \
+  fesetexceptflag(&current_exceptions,FE_ALL_EXCEPT);
+#else
+// No-op
+#define IGL_PUSH_FPE 
+#define IGL_POP_FPE 
+#endif
 
 #include <igl/STR.h>
 template<>
@@ -190,6 +205,7 @@ namespace test_common
     const Eigen::MatrixBase<DerivedB> & B,
     const EpsType & eps)
   {
+    if(eps == 0){ return assert_eq(A,B); }
     // Sizes should match
     REQUIRE(A.rows() == B.rows());
     REQUIRE(A.cols() == B.cols());
@@ -216,6 +232,21 @@ namespace test_common
         }
       }
     }
+  }
+
+  // assert_near after sortrows on each input
+  template <typename DerivedA, typename DerivedB, typename EpsType>
+  void assert_near_rows(
+    const Eigen::MatrixBase<DerivedA> & A,
+    const Eigen::MatrixBase<DerivedB> & B,
+    const EpsType & eps)
+  {
+    Eigen::VectorXi _;
+    DerivedA sA;
+    DerivedB sB;
+    igl::sortrows(A,false,sA,_);
+    igl::sortrows(B,false,sB,_);
+    return assert_near(sA,sB,eps);
   }
 
 }

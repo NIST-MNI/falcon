@@ -47,3 +47,7 @@ LibiglOptions.cmake
 
 # macos debris
 .DS_Store
+*~
+dox/
+latex/
+scripts/

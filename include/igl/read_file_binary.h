@@ -11,25 +11,24 @@
 
 #include "igl_inline.h"
 
+#include <cstdint>
 #include <streambuf>
 #include <istream>
 #include <string>
 #include <vector>
 
 namespace igl {
-
-  // Read contents of file into a buffer of uint8_t bytes.
-  //
-  // Input:
-  //   fp  pointer to open File
-  // Outputs:
-  //   fileBufferBytes  contents of file as vector of bytes
-  // Side effects:
-  //   closes fp
-  // Throws runtime_error on error
+  /// Read contents of file into a buffer of uint8_t bytes.
+  ///
+  /// @param[in,out] fp  pointer to open File
+  /// @param[out] fileBufferBytes  contents of file as vector of bytes
+  ///
+  /// #### Side effects:
+  ///   closes fp
+  /// \throws runtime_error on error
   IGL_INLINE void read_file_binary(
     FILE *fp,
-    std::vector<uint8_t> &fileBufferBytes);
+    std::vector<std::uint8_t> &fileBufferBytes);
 }
 
 #ifndef IGL_STATIC_LIBRARY

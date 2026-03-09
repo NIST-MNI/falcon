@@ -16,13 +16,14 @@
 #include "remesh_self_intersections.h"
 #include "string_to_mesh_boolean_type.h"
 #include "../../combine.h"
+#include "../../PlainVector.h"
+#include "../../PlainMatrix.h"
 #include "../../cumsum.h"
 #include "../../extract_manifold_patches.h"
 #include "../../get_seconds.h"
 #include "../../parallel_for.h"
 #include "../../remove_unreferenced.h"
 #include "../../resolve_duplicated_faces.h"
-#include "../../slice.h"
 #include "../../unique_edge_map.h"
 #include "../../unique_simplices.h"
 #include "../../C_STR.h"
@@ -140,8 +141,8 @@ IGL_INLINE bool igl::copyleft::cgal::mesh_boolean(
     Eigen::PlainObjectBase<DerivedFC > & FC,
     Eigen::PlainObjectBase<DerivedJ > & J)
 {
-  DerivedV VV;
-  DerivedF FF;
+  PlainMatrix<DerivedV,Eigen::Dynamic> VV;
+  PlainMatrix<DerivedF,Eigen::Dynamic> FF;
   Eigen::Matrix<size_t,Eigen::Dynamic,1> Vsizes,Fsizes;
   igl::combine(Vlist,Flist,VV,FF,Vsizes,Fsizes);
   return mesh_boolean(VV,FF,Fsizes,wind_num_op,keep,VC,FC,J);
@@ -161,8 +162,8 @@ IGL_INLINE bool igl::copyleft::cgal::mesh_boolean(
     Eigen::PlainObjectBase<DerivedFC > & FC,
     Eigen::PlainObjectBase<DerivedJ > & J)
 {
-  DerivedV VV;
-  DerivedF FF;
+  PlainMatrix<DerivedV,Eigen::Dynamic> VV;
+  PlainMatrix<DerivedF,Eigen::Dynamic> FF;
   Eigen::Matrix<size_t,Eigen::Dynamic,1> Vsizes,Fsizes;
   igl::combine(Vlist,Flist,VV,FF,Vsizes,Fsizes);
   std::function<int(const int, const int)> keep;
@@ -202,10 +203,8 @@ IGL_INLINE bool igl::copyleft::cgal::mesh_boolean(
   };
   tictoc();
 #endif
-  typedef typename DerivedVC::Scalar Scalar;
   typedef CGAL::Epeck Kernel;
   typedef Kernel::FT ExactScalar;
-  typedef Eigen::Matrix<Scalar,Eigen::Dynamic,3> MatrixX3S;
   typedef Eigen::Matrix<typename DerivedJ::Scalar,Eigen::Dynamic,1> VectorXJ;
   typedef Eigen::Matrix<
     ExactScalar,
@@ -216,22 +215,12 @@ IGL_INLINE bool igl::copyleft::cgal::mesh_boolean(
   DerivedFC F;
   VectorXJ  CJ;
   {
-    Eigen::VectorXi I;
     igl::copyleft::cgal::RemeshSelfIntersectionsParam params;
     params.stitch_all = true;
-    MatrixXES Vr;
-    DerivedFC Fr;
     Eigen::MatrixXi IF;
-    igl::copyleft::cgal::remesh_self_intersections(
-        VV, FF, params, Vr, Fr, IF, CJ, I);
-    assert(I.size() == Vr.rows());
-    // Merge coinciding vertices into non-manifold vertices.
-    std::for_each(Fr.data(), Fr.data()+Fr.size(),
-          [&I](typename DerivedFC::Scalar& a) { a=I[a]; });
-      // Remove unreferenced vertices.
-      Eigen::VectorXi UIM;
-      igl::remove_unreferenced(Vr, Fr, V, F, UIM);
-   }
+    remesh_self_intersections(VV,FF,params,V,F,IF,CJ);
+  }
+  
 #ifdef MESH_BOOLEAN_TIMING
   log_time("resolve_self_intersection");
 #endif
@@ -250,7 +239,7 @@ IGL_INLINE bool igl::copyleft::cgal::mesh_boolean(
   // Compute cells (V,F,P,E,uE,EMAP) -> (per_patch_cells)
   Eigen::MatrixXi per_patch_cells;
   const size_t num_cells =
-  extract_cells( V, F, P, E, uE, EMAP, uEC, uEE, per_patch_cells);
+  extract_cells( V, F, P, uE, EMAP, uEC, uEE, per_patch_cells);
 #ifdef MESH_BOOLEAN_TIMING
   log_time("cell_extraction");
 #endif
@@ -265,7 +254,7 @@ IGL_INLINE bool igl::copyleft::cgal::mesh_boolean(
   // labels(f) = i means that face f comes from mesh i
   Eigen::VectorXi labels(num_faces);
   // cumulative sizes
-  Derivedsizes cumsizes;
+  PlainVector<Derivedsizes,Eigen::Dynamic> cumsizes;
   igl::cumsum(sizes,1,cumsizes);
   const size_t num_inputs = sizes.size();
   std::transform(
@@ -372,7 +361,7 @@ IGL_INLINE bool igl::copyleft::cgal::mesh_boolean(
     DerivedFC G;
     DerivedJ JJ;
     igl::resolve_duplicated_faces(kept_faces, G, JJ);
-    igl::slice(kept_face_indices, JJ, 1, J);
+    J = kept_face_indices(JJ);
 
 #ifdef DOUBLE_CHECK_EXACT_OUTPUT
     {
