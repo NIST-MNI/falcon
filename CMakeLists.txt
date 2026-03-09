@@ -4,7 +4,7 @@ if(POLICY CMP0069)
 cmake_policy(SET CMP0069 NEW)
 endif()
 
-PROJECT(FALCON VERSION 0.9.18)
+PROJECT(FALCON VERSION 0.9.19)
 
 enable_language(C CXX)
 
