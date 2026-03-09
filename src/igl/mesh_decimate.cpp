@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
       else if(par.count("f")) n=par["f"].as<double>()*V.rows();
 
       //decimating
-      if(!igl::decimate(V, F, par["n"].as<int>(), V1, F1, J, I))
+      if(!igl::decimate(V, F, par["n"].as<int>(),true, V1, F1, J, I))
         std::cerr<<"Failed achieving desired number of target vertices"<<std::endl;
 
       // map data to the new vertices

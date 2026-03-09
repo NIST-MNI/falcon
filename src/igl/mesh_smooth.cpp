@@ -7,7 +7,7 @@
 #include "igl/massmatrix.h"
 #include "igl/adjacency_matrix.h"
 #include "igl/sum.h"
-#include "igl/diag.h"
+//#include "igl/diag.h"
 
 #include "cxxopts.hpp"
 
@@ -18,9 +18,10 @@ int uniform_laplacian(const Eigen::MatrixXi &F, Eigen::SparseMatrix<double> &U)
   igl::adjacency_matrix(F, A);
   Eigen::SparseVector<double> Asum;
   igl::sum(A, 1, Asum);
-  Eigen::SparseMatrix<double> Adiag;
-  igl::diag(Asum, Adiag);
-  U = A - Adiag ;
+
+  //Eigen::SparseMatrix<double> Adiag;
+  //igl::diag(Asum, Adiag);
+  U = A - Eigen::VectorXd(Asum).diagonal().sparseView();
   return 0;
 }
 
