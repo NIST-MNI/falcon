@@ -161,7 +161,7 @@ int niik_simu_cortical_atrophy_func(kobj **obj,nifti_image *refimg,double radius
   free(refimg->data);
   NIIK_RET1(((refimg->data=(void *)calloc(refimg->nvox,sizeof(float)))==NULL),fcname,"calloc for refimg->data");
   n3=maskimg->nx*maskimg->ny*maskimg->nz;
-  fprintf(stdout,"[%s]     %i %i %i\n",fcname,n3,refimg->nvox,maskimg->nvox);
+  fprintf(stdout,"[%s]     %i %zu %zu\n",fcname,n3,refimg->nvox,maskimg->nvox);
 
   fprintf(stdout,"[%s]   normal calculation\n",fcname);
   for(vo=obj[1]->vert,vi=obj[0]->vert; vo!=NULL; vo=vo->next,vi=vi->next) {

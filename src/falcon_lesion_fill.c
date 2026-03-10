@@ -68,11 +68,11 @@ int niik_image_fill_lesion_with_matrix(nifti_image *img, nifti_image *les_mask, 
     return 0;
   }
   if(img->nvox!=wm_mask->nvox) {
-    fprintf(stderr,"ERROR: WM #vox %i %i\n",img->nvox,wm_mask->nvox);
+    fprintf(stderr,"ERROR: WM #vox %zu %zu\n",img->nvox,wm_mask->nvox);
     return 0;
   }
   if(img->nvox!=les_mask->nvox) {
-    fprintf(stderr,"ERROR: lesion #vox %i %i\n",img->nvox,les_mask->nvox);
+    fprintf(stderr,"ERROR: lesion #vox %zu %zu\n",img->nvox,les_mask->nvox);
     return 0;
   }
 

@@ -5036,7 +5036,7 @@ int main(int argc,char *argv[],char *envp[]) {
       exit(1);
     }
     if(imglist[0]->nvox != imglist[1]->nvox) {
-      fprintf(stderr,"[niikmath] ERROR: nvox is different %i, %i\n",imglist[0]->nvox,imglist[1]->nvox);
+      fprintf(stderr,"[niikmath] ERROR: nvox is different %zu, %zu\n",imglist[0]->nvox,imglist[1]->nvox);
       exit(1);
     }
     /*
@@ -6460,7 +6460,7 @@ int main(int argc,char *argv[],char *envp[]) {
     }
     i=fwrite(img->data,img->nvox*img->nbyper,1,fp);
     fclose(fp);
-    fprintf(stdout,"[%s] MATLAB: fid=fopen('%s','r'); img=fread(fid,%i,'float'); fclose(fid); img=reshape(img,%i,%i,%i);\n",fcname,outname,img->nvox,img->nx,img->ny,img->nz);
+    fprintf(stdout,"[%s] MATLAB: fid=fopen('%s','r'); img=fread(fid,%zu,'float'); fclose(fid); img=reshape(img,%i,%i,%i);\n",fcname,outname,img->nvox,img->nx,img->ny,img->nz);
     img=niik_image_free(img);
     exit(0);
   } /* OP = nii2img */
@@ -6528,9 +6528,9 @@ int main(int argc,char *argv[],char *envp[]) {
       }
       break;
     } /* dimensions */
-    fprintf(stdout,"[%s] reading %s, nvox = %i, nbyper = %i\n",fcname,inname,img->nvox,img->nbyper);
+    fprintf(stdout,"[%s] reading %s, nvox = %zu, nbyper = %i\n",fcname,inname,img->nvox,img->nbyper);
     NIIK_EXIT(((fp=fopen(inname,"rb"))==NULL),fcname,"fopen file",1);
-    fprintf(stdout,"[%s] fread image, nvox = %i, nbyper = %i\n",fcname,img->nvox,img->nbyper);
+    fprintf(stdout,"[%s] fread image, nvox = %zu, nbyper = %i\n",fcname,img->nvox,img->nbyper);
     /*NIIK_EXIT(((fread(img->data,img->nvox*img->nbyper,1,fp))!=(img->nvox*img->nbyper)),fcname,"fread",1);*/
     i=fread(img->data,img->nvox*img->nbyper,1,fp);
     fclose(fp);

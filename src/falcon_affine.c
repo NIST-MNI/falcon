@@ -89,7 +89,7 @@ int niik_image_affine_transform_3d_update(nifti_image *img,nifti_image *refimg,n
   img->xyz_units  = refimg->xyz_units;
   img->time_units = refimg->time_units;
   free(img->data);
-  if(verbose>=1) fprintf(stdout,"[%s] calloc %i %i\n",fcname,img->nvox,img->nbyper);
+  if(verbose>=1) fprintf(stdout,"[%s] calloc %zu %i\n",fcname,img->nvox,img->nbyper);
   if((img->data = (void *)calloc(img->nvox*img->nbyper,1))==NULL) {
     fprintf(stderr,"ERROR: malloc for image data\n");
     return 0;
@@ -399,7 +399,7 @@ int niik_image_resample_3d_update(nifti_image *img,double dx, double dy, double 
     fprintf(stdout,"\t  image vox = %7.4f %7.4f %7.4f   <-   %7.4f %7.4f %7.4f\n",img->dx,img->dy,img->dz,outimg->dx,outimg->dy,outimg->dz);
   }
   free(img->data);
-  if(verbose>=1) fprintf(stdout,"[%s]   calloc %i %i\n",fcname,img->nvox,img->nbyper);
+  if(verbose>=1) fprintf(stdout,"[%s]   calloc %zu %i\n",fcname,img->nvox,img->nbyper);
   if((img->data = (void *)calloc(img->nvox*img->nbyper,1))==NULL) {
     fprintf(stderr,"ERROR: malloc for image data\n");
     return 0;

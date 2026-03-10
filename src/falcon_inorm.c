@@ -32,7 +32,7 @@ int niik_image_linear_normalization(nifti_image *refimg, nifti_image *modimg, ni
   sx = sy = sxx = sxy = syy = 0;
   if(modmask!=NULL) {
     if(modimg->nvox!=modmask->nvox) {
-      fprintf(stderr,"ERROR: different nvox %i %i\n",modimg->nvox,modmask->nvox);
+      fprintf(stderr,"ERROR: different nvox %zu %zu\n",modimg->nvox,modmask->nvox);
       return 0;
     }
     if((bimg = niik_image_get_voxels_as_uint8_vector(modmask))==NULL) {

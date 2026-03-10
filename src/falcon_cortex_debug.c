@@ -19,7 +19,8 @@
 int falcon_tracing_init(nifti_image * img, 
     cortex_tracing_info *info) 
     {
-    const char *falcon_trace, *trace_x,*trace_y,*trace_z;
+    const char *falcon_trace;
+    char *trace_x,*trace_y,*trace_z;
     char **CSlist=NULL;
     int n,i;
     double imin,imax;

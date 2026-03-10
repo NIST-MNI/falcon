@@ -60,9 +60,9 @@ int niik_image_histogram(nifti_image *img,nifti_image *maskimg,double *hx,double
   for(n=0; n<num; n++) hx[n]=dmin+dran*n;
   if(maskimg!=NULL) {
     if(img->nvox!=maskimg->nvox) {
-      fprintf(stderr,"ERROR: different image nvox %i %i\n",img->nvox,maskimg->nvox);
-      fprintf(stderr,"       img  = %i %s \n",img->nvox,img->fname);
-      fprintf(stderr,"       mask = %i %s \n",maskimg->nvox,maskimg->fname);
+      fprintf(stderr,"ERROR: different image nvox %zu %zu\n",img->nvox,maskimg->nvox);
+      fprintf(stderr,"       img  = %zu %s \n",img->nvox,img->fname);
+      fprintf(stderr,"       mask = %zu %s \n",maskimg->nvox,maskimg->fname);
       return 0;
     }
     if((bimg = niik_image_get_voxels_as_uint8_vector(maskimg))==NULL) {
@@ -122,7 +122,7 @@ int niik_image_histogram_limits(nifti_image *img,nifti_image *maskimg,double *hx
   for(n=0; n<num; n++) hx[n]=dmin+dran*n;
   if(maskimg!=NULL) {
     if(img->nvox!=maskimg->nvox) {
-      fprintf(stderr,"ERROR: different image nvox %i %i\n",img->nvox,maskimg->nvox);
+      fprintf(stderr,"ERROR: different image nvox %zu %zu\n",img->nvox,maskimg->nvox);
       return 0;
     }
     if((bimg = niik_image_get_voxels_as_uint8_vector(maskimg))==NULL) {

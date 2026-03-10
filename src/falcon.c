@@ -944,7 +944,7 @@ nifti_image *niik_image_copy(nifti_image * src)
     fprintf(stderr,"ERROR: malloc for dest (%s) \n",dest->iname);
     return NULL;
   }
-  if(verbose) fprintf(stdout,"-v (niik_image_copy) %i %i  -->   %i %i \n",src->nvox,src->nbyper,dest->nvox,dest->nbyper);
+  if(verbose) fprintf(stdout,"-v (niik_image_copy) %zu %i  -->   %zu %i \n",src->nvox,src->nbyper,dest->nvox,dest->nbyper);
   if(verbose) fprintf(stdout,"-v (niik_image_copy) copy data\n");
   memcpy(dest->data, src->data, (size_t)(dest->nvox * dest->nbyper));
   if(verbose) fprintf(stdout,"-v (niik_image_copy) return data\n");
@@ -1016,7 +1016,7 @@ nifti_image *niik_image_init(int x,int y,int z,int t,int u,int v,int w,
   for(n=img->nvox=1; n<=img->ndim; n++) {
     img->nvox*=img->dim[n];
   }
-  if(verbose>0) fprintf(stdout,"[%s] nvox = %i\n",fcname,img->nvox);
+  if(verbose>0) fprintf(stdout,"[%s] nvox = %zu\n",fcname,img->nvox);
   img->datatype=datatype;
   nifti_datatype_sizes(datatype,&img->nbyper,&img->swapsize);
   if(verbose>0) fprintf(stdout,"[%s] datatype = %i %i %s\n",fcname,img->nbyper,img->swapsize,nifti_datatype_string(img->datatype));
@@ -1596,7 +1596,7 @@ int niik_image_add_masks(nifti_image *modified,nifti_image *unchange)
     return 0;
   }
   if(modified->nvox!=unchange->nvox) {
-    fprintf(stderr,"[%s] ERROR: nvox is different %i %i\n",fcname,modified->nvox,unchange->nvox);
+    fprintf(stderr,"[%s] ERROR: nvox is different %zu %zu\n",fcname,modified->nvox,unchange->nvox);
     return 0;
   }
   for(i=0; i<modified->nvox; i++) {
@@ -1623,7 +1623,7 @@ int niik_image_display_stats_mask(nifti_image *img,nifti_image *maskimg) {
     return 0;
   }
   if(img->nvox!=maskimg->nvox) {
-    fprintf(stderr,"[%s] ERROR: nvox is different %i, %i\n",fcname,img->nvox,maskimg->nvox);
+    fprintf(stderr,"[%s] ERROR: nvox is different %zu, %zu\n",fcname,img->nvox,maskimg->nvox);
     return 0;
   }
   minidx = niik_image_get_min_index(img,maskimg);
@@ -1726,7 +1726,7 @@ int niik_image_display_stats(nifti_image *img,nifti_image *maskimg) {
   fprintf(stdout,"  global median       %15.9f\n",niik_get_median_from_sorted_double_vector(v->v,v->num));
   fprintf(stdout,"  global 25%%          %15.9f\n",v->v[(int)floor(v->num*0.25+0.5)]);
   fprintf(stdout,"  global 75%%          %15.9f\n",v->v[(int)floor(v->num*0.75+0.5)]);
-  fprintf(stdout,"  global count        %15i\n",img->nvox);
+  fprintf(stdout,"  global count        %15zu\n",img->nvox);
   ctr=niikpt_image_get_centroid(img,NULL);
   if(niik_check_double_problem(ctr.x)) {
     fprintf(stderr,"[%s] ERROR: niikpt_image_get_centroid\n",fcname);
@@ -1949,7 +1949,7 @@ int niik_image_copy_data(nifti_image *src,nifti_image *dest)
     return 0;
   }
   if(src->nvox!=dest->nvox) {
-    fprintf(stderr,"ERROR: #voxels did not match %i %i\n",src->nvox,dest->nvox);
+    fprintf(stderr,"ERROR: #voxels did not match %zu %zu\n",src->nvox,dest->nvox);
     return 0;
   }
   if((dimg = niik_image_get_voxels_as_double_vector(src))==NULL) {
@@ -2041,7 +2041,7 @@ double *niik_image_get_voxels_as_double_vector(nifti_image *img) {
       img->datatype == NIFTI_TYPE_COMPLEX128 ||
       img->datatype == NIFTI_TYPE_COMPLEX256 ||
       img->datatype == NIFTI_TYPE_RGBA32 ) return NULL;
-  if(verbose) fprintf(stderr,"-d (niik_image_get_voxels_as_double_vector) calloc %i\n",img->nvox);
+  if(verbose) fprintf(stderr,"-d (niik_image_get_voxels_as_double_vector) calloc %zu\n",img->nvox);
   if((v=(double *)calloc(img->nvox,sizeof(double)))==NULL) {
     fprintf(stderr,"ERROR: calloc\n");
     return NULL;
@@ -2409,7 +2409,7 @@ float *niik_image_get_voxels_as_float_vector(nifti_image *img) {
       img->datatype == NIFTI_TYPE_COMPLEX128 ||
       img->datatype == NIFTI_TYPE_COMPLEX256 ||
       img->datatype == NIFTI_TYPE_RGBA32 ) return NULL;
-  if(verbose) fprintf(stderr,"-d (niik_image_get_voxels_as_double_vector) calloc %i\n",img->nvox);
+  if(verbose) fprintf(stderr,"-d (niik_image_get_voxels_as_double_vector) calloc %zu\n",img->nvox);
   if((v=(float *)calloc(img->nvox,sizeof(float)))==NULL) {
     fprintf(stderr,"ERROR: calloc for data\n");
     return NULL;
@@ -2524,7 +2524,7 @@ unsigned char *niik_image_get_voxels_as_uint8_vector(nifti_image *img) {
       img->datatype == NIFTI_TYPE_COMPLEX128 ||
       img->datatype == NIFTI_TYPE_COMPLEX256 ||
       img->datatype == NIFTI_TYPE_RGBA32 ) return NULL;
-  if(verbose) fprintf(stderr,"-d (niik_image_get_voxels_as_double_vector) calloc %i\n",img->nvox);
+  if(verbose) fprintf(stderr,"-d (niik_image_get_voxels_as_double_vector) calloc %zu\n",img->nvox);
   NIIK_RET0(((v=(unsigned char *)calloc(img->nvox,sizeof(char)))==NULL),fcname,"calloc");
   if(verbose) fprintf(stderr,"[%s] switch\n",fcname);
   switch(img->datatype) {
@@ -2636,7 +2636,7 @@ long *niik_image_get_voxels_as_long_vector(nifti_image *img) {
       img->datatype == NIFTI_TYPE_COMPLEX128 ||
       img->datatype == NIFTI_TYPE_COMPLEX256 ||
       img->datatype == NIFTI_TYPE_RGBA32 ) return NULL;
-  if(verbose) fprintf(stderr,"-d (niik_image_get_voxels_as_double_vector) calloc %i\n",img->nvox);
+  if(verbose) fprintf(stderr,"-d (niik_image_get_voxels_as_double_vector) calloc %zu\n",img->nvox);
   NIIK_RET0(((v=(long *)calloc(img->nvox,sizeof(long)))==NULL),fcname,"calloc");
   if(verbose) fprintf(stderr,"[%s] switch\n",fcname);
   switch(img->datatype) {
@@ -3391,7 +3391,7 @@ double niik_image_get_min(nifti_image *img,nifti_image *maskimg) {
     }
   } else {
     if(img->nvox!=maskimg->nvox) {
-      fprintf(stderr,"[%s] ERROR: img and maskimg size did not match, %i %i\n",fcname,img->nvox,maskimg->nvox);
+      fprintf(stderr,"[%s] ERROR: img and maskimg size did not match, %zu %zu\n",fcname,img->nvox,maskimg->nvox);
       return NIIKMAX;
     }
     for(n=m=0,out=NIIKMAX; n<img->nvox; n++) {
@@ -3598,7 +3598,7 @@ double niik_image_get_sum(nifti_image *img,nifti_image *maskimg) {
     return dsum;
   } else {
     if(img->nvox!=maskimg->nvox) {
-      fprintf(stderr,"[niik_image_get_sum] ERROR: img->nvox and maskimg->nvox are different: %i %i\n",img->nvox,maskimg->nvox);
+      fprintf(stderr,"[niik_image_get_sum] ERROR: img->nvox and maskimg->nvox are different: %zu %zu\n",img->nvox,maskimg->nvox);
       return NIIKMAX;
     }
     for(n=0,dsum=0; n<img->nvox; n++) {
@@ -3804,7 +3804,7 @@ int niik_image_get_min_index(nifti_image *img,nifti_image *maskimg) {
     }
   } else {
     if(img->nvox!=maskimg->nvox) {
-      fprintf(stderr,"[%s] ERROR: nvox is different for img %i and maskimg %i\n",fcname,img->nvox,maskimg->nvox);
+      fprintf(stderr,"[%s] ERROR: nvox is different for img %zu and maskimg %zu\n",fcname,img->nvox,maskimg->nvox);
       return -1;
     }
     for(n=m=0,out=1e99; n<img->nvox; n++) {
@@ -4623,7 +4623,7 @@ int niik_image_multiply_2_images(nifti_image *changed,nifti_image *mult) {
     return 0;
   }
   if(changed->nvox!=mult->nvox) {
-    fprintf(stderr,"[%s] ERROR: #voxel is different %i %i\n",fcname,changed->nvox,mult->nvox);
+    fprintf(stderr,"[%s] ERROR: #voxel is different %zu %zu\n",fcname,changed->nvox,mult->nvox);
     return 0;
   }
   for(i=0; i<changed->nvox; i++) {
@@ -4644,7 +4644,7 @@ int niik_image_add_2_images(nifti_image *changed,nifti_image *add) {
     return 0;
   }
   if(changed->nvox!=add->nvox) {
-    fprintf(stderr,"[%s] ERROR: #voxel is different %i %i\n",fcname,changed->nvox,add->nvox);
+    fprintf(stderr,"[%s] ERROR: #voxel is different %zu %zu\n",fcname,changed->nvox,add->nvox);
     return 0;
   }
   for(i=0; i<changed->nvox; i++) {

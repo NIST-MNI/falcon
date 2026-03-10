@@ -141,7 +141,7 @@ int main(int   argc, char  *argv[] ) {
 
   if(maskfn)
   {
-      NIIK_RETURN((input_volume(  maskfn, 3, NULL, NC_DOUBLE, FALSE,
+      NIIK_RETURN((input_volume(  (char *)maskfn, 3, NULL, NC_DOUBLE, FALSE,
                             0.0, FLT_MAX, TRUE, &vol_mask,
                             (minc_input_options *) NULL ) != VIO_OK),"input_volume failed for mask",1);
       
@@ -261,7 +261,7 @@ int main(int   argc, char  *argv[] ) {
     int j;
     for(j=0;j<obj->nvert;j++) meas[i+1][j]=(double)mask_flag[j];
 
-    NIIK_RETURN((!off_kobj_write_ply_ex(out_file,obj,0,1,1,1, n_meas, meas_name, meas)),"off_kobj_write_ply_ex",1);
+    NIIK_RETURN((!off_kobj_write_ply_ex(out_file,obj,0,1,1,1, n_meas, (const char **)meas_name, meas)),"off_kobj_write_ply_ex",1);
 
   } else {
     int j;

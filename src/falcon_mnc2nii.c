@@ -1032,7 +1032,7 @@ nifti_image *niik_image_read_minc(const char *minc_name) {
   /* Now load the actual MINC data. */
   if(verbose>=1) {
     fprintf(stdout,"  nbyper = %i\n",nii_ptr->nbyper);
-    fprintf(stdout,"  nvox     %i\n",nii_ptr->nvox);
+    fprintf(stdout,"  nvox     %zu\n",nii_ptr->nvox);
   }
 
   nii_ptr->data = malloc(nii_ptr->nbyper * nii_ptr->nvox);
@@ -1086,7 +1086,7 @@ nifti_image *niik_image_read_minc(const char *minc_name) {
              i, nii_lens[i], nii_map[i], nii_dir[i]);
     }
     printf("bytes per voxel %d\n", nii_ptr->nbyper);
-    printf("# of voxels %d\n", nii_ptr->nvox);
+    printf("# of voxels %zu\n", nii_ptr->nvox);
   }
 
   /* Rearrange the data to correspond to the NIfTI dimension ordering.
