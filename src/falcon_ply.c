@@ -23,10 +23,10 @@
 #define PLY_CHECK(test)      if((test)==0) { fprintf(stdout,"[%s:%i:%s] PLY ERROR\n",__FILE__,__LINE__,__func__); return 0; }
 
 
-int niik_off_write_ply(const char *fname,kobj *obj,const double *meas,int output_sph,int output_normal,int output_edge) {
+int niik_off_write_ply(const char *fname,kobj *obj,const double const *meas,int output_sph,int output_normal,int output_edge) {
   /*Legacy function*/
-  const char *meas_names[]={"thickness"};
-  const double *meas_vec[]={meas};
+  const char * meas_names[]={ "thickness" };
+  const double const  * meas_vec[]={ meas };
   int n_meas=meas?1:0;
 
   return off_kobj_write_ply_ex(fname,obj,output_normal,output_sph, output_edge, 1, n_meas, meas_names, meas_vec);

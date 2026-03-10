@@ -401,7 +401,7 @@ double mean_curvature(off_curvature_t *crv,kobj *obj);
  * falcon_ply.c
  *
  ******************************************************************/
-int niik_off_write_ply(const char *fname, kobj *obj, const double *meas, int output_sph, int output_normal, int output_edge);
+int niik_off_write_ply(const char *fname, kobj *obj, const double const *meas, int output_sph, int output_normal, int output_edge);
 int off_kobj_write_ply(const char *fname, kobj *obj, int write_vertex_normal);
 int off_kobj_write_ply_ex(const char *fname,kobj *obj,
        int output_normal,int output_sph, int output_edge, int output_color,

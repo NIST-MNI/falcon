@@ -25,6 +25,12 @@ extern "C" {
 #endif
 /*=================*/
 
+/* hack from Kunio defined in nifti1_dummy.c */
+int nifti_io_get_problem_code_kunio();
+void nifti_io_set_problem_code_kunio(int i);
+/* hack from Kunio defined in nifti1_dummy.c */
+
+
 /*****===================================================================*****/
 /*****         File nifti1_io.h == Declarations for nifti1_io.c          *****/
 /*****...................................................................*****/
