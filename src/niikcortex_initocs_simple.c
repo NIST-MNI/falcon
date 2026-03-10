@@ -163,7 +163,7 @@ int main(int argc,char *argv[],char *envp[]) {
   out_init_ocs = argv[optind+2];
 
   if( (img=niik_image_read(in_mask))==NULL) {
-    fprintf(stderr,"[%s] ERROR: nifti_image_read %s\n",fcname,in_ctx);
+    fprintf(stderr,"[%s] ERROR: nifti_image_read %s\n",fcname,in_mask);
     exit(1);
   }
   NIIK_RET1((!niik_image_type_convert(img,NIFTI_TYPE_UINT8)),fcname,"niik_image_type_convert");
