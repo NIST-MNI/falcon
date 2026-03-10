@@ -951,6 +951,7 @@ int main(int argc,char *argv[],char *envp[]) {
           exit(1);
         }
         NIIK_EXIT((niik_check_fsldir_exists()>0),fcname,"fsldir is not defined",1);
+        FSLDIR = getenv("FSLDIR");
         sprintf(fname,"%s/data/standard/MNI152_T1_1mm.nii.gz",FSLDIR);
         fprintf(stdout,"[niikmath] reading refimg    %s\n",fname);
         if((refimg=niik_image_read(fname))==NULL) {
@@ -965,6 +966,7 @@ int main(int argc,char *argv[],char *envp[]) {
           exit(1);
         }
         NIIK_EXIT((niik_check_fsldir_exists()>0),fcname,"fsldir is not defined",1);
+        FSLDIR = getenv("FSLDIR");
         sprintf(fname,"%s/data/standard/MNI152_T1_2mm.nii.gz",FSLDIR);
         fprintf(stdout,"[niikmath] reading refimg    %s\n",fname);
         if((refimg=niik_image_read(fname))==NULL) {
@@ -4047,7 +4049,7 @@ int main(int argc,char *argv[],char *envp[]) {
       NIIK_EXIT((niik_image_write(outname,img)==0),fcname,"niik_image_write",1);
     } else {
       if(nifti_set_filenames(img,outname,0,img->byteorder)) {
-        fprintf(stderr,"[niikmath] ERROR: nifti_set_filenames %s\n",outname);
+        fprintf(stderr,"[niikmath] ERROR: nifti_set_filenames %s\n", outname ? outname : "(null)");
         exit(1);
       }
       fprintf(stdout,"[niikmath] writing image:    %s\n",img->fname);
@@ -6314,6 +6316,7 @@ int main(int argc,char *argv[],char *envp[]) {
     }
     /* read mni images */
     NIIK_EXIT((niik_check_fsldir_exists()>0),fcname,"fsldir is not defined",1);
+    FSLDIR = getenv("FSLDIR");
     sprintf(fname,"%s/data/standard/MNI152_T1_1mm.nii.gz",FSLDIR);
     /* sprintf(fname,"/lab2/Kunio/kproj/data/mni_icbm152_t1_tal_nlin_sym_09c.mnc"); */
     fprintf(stdout,"[%s] reading mni img   %s\n",fcname,fname);
@@ -6321,6 +6324,7 @@ int main(int argc,char *argv[],char *envp[]) {
       fprintf(stderr,"[niikmath] ERROR: nifti_image_read %s\n",fname);
       exit(1);
     }
+    FSLDIR = getenv("FSLDIR");
     sprintf(fname,"%s/data/standard/MNI152_T1_1mm_brain_mask.nii.gz",FSLDIR);
     /* sprintf(fname,"/lab2/Kunio/kproj/data/mni_icbm152_t1_tal_nlin_sym_09c_mask.mnc"); */
     fprintf(stdout,"[%s] reading mni seg   %s\n",fcname,fname);
@@ -9135,6 +9139,7 @@ int main(int argc,char *argv[],char *envp[]) {
     }
     if(niik_check_double_problem(thresh)) {
       NIIK_EXIT((niik_check_fsldir_exists()>0),fcname,"fsldir is not defined",1);
+      FSLDIR = getenv("FSLDIR");
       sprintf(fname,"%s/data/standard/MNI152_T1_2mm_brain_mask.nii.gz",FSLDIR);
       fprintf(stdout,"[niikmath] reading mni seg   %s\n",fname);
       if((mni_seg=niik_image_read(fname))==NULL) {
@@ -9307,12 +9312,14 @@ int main(int argc,char *argv[],char *envp[]) {
     if(afmat==NULL) {
       /* read mni images */
       NIIK_EXIT((niik_check_fsldir_exists()>0),fcname,"fsldir is not defined",1);
+      FSLDIR = getenv("FSLDIR");
       sprintf(fname,"%s/data/standard/MNI152_T1_1mm.nii.gz",FSLDIR);
       fprintf(stdout,"[niikmath] reading mni img   %s\n",fname);
       if((mni_img=niik_image_read(fname))==NULL) {
         fprintf(stderr,"[niikmath] ERROR: nifti_image_read %s\n",fname);
         exit(1);
       }
+      FSLDIR = getenv("FSLDIR");
       sprintf(fname,"%s/data/standard/MNI152_T1_1mm_brain_mask.nii.gz",FSLDIR);
       fprintf(stdout,"[niikmath] reading mni seg   %s\n",fname);
       if((mni_seg=niik_image_read(fname))==NULL) {
